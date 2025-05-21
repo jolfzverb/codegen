@@ -22,7 +22,7 @@ type SchemaStruct struct {
 type SchemaField struct {
 	Name        string
 	Type        string
-	TagJson     []string
+	TagJSON     []string
 	TagValidate []string
 }
 
@@ -42,17 +42,18 @@ func (m *SchemasFile) WriteToOutput(output io.Writer) error {
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
+
 	return nil
 }
 
 func (m *SchemasFile) AddSchema(model SchemaStruct) {
-	var fieldList []*ast.Field
+	fieldList := make([]*ast.Field, 0, len(model.Fields))
 	for _, field := range model.Fields {
-		jsonTags := strings.Join(field.TagJson, ",")
+		jsonTags := strings.Join(field.TagJSON, ",")
 		validateTags := strings.Join(field.TagValidate, ",")
 
 		var tags string
-		if len(field.TagJson) > 0 {
+		if len(field.TagJSON) > 0 {
 			tags += "json:\"" + jsonTags + "\""
 		}
 		if len(field.TagValidate) > 0 {

@@ -1,7 +1,7 @@
 package generator
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -51,7 +51,7 @@ var commonInitialisms = map[string]bool{
 
 func GoIdentLowercase(name string) string {
 	match := 1
-	for i, _ := range commonInitialisms {
+	for i := range commonInitialisms {
 		if strings.HasPrefix(name, i) {
 			match = max(match, len(i))
 		}
@@ -60,6 +60,7 @@ func GoIdentLowercase(name string) string {
 	if len(name) < match {
 		return lowerCaser.String(name)
 	}
+
 	return lowerCaser.String(name[0:match]) + name[match:]
 }
 
@@ -77,7 +78,7 @@ func FormatGoLikeIdentifier(name string) string {
 	titleCaser := cases.Title(language.Und)
 	upperCaser := cases.Upper(language.Und)
 
-	var result []string
+	result := make([]string, 0, len(items3))
 	for _, item := range items3 {
 		if commonInitialisms[upperCaser.String(item)] {
 			result = append(result, upperCaser.String(item))
@@ -96,8 +97,11 @@ func ParseRefTypeName(ref string) string {
 	if len(parts) == 0 {
 		return ""
 	}
+
 	return parts[len(parts)-1]
 }
+
+var ErrUnsupportedContentType = errors.New("unsupported content type")
 
 func NameSuffixFromContentType(contentType string) (string, error) {
 	switch contentType {
@@ -106,6 +110,6 @@ func NameSuffixFromContentType(contentType string) (string, error) {
 	case "":
 		return "Json", nil
 	default:
-		return "", fmt.Errorf("unsupported content type %s", contentType)
+		return "", ErrUnsupportedContentType
 	}
 }

@@ -14,7 +14,7 @@ type Generator struct {
 	HandlersFile *HandlersFile
 }
 
-func NewGenerator(pathPrefix string, importPrefix string, packageName string) *Generator {
+func NewGenerator(importPrefix string, packageName string) *Generator {
 	return &Generator{
 		SchemasFile:  NewSchemasFile(),
 		HandlersFile: NewHandlersFile(packageName, path.Join(importPrefix, "models")),
@@ -35,16 +35,16 @@ func (g *Generator) WriteToOutput(modelsOutput io.Writer, handlersOutput io.Writ
 	return nil
 }
 
-func (g *Generator) Generate(ctx context.Context, yaml *openapi3.T) {
+func (g *Generator) Generate(yaml *openapi3.T) {
 	const op = "generator.Generate"
 	if yaml.Components != nil && yaml.Components.Schemas != nil {
-		err := g.ProcessSchemas(ctx, yaml.Components.Schemas)
+		err := g.ProcessSchemas(yaml.Components.Schemas)
 		if err != nil {
 			panic(errors.Wrap(err, op))
 		}
 	}
 	if yaml.Paths != nil && len(yaml.Paths.Map()) > 0 {
-		err := g.ProcessPaths(ctx, yaml.Paths)
+		err := g.ProcessPaths(yaml.Paths)
 		if err != nil {
 			panic(errors.Wrap(err, op))
 		}
@@ -52,7 +52,8 @@ func (g *Generator) Generate(ctx context.Context, yaml *openapi3.T) {
 }
 
 func GenerateToIO(ctx context.Context, input io.Reader, schemasOutput io.Writer, handlersOutput io.Writer,
-	pathPrefix string, importPrefix string, packageName string) error {
+	importPrefix string, packageName string,
+) error {
 	const op = "generator.GenerateToIO"
 	loader := &openapi3.Loader{Context: ctx, IsExternalRefsAllowed: true}
 	yaml, err := loader.LoadFromIoReader(input)
@@ -63,12 +64,13 @@ func GenerateToIO(ctx context.Context, input io.Reader, schemasOutput io.Writer,
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	generator := NewGenerator(pathPrefix, importPrefix, packageName)
-	generator.Generate(ctx, yaml)
+	generator := NewGenerator(importPrefix, packageName)
+	generator.Generate(yaml)
 
 	err = generator.WriteToOutput(schemasOutput, handlersOutput)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
+
 	return nil
 }

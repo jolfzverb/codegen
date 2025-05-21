@@ -12,6 +12,8 @@ import (
 	"golang.org/x/text/language"
 )
 
+const directoryPermissions = 0o755
+
 func GetModelName(yamlFilePath string) string {
 	parts := strings.Split(yamlFilePath, "/")
 	if len(parts) == 0 {
@@ -22,6 +24,7 @@ func GetModelName(yamlFilePath string) string {
 	fileName = strings.TrimSuffix(fileName, ".yml")
 
 	lowerCaser := cases.Lower(language.Und)
+
 	return lowerCaser.String(fileName)
 }
 
@@ -41,7 +44,7 @@ func Generate(ctx context.Context, yamlFilePath string, outputPathPrefix string,
 	handlersPath := path.Join(outputPathPrefix, "generated", modelName)
 	schemasPath := path.Join(handlersPath, "schemas")
 
-	err = os.MkdirAll(schemasPath, 0755)
+	err = os.MkdirAll(schemasPath, directoryPermissions)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
@@ -58,7 +61,7 @@ func Generate(ctx context.Context, yamlFilePath string, outputPathPrefix string,
 	}
 	defer handlerOutput.Close()
 
-	err = GenerateToIO(ctx, reader, schemasOutput, handlerOutput, handlersPath,
+	err = GenerateToIO(ctx, reader, schemasOutput, handlerOutput,
 		path.Join(outputImportPrefix, "generated", modelName), modelName)
 	if err != nil {
 		return errors.Wrap(err, op)

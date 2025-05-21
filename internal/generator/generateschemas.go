@@ -1,14 +1,14 @@
 package generator
 
 import (
-	"context"
 	"sort"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
 )
 
-func (g *Generator) ProcessObjectSchema(ctx context.Context, modelName string, schema *openapi3.SchemaRef) error {
+func (g *Generator) ProcessObjectSchema(modelName string, schema *openapi3.SchemaRef) error {
+	const op = "generator.ProcessObjectSchema"
 	model := SchemaStruct{
 		Name:   modelName,
 		Fields: []SchemaField{},
@@ -48,12 +48,18 @@ func (g *Generator) ProcessObjectSchema(ctx context.Context, modelName string, s
 			fieldType = "bool"
 		case fieldSchema.Value.Type.Permits(openapi3.TypeObject):
 			if fieldSchema.Ref == "" {
-				g.ProcessObjectSchema(ctx, modelName+FormatGoLikeIdentifier(fieldName), fieldSchema)
+				err := g.ProcessObjectSchema(modelName+FormatGoLikeIdentifier(fieldName), fieldSchema)
+				if err != nil {
+					return errors.Wrap(err, op)
+				}
 				fieldType = modelName + FormatGoLikeIdentifier(fieldName)
 			}
 		case fieldSchema.Value.Type.Permits(openapi3.TypeArray):
 			if fieldSchema.Ref == "" {
-				g.ProcessArraySchema(ctx, modelName+FormatGoLikeIdentifier(fieldName), fieldSchema)
+				err := g.ProcessArraySchema(modelName+FormatGoLikeIdentifier(fieldName), fieldSchema)
+				if err != nil {
+					return errors.Wrap(err, op)
+				}
 				fieldType = modelName + FormatGoLikeIdentifier(fieldName)
 			}
 		default:
@@ -68,21 +74,23 @@ func (g *Generator) ProcessObjectSchema(ctx context.Context, modelName string, s
 		field := SchemaField{
 			Name:        FormatGoLikeIdentifier(fieldName),
 			Type:        fieldType,
-			TagJson:     jsonTags,
+			TagJSON:     jsonTags,
 			TagValidate: validateTags,
 		}
 		model.Fields = append(model.Fields, field)
 	}
 	g.SchemasFile.AddSchema(model)
+
 	return nil
 }
 
-func (g *Generator) ProcessTypeAlias(ctx context.Context, modelName string, typeName string) error {
+func (g *Generator) ProcessTypeAlias(modelName string, typeName string) error {
 	g.SchemasFile.AddTypeAlias(modelName, typeName)
+
 	return nil
 }
 
-func (g *Generator) ProcessArraySchema(ctx context.Context, modelName string, schema *openapi3.SchemaRef,
+func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.SchemaRef,
 ) error {
 	const op = "generator.ProcessArraySchema"
 
@@ -95,77 +103,92 @@ func (g *Generator) ProcessArraySchema(ctx context.Context, modelName string, sc
 	switch {
 	case itemsSchema.Value.Type.Permits(openapi3.TypeString):
 		g.SchemasFile.AddSliceAlias(modelName, "string")
+
 		return nil
 	case itemsSchema.Value.Type.Permits(openapi3.TypeBoolean):
 		g.SchemasFile.AddSliceAlias(modelName, "bool")
+
 		return nil
 	case itemsSchema.Value.Type.Permits(openapi3.TypeInteger):
 		g.SchemasFile.AddSliceAlias(modelName, "int")
+
 		return nil
 	case itemsSchema.Value.Type.Permits(openapi3.TypeNumber):
 		g.SchemasFile.AddSliceAlias(modelName, "float64")
+
 		return nil
 	case itemsSchema.Value.Type.Permits(openapi3.TypeObject):
-		g.ProcessObjectSchema(ctx, modelName+"Item", itemsSchema)
-		g.SchemasFile.AddSliceAlias(modelName, modelName+"Item")
-		return nil
-	case itemsSchema.Value.Type.Permits(openapi3.TypeArray):
-		err := g.ProcessArraySchema(ctx, modelName+"Item", itemsSchema)
+		err := g.ProcessObjectSchema(modelName+"Item", itemsSchema)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
 		g.SchemasFile.AddSliceAlias(modelName, modelName+"Item")
+
+		return nil
+	case itemsSchema.Value.Type.Permits(openapi3.TypeArray):
+		err := g.ProcessArraySchema(modelName+"Item", itemsSchema)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		g.SchemasFile.AddSliceAlias(modelName, modelName+"Item")
+
 		return nil
 	}
 
 	return errors.Errorf("unsupported schema type %s for model %s", itemsSchema.Value.Type, modelName)
 }
 
-func (g *Generator) ProcessSchema(ctx context.Context, modelName string, schema *openapi3.SchemaRef) error {
+func (g *Generator) ProcessSchema(modelName string, schema *openapi3.SchemaRef) error {
 	const op = "generator.ProcessSchema"
 	switch {
 	case schema.Value.Type.Permits(openapi3.TypeObject):
-		err := g.ProcessObjectSchema(ctx, modelName, schema)
+		err := g.ProcessObjectSchema(modelName, schema)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
+
 		return nil
 	case schema.Value.Type.Permits(openapi3.TypeArray):
-		err := g.ProcessArraySchema(ctx, modelName, schema)
+		err := g.ProcessArraySchema(modelName, schema)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
+
 		return nil
 	case schema.Value.Type.Permits(openapi3.TypeString):
-		err := g.ProcessTypeAlias(ctx, modelName, "string")
+		err := g.ProcessTypeAlias(modelName, "string")
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
+
 		return nil
 	case schema.Value.Type.Permits(openapi3.TypeBoolean):
-		err := g.ProcessTypeAlias(ctx, modelName, "bool")
+		err := g.ProcessTypeAlias(modelName, "bool")
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
+
 		return nil
 	case schema.Value.Type.Permits(openapi3.TypeInteger):
-		err := g.ProcessTypeAlias(ctx, modelName, "int")
+		err := g.ProcessTypeAlias(modelName, "int")
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
+
 		return nil
 	case schema.Value.Type.Permits(openapi3.TypeNumber):
-		err := g.ProcessTypeAlias(ctx, modelName, "float64")
+		err := g.ProcessTypeAlias(modelName, "float64")
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
+
 		return nil
 	}
 
 	return errors.Errorf("unsupported schema type %s for model %s", schema.Value.Type, modelName)
 }
 
-func (g *Generator) ProcessSchemas(ctx context.Context, schemas map[string]*openapi3.SchemaRef) error {
+func (g *Generator) ProcessSchemas(schemas map[string]*openapi3.SchemaRef) error {
 	const op = "generator.ProcessSchemas"
 	modelKeys := make([]string, 0, len(schemas))
 	for modelName := range schemas {
@@ -175,10 +198,11 @@ func (g *Generator) ProcessSchemas(ctx context.Context, schemas map[string]*open
 
 	for _, modelName := range modelKeys {
 		schema := schemas[modelName]
-		err := g.ProcessSchema(ctx, modelName, schema)
+		err := g.ProcessSchema(modelName, schema)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
 	}
+
 	return nil
 }

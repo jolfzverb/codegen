@@ -9,5 +9,8 @@ import (
 func main() {
 	ctx := context.Background()
 
-	generator.Generate(ctx, "api/api.yaml", "internal", "internal")
+	err := generator.Generate(ctx, "api/api.yaml", "internal", "internal")
+	if err != nil {
+		panic(err)
+	}
 }

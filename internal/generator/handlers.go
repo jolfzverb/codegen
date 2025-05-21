@@ -47,33 +47,59 @@ func (h *HandlersFile) InitImports(modelsImportPath string) {
 }
 
 func (h *HandlersFile) InitHandlerStruct() {
+	fieldList := &ast.FieldList{
+		List: []*ast.Field{{
+			Names: []*ast.Ident{ast.NewIdent("validator")},
+			Type: &ast.StarExpr{
+				Star: token.NoPos,
+				X: &ast.SelectorExpr{
+					X:   ast.NewIdent("validator"),
+					Sel: ast.NewIdent("Validate"),
+				},
+			},
+		}},
+	}
 	handlerDecl := &ast.GenDecl{
 		Tok: token.TYPE,
 		Specs: []ast.Spec{
 			&ast.TypeSpec{
 				Name: ast.NewIdent("Handler"),
 				Type: &ast.StructType{
-					Fields: &ast.FieldList{
-						List: []*ast.Field{{
-							Names: []*ast.Ident{ast.NewIdent("validator")},
-							Type: &ast.StarExpr{
-								Star: token.NoPos,
-								X: &ast.SelectorExpr{
-									X:   ast.NewIdent("validator"),
-									Sel: ast.NewIdent("Validate"),
-								},
-							},
-						}},
-					},
+					Fields: fieldList,
 				},
 			},
 		},
 	}
 	h.handlerDecl = handlerDecl
-	h.handlerDeclQAFieldList = handlerDecl.Specs[0].(*ast.TypeSpec).Type.(*ast.StructType).Fields
+	h.handlerDeclQAFieldList = fieldList
 }
 
 func (h *HandlersFile) InitHandlerConstructor() {
+	initializerComposite := &ast.CompositeLit{
+		Type: &ast.Ident{
+			Name: "Handler",
+		},
+		Elts: []ast.Expr{
+			&ast.KeyValueExpr{
+				Key: ast.NewIdent("validator"),
+				Value: &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   ast.NewIdent("validator"),
+						Sel: ast.NewIdent("New"),
+					},
+					Args: []ast.Expr{
+						&ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   ast.NewIdent("validator"),
+								Sel: ast.NewIdent("WithRequiredStructEnabled"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	newHandlerDecl := &ast.FuncDecl{
 		Name: ast.NewIdent("NewHandler"),
 		Type: &ast.FuncType{
@@ -97,30 +123,7 @@ func (h *HandlersFile) InitHandlerConstructor() {
 					Results: []ast.Expr{
 						&ast.UnaryExpr{
 							Op: token.AND,
-							X: &ast.CompositeLit{
-								Type: &ast.Ident{
-									Name: "Handler",
-								},
-								Elts: []ast.Expr{
-									&ast.KeyValueExpr{
-										Key: ast.NewIdent("validator"),
-										Value: &ast.CallExpr{
-											Fun: &ast.SelectorExpr{
-												X:   ast.NewIdent("validator"),
-												Sel: ast.NewIdent("New"),
-											},
-											Args: []ast.Expr{
-												&ast.CallExpr{
-													Fun: &ast.SelectorExpr{
-														X:   ast.NewIdent("validator"),
-														Sel: ast.NewIdent("WithRequiredStructEnabled"),
-													},
-												},
-											},
-										},
-									},
-								},
-							},
+							X:  initializerComposite,
 						},
 					},
 				},
@@ -129,7 +132,7 @@ func (h *HandlersFile) InitHandlerConstructor() {
 	}
 
 	h.handlerConstructorDeclQAArgs = newHandlerDecl.Type.Params
-	h.handlerConstructorDeclQAConstructorComposite = newHandlerDecl.Body.List[0].(*ast.ReturnStmt).Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit)
+	h.handlerConstructorDeclQAConstructorComposite = initializerComposite
 	h.handlerConstructorDecl = newHandlerDecl
 }
 
@@ -192,16 +195,18 @@ func (h *HandlersFile) InitFields(packageName string, modelsImportPath string) {
 func NewHandlersFile(packageName string, modelsImportPath string) *HandlersFile {
 	h := &HandlersFile{}
 	h.InitFields(packageName, modelsImportPath)
+
 	return h
 }
 
-func (m *HandlersFile) WriteToOutput(output io.Writer) error {
+func (h *HandlersFile) WriteToOutput(output io.Writer) error {
 	const op = "generator.HandlersFile.WriteToOutput"
-	file := m.GenerateFile()
+	file := h.GenerateFile()
 	err := format.Node(output, token.NewFileSet(), file)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
+
 	return nil
 }
 
@@ -260,8 +265,6 @@ func (h *HandlersFile) AddInterface(name string, methodName string, requestName 
 }
 
 func (h *HandlersFile) AddDependencyToHandler(baseName string) {
-	const op = "generator.HandlersFile.AddDependencyToHandler"
-
 	fieldName := GoIdentLowercase(baseName)
 
 	h.handlerDeclQAFieldList.List = append(h.handlerDeclQAFieldList.List, &ast.Field{
@@ -281,6 +284,7 @@ func (h *HandlersFile) AddDependencyToHandler(baseName string) {
 		},
 	)
 }
+
 func (h *HandlersFile) AddImport(path string) {
 	for _, imp := range h.packageImports {
 		if imp.Path.Value == fmt.Sprintf("%q", path) {
@@ -298,7 +302,6 @@ func (h *HandlersFile) AddImport(path string) {
 }
 
 func (h *HandlersFile) GenerateFile() *ast.File {
-	const op = "generator.HandlersFile.GenerateFile"
 	file := &ast.File{
 		Name:    h.packageName,
 		Decls:   []ast.Decl{},
@@ -320,9 +323,7 @@ func (h *HandlersFile) GenerateFile() *ast.File {
 	return file
 }
 
-func (h HandlersFile) AddRouteToRouter(baseName string, method string, pathName string) {
-	const op = "generator.HandlersFile.AddRouteToRouter"
-	// add route to router
+func (h *HandlersFile) AddRouteToRouter(baseName string, method string, pathName string) {
 	h.addRoutesDecl.Body.List = append(h.addRoutesDecl.Body.List, &ast.ExprStmt{
 		X: &ast.CallExpr{
 			Fun: &ast.SelectorExpr{

@@ -78,7 +78,7 @@ type StringModel string
 	outputModels := &bytes.Buffer{}
 	outputHandlers := &bytes.Buffer{}
 
-	err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "", "imports", "packagename")
+	err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename")
 
 	assert.NoError(t, err)
 
@@ -654,7 +654,7 @@ type ObjectModel struct {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "", "imports", "packagename")
+			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename")
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, outputModels.String())
@@ -727,7 +727,7 @@ func (h *Handler) AddRoutes(router *chi.Router) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "", "imports", "packagename")
+			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename")
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedModels, outputModels.String())
