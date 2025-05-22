@@ -698,6 +698,7 @@ import (
 	"imports/models"
 	"context"
 	"github.com/go-chi/chi/v5"
+	"net/http"
 )
 
 type GetExample2JsonHandler interface {
@@ -716,8 +717,64 @@ func NewHandler(getExample2Json GetExample2JsonHandler, getExampleJson GetExampl
 	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), getExample2Json: getExample2Json, getExampleJson: getExampleJson}
 }
 func (h *Handler) AddRoutes(router chi.Router) {
-	router.Get("/example2", h.handleGetExample2Json)
-	router.Get("/example", h.handleGetExampleJson)
+	router.Get("/example2", h.handleGetExample2)
+	router.Get("/example", h.handleGetExample)
+}
+func (h *Handler) handleGetExample2Json(w http.ResponseWriter, r *http.Request) {
+	request, err := h.ParseGetExample2JsonRequest(r)
+	if err != nil {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	ctx := r.Context()
+	response, err := h.getExample2Json.GetExample2Json(ctx, request)
+	if (err != nil) | (response == nil) {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	h.WriteGetExample2JsonResponse(w, response)
+	return
+}
+func (h *Handler) handleGetExample2(w http.ResponseWriter, r *http.Request) {
+	switch r.Header.Get("Content-Type") {
+	case "application/json":
+		h.handleGetExample2Json(w, r)
+		return
+	case "":
+		h.handleGetExample2Json(w, r)
+		return
+	default:
+		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		return
+	}
+}
+func (h *Handler) handleGetExampleJson(w http.ResponseWriter, r *http.Request) {
+	request, err := h.ParseGetExampleJsonRequest(r)
+	if err != nil {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	ctx := r.Context()
+	response, err := h.getExampleJson.GetExampleJson(ctx, request)
+	if (err != nil) | (response == nil) {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	h.WriteGetExampleJsonResponse(w, response)
+	return
+}
+func (h *Handler) handleGetExample(w http.ResponseWriter, r *http.Request) {
+	switch r.Header.Get("Content-Type") {
+	case "application/json":
+		h.handleGetExampleJson(w, r)
+		return
+	case "":
+		h.handleGetExampleJson(w, r)
+		return
+	default:
+		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		return
+	}
 }
 `,
 		},
