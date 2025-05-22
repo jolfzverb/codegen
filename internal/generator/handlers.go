@@ -23,8 +23,9 @@ type HandlersFile struct {
 	handlerConstructorDeclQAArgs                 *ast.FieldList    // quick access to handler constructor args
 	handlerConstructorDeclQAConstructorComposite *ast.CompositeLit // quick access to handler struct initializer
 
-	addRoutesDecl *ast.FuncDecl
-	handleDecls   []*ast.FuncDecl
+	addRoutesDecl        *ast.FuncDecl
+	handleDeclQASwitches map[string]*ast.BlockStmt
+	restDecls            []*ast.FuncDecl
 }
 
 func (h *HandlersFile) InitImports(modelsImportPath string) {
@@ -44,6 +45,7 @@ func (h *HandlersFile) InitImports(modelsImportPath string) {
 	h.AddImport(modelsImportPath)
 	h.AddImport("context")
 	h.AddImport("github.com/go-chi/chi/v5")
+	h.AddImport("net/http")
 }
 
 func (h *HandlersFile) InitHandlerStruct() {
@@ -299,6 +301,7 @@ func (h *HandlersFile) AddImport(path string) {
 }
 
 func (h *HandlersFile) GenerateFile() *ast.File {
+	h.FinalizeHandlerSwitches()
 	file := &ast.File{
 		Name:    h.packageName,
 		Decls:   []ast.Decl{},
@@ -313,7 +316,7 @@ func (h *HandlersFile) GenerateFile() *ast.File {
 	file.Decls = append(file.Decls, h.handlerDecl)
 	file.Decls = append(file.Decls, h.handlerConstructorDecl)
 	file.Decls = append(file.Decls, h.addRoutesDecl)
-	for _, d := range h.handleDecls {
+	for _, d := range h.restDecls {
 		file.Decls = append(file.Decls, d)
 	}
 
@@ -336,6 +339,336 @@ func (h *HandlersFile) AddRouteToRouter(baseName string, method string, pathName
 					X:   ast.NewIdent("h"),
 					Sel: ast.NewIdent("handle" + baseName),
 				},
+			},
+		},
+	})
+}
+
+func (h *HandlersFile) GetHandler(baseName string) *ast.BlockStmt {
+	if h.handleDeclQASwitches == nil {
+		return nil
+	}
+	if blockStmt, ok := h.handleDeclQASwitches[baseName]; ok {
+		return blockStmt
+	}
+
+	return nil
+}
+
+func (h *HandlersFile) CreateHandler(baseName string) {
+	switchBody := &ast.BlockStmt{
+		List: []ast.Stmt{},
+	}
+
+	handleDecl := &ast.FuncDecl{
+		Name: ast.NewIdent("handle" + baseName),
+		Recv: &ast.FieldList{
+			List: []*ast.Field{{
+				Names: []*ast.Ident{ast.NewIdent("h")},
+				Type: &ast.StarExpr{
+					X: ast.NewIdent("Handler"),
+				},
+			}},
+		},
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{
+				List: []*ast.Field{{
+					Names: []*ast.Ident{ast.NewIdent("w")},
+					Type: &ast.SelectorExpr{
+						X:   ast.NewIdent("http"),
+						Sel: ast.NewIdent("ResponseWriter"),
+					},
+				}, {
+					Names: []*ast.Ident{ast.NewIdent("r")},
+					Type: &ast.StarExpr{
+						X: &ast.SelectorExpr{
+							X:   ast.NewIdent("http"),
+							Sel: ast.NewIdent("Request"),
+						},
+					},
+				}},
+			},
+			Results: &ast.FieldList{},
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.SwitchStmt{
+					Tag: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("r.Header"),
+							Sel: ast.NewIdent("Get"),
+						},
+						Args: []ast.Expr{
+							&ast.BasicLit{
+								Kind:  token.STRING,
+								Value: `"Content-Type"`,
+							},
+						},
+					},
+					Body: switchBody,
+				},
+			},
+		},
+	}
+
+	h.restDecls = append(h.restDecls, handleDecl)
+	if h.handleDeclQASwitches == nil {
+		h.handleDeclQASwitches = make(map[string]*ast.BlockStmt)
+	}
+	h.handleDeclQASwitches[baseName] = switchBody
+}
+
+func (h *HandlersFile) FinalizeHandlerSwitches() {
+	if h.handleDeclQASwitches == nil {
+		return
+	}
+	for _, blockStmt := range h.handleDeclQASwitches {
+		blockStmt.List = append(blockStmt.List, &ast.CaseClause{
+			List: nil,
+			Body: []ast.Stmt{
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("http"),
+							Sel: ast.NewIdent("Error"),
+						},
+						Args: []ast.Expr{
+							ast.NewIdent("w"),
+							&ast.BasicLit{
+								Kind:  token.STRING,
+								Value: `"Unsupported Content-Type"`,
+							},
+							&ast.SelectorExpr{
+								X:   ast.NewIdent("http"),
+								Sel: ast.NewIdent("StatusUnsupportedMediaType"),
+							},
+						},
+					},
+				},
+				&ast.ReturnStmt{},
+			},
+		})
+	}
+}
+
+func (h *HandlersFile) AddContentTypeHandler(baseName string, rawContentType string, handlerSuffix string) {
+	if h.handleDeclQASwitches == nil {
+		return
+	}
+	if blockStmt, ok := h.handleDeclQASwitches[baseName]; ok {
+		stmts := []ast.Stmt{
+			&ast.ExprStmt{
+				X: &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   ast.NewIdent("h"),
+						Sel: ast.NewIdent("handle" + baseName + handlerSuffix),
+					},
+					Args: []ast.Expr{
+						ast.NewIdent("w"),
+						ast.NewIdent("r"),
+					},
+				},
+			},
+			&ast.ReturnStmt{},
+		}
+
+		blockStmt.List = append(blockStmt.List, &ast.CaseClause{
+			List: []ast.Expr{
+				&ast.BasicLit{
+					Kind:  token.STRING,
+					Value: fmt.Sprintf("%q", rawContentType),
+				},
+			},
+			Body: stmts,
+		},
+		)
+
+		if rawContentType == applicationJSONCT {
+			blockStmt.List = append(blockStmt.List, &ast.CaseClause{
+				List: []ast.Expr{
+					&ast.BasicLit{
+						Kind:  token.STRING,
+						Value: `""`,
+					},
+				},
+				Body: stmts,
+			})
+		}
+	}
+}
+
+func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
+	h.restDecls = append(h.restDecls, &ast.FuncDecl{
+		Name: ast.NewIdent("handle" + baseName),
+		Recv: &ast.FieldList{
+			List: []*ast.Field{{
+				Names: []*ast.Ident{ast.NewIdent("h")},
+				Type: &ast.StarExpr{
+					X: ast.NewIdent("Handler"),
+				},
+			}},
+		},
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{
+				List: []*ast.Field{{
+					Names: []*ast.Ident{ast.NewIdent("w")},
+					Type: &ast.SelectorExpr{
+						X:   ast.NewIdent("http"),
+						Sel: ast.NewIdent("ResponseWriter"),
+					},
+				}, {
+					Names: []*ast.Ident{ast.NewIdent("r")},
+					Type: &ast.StarExpr{
+						X: &ast.SelectorExpr{
+							X:   ast.NewIdent("http"),
+							Sel: ast.NewIdent("Request"),
+						},
+					},
+				}},
+			},
+			Results: &ast.FieldList{},
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						ast.NewIdent("request"),
+						ast.NewIdent("err"),
+					},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   ast.NewIdent("h"),
+								Sel: ast.NewIdent("Parse" + baseName + "Request"),
+							},
+							Args: []ast.Expr{
+								ast.NewIdent("r"),
+							},
+						},
+					},
+				},
+				&ast.IfStmt{
+					Cond: &ast.BinaryExpr{
+						X:  ast.NewIdent("err"),
+						Op: token.NEQ,
+						Y:  ast.NewIdent("nil"),
+					},
+					Body: &ast.BlockStmt{
+						List: []ast.Stmt{
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   ast.NewIdent("http"),
+										Sel: ast.NewIdent("Error"),
+									},
+									Args: []ast.Expr{
+										ast.NewIdent("w"),
+										&ast.BasicLit{
+											Kind:  token.STRING,
+											Value: `"InternalServerError"`,
+										},
+										&ast.SelectorExpr{
+											X:   ast.NewIdent("http"),
+											Sel: ast.NewIdent("StatusInternalServerError"),
+										},
+									},
+								},
+							},
+							&ast.ReturnStmt{},
+						},
+					},
+				},
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						ast.NewIdent("ctx"),
+					},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   ast.NewIdent("r"),
+								Sel: ast.NewIdent("Context"),
+							},
+							Args: []ast.Expr{},
+						},
+					},
+				},
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						ast.NewIdent("response"),
+						ast.NewIdent("err"),
+					},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.SelectorExpr{
+									X:   ast.NewIdent("h"),
+									Sel: ast.NewIdent(GoIdentLowercase(baseName)),
+								},
+								Sel: ast.NewIdent(baseName),
+							},
+							Args: []ast.Expr{
+								ast.NewIdent("ctx"),
+								ast.NewIdent("request"),
+							},
+						},
+					},
+				},
+				&ast.IfStmt{
+					Cond: &ast.BinaryExpr{
+						X: &ast.BinaryExpr{
+							X:  ast.NewIdent("err"),
+							Op: token.NEQ,
+							Y:  ast.NewIdent("nil"),
+						},
+						Op: token.OR,
+						Y: &ast.BinaryExpr{
+							X:  ast.NewIdent("response"),
+							Op: token.EQL,
+							Y:  ast.NewIdent("nil"),
+						},
+					},
+					Body: &ast.BlockStmt{
+						List: []ast.Stmt{
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   ast.NewIdent("http"),
+										Sel: ast.NewIdent("Error"),
+									},
+									Args: []ast.Expr{
+										ast.NewIdent("w"),
+										&ast.BasicLit{
+											Kind:  token.STRING,
+											Value: `"InternalServerError"`,
+										},
+										&ast.SelectorExpr{
+											X:   ast.NewIdent("http"),
+											Sel: ast.NewIdent("StatusInternalServerError"),
+										},
+									},
+								},
+							},
+							&ast.ReturnStmt{},
+						},
+					},
+				},
+
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("h"),
+							Sel: ast.NewIdent("Write" + baseName + "Response"),
+						},
+						Args: []ast.Expr{
+							ast.NewIdent("w"),
+							ast.NewIdent("response"),
+						},
+					},
+				},
+				&ast.ReturnStmt{},
 			},
 		},
 	})
