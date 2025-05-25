@@ -682,6 +682,12 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-Header:
+              description: X-Header
+              schema:
+                type: string
+              required: true
   /example2:
     get:
       summary: Example
@@ -698,6 +704,8 @@ import (
 	"imports/models"
 	"context"
 	"github.com/go-chi/chi/v5"
+	"net/http"
+	"encoding/json"
 )
 
 type GetExample2JsonHandler interface {
@@ -716,8 +724,105 @@ func NewHandler(getExample2Json GetExample2JsonHandler, getExampleJson GetExampl
 	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), getExample2Json: getExample2Json, getExampleJson: getExampleJson}
 }
 func (h *Handler) AddRoutes(router chi.Router) {
-	router.Get("/example2", h.handleGetExample2Json)
-	router.Get("/example", h.handleGetExampleJson)
+	router.Get("/example2", h.handleGetExample2)
+	router.Get("/example", h.handleGetExample)
+}
+func (h *Handler) writeGetExample2Json200Response(w http.ResponseWriter, r *models.GetExample2JsonResponse200) {
+}
+func (h *Handler) writeGetExample2JsonResponse(w http.ResponseWriter, response *models.GetExample2JsonResponse) {
+	switch response.StatusCode {
+	case 200:
+		if response.Response200 == nil {
+			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			return
+		}
+		h.writeGetExample2Json200Response(w, response.Response200)
+	}
+	w.WriteHeader(response.StatusCode)
+}
+func (h *Handler) handleGetExample2Json(w http.ResponseWriter, r *http.Request) {
+	request, err := h.parseGetExample2JsonRequest(r)
+	if err != nil {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	ctx := r.Context()
+	response, err := h.getExample2Json.HandleGetExample2Json(ctx, request)
+	if (err != nil) | (response == nil) {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	h.writeGetExample2JsonResponse(w, response)
+	return
+}
+func (h *Handler) handleGetExample2(w http.ResponseWriter, r *http.Request) {
+	switch r.Header.Get("Content-Type") {
+	case "application/json":
+		h.handleGetExample2Json(w, r)
+		return
+	case "":
+		h.handleGetExample2Json(w, r)
+		return
+	default:
+		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		return
+	}
+}
+func (h *Handler) writeGetExampleJson200Response(w http.ResponseWriter, r *models.GetExampleJsonResponse200) {
+	var err error
+	headersJSON, err := json.Marshal(h)
+	if err != nil {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	var headers map[string]string
+	err = json.Unmarshal(headersJSON, &headers)
+	if err != nil {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	for key, value := range headers {
+		w.Header().Set(key, value)
+	}
+}
+func (h *Handler) writeGetExampleJsonResponse(w http.ResponseWriter, response *models.GetExampleJsonResponse) {
+	switch response.StatusCode {
+	case 200:
+		if response.Response200 == nil {
+			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			return
+		}
+		h.writeGetExampleJson200Response(w, response.Response200)
+	}
+	w.WriteHeader(response.StatusCode)
+}
+func (h *Handler) handleGetExampleJson(w http.ResponseWriter, r *http.Request) {
+	request, err := h.parseGetExampleJsonRequest(r)
+	if err != nil {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	ctx := r.Context()
+	response, err := h.getExampleJson.HandleGetExampleJson(ctx, request)
+	if (err != nil) | (response == nil) {
+		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		return
+	}
+	h.writeGetExampleJsonResponse(w, response)
+	return
+}
+func (h *Handler) handleGetExample(w http.ResponseWriter, r *http.Request) {
+	switch r.Header.Get("Content-Type") {
+	case "application/json":
+		h.handleGetExampleJson(w, r)
+		return
+	case "":
+		h.handleGetExampleJson(w, r)
+		return
+	default:
+		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		return
+	}
 }
 `,
 		},

@@ -105,9 +105,7 @@ var ErrUnsupportedContentType = errors.New("unsupported content type")
 
 func NameSuffixFromContentType(contentType string) (string, error) {
 	switch contentType {
-	case "application/json":
-		return "Json", nil
-	case "":
+	case applicationJSONCT:
 		return "Json", nil
 	default:
 		return "", ErrUnsupportedContentType
