@@ -36,8 +36,23 @@ func (g *Generator) AddHandleOperationMethod(baseName string) {
 	g.HandlersFile.AddHandleOperationMethod(baseName)
 }
 
+func (g *Generator) AddWriteResponseMethod(baseName string, operation *openapi3.Operation) error {
+	const op = "generator.AddWriteResponseMethod"
+	codes := make([]string, 0, len(operation.Responses.Map()))
+	for code, response := range operation.Responses.Map() {
+		err := g.HandlersFile.AddWriteResponseCode(baseName, code, response)
+		if err != nil {
+			return errors.Wrapf(err, op)
+		}
+		codes = append(codes, code)
+	}
+	g.HandlersFile.AddWriteResponseMethod(baseName, codes)
+
+	return nil
+}
+
 func (g *Generator) ProcessApplicationJSONOperation(pathName string, method string, contentType string,
-	_ *openapi3.Operation,
+	operation *openapi3.Operation,
 ) error {
 	const op = "generator.ProcessApplicationJsonOperation"
 	if contentType == "" {
@@ -59,6 +74,10 @@ func (g *Generator) ProcessApplicationJSONOperation(pathName string, method stri
 	// if request body add ParseRequestBody method
 	// add parse params method
 	// add handlejson method
+	err = g.AddWriteResponseMethod(handlerBaseName+suffix, operation)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
 	g.AddHandleOperationMethod(handlerBaseName + suffix)
 	// add/modify handle method
 	g.AddContentTypeToHandler(handlerBaseName, contentType, suffix)
@@ -110,6 +129,12 @@ func (g *Generator) ProcessPaths(paths *openapi3.Paths) error {
 				return errors.New("GET method should not have request body")
 			}
 			err := g.ProcessOperation(pathName, "Get", pathItem.Get)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
+		}
+		if pathItem.Post != nil {
+			err := g.ProcessOperation(pathName, "Post", pathItem.Post)
 			if err != nil {
 				return errors.Wrap(err, op)
 			}

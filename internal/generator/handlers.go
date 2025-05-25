@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"io"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
 )
 
@@ -540,7 +541,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 						&ast.CallExpr{
 							Fun: &ast.SelectorExpr{
 								X:   ast.NewIdent("h"),
-								Sel: ast.NewIdent("Parse" + baseName + "Request"),
+								Sel: ast.NewIdent("parse" + baseName + "Request"),
 							},
 							Args: []ast.Expr{
 								ast.NewIdent("r"),
@@ -607,7 +608,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 									X:   ast.NewIdent("h"),
 									Sel: ast.NewIdent(GoIdentLowercase(baseName)),
 								},
-								Sel: ast.NewIdent(baseName),
+								Sel: ast.NewIdent("Handle" + baseName),
 							},
 							Args: []ast.Expr{
 								ast.NewIdent("ctx"),
@@ -660,7 +661,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 					X: &ast.CallExpr{
 						Fun: &ast.SelectorExpr{
 							X:   ast.NewIdent("h"),
-							Sel: ast.NewIdent("Write" + baseName + "Response"),
+							Sel: ast.NewIdent("write" + baseName + "Response"),
 						},
 						Args: []ast.Expr{
 							ast.NewIdent("w"),
@@ -672,4 +673,421 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 			},
 		},
 	})
+}
+
+func (h *HandlersFile) AddWriteResponseMethod(baseName string, codes []string) {
+	switchBody := &ast.BlockStmt{
+		List: []ast.Stmt{},
+	}
+	for _, code := range codes {
+		switchBody.List = append(switchBody.List, &ast.CaseClause{
+			List: []ast.Expr{
+				&ast.BasicLit{
+					Kind:  token.INT,
+					Value: code,
+				},
+			},
+			Body: []ast.Stmt{
+				&ast.IfStmt{
+					Cond: &ast.BinaryExpr{
+						X: &ast.SelectorExpr{
+							X:   ast.NewIdent("response"),
+							Sel: ast.NewIdent("Response" + code),
+						},
+						Op: token.EQL,
+						Y:  ast.NewIdent("nil"),
+					},
+					Body: &ast.BlockStmt{
+						List: []ast.Stmt{
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   ast.NewIdent("http"),
+										Sel: ast.NewIdent("Error"),
+									},
+									Args: []ast.Expr{
+										ast.NewIdent("w"),
+										&ast.BasicLit{
+											Kind:  token.STRING,
+											Value: `"InternalServerError"`,
+										},
+										&ast.SelectorExpr{
+											X:   ast.NewIdent("http"),
+											Sel: ast.NewIdent("StatusInternalServerError"),
+										},
+									},
+								},
+							},
+							&ast.ReturnStmt{},
+						},
+					},
+				},
+
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("h"),
+							Sel: ast.NewIdent("write" + baseName + code + "Response"),
+						},
+						Args: []ast.Expr{
+							ast.NewIdent("w"),
+							&ast.SelectorExpr{
+								X:   ast.NewIdent("response"),
+								Sel: ast.NewIdent("Response" + code),
+							},
+						},
+					},
+				},
+			},
+		})
+	}
+	h.restDecls = append(h.restDecls, &ast.FuncDecl{
+		Name: ast.NewIdent("write" + baseName + "Response"),
+		Recv: &ast.FieldList{
+			List: []*ast.Field{{
+				Names: []*ast.Ident{ast.NewIdent("h")},
+				Type: &ast.StarExpr{
+					X: ast.NewIdent("Handler"),
+				},
+			}},
+		},
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{
+				List: []*ast.Field{{
+					Names: []*ast.Ident{ast.NewIdent("w")},
+					Type: &ast.SelectorExpr{
+						X:   ast.NewIdent("http"),
+						Sel: ast.NewIdent("ResponseWriter"),
+					},
+				}, {
+					Names: []*ast.Ident{ast.NewIdent("response")},
+					Type: &ast.StarExpr{
+						X: &ast.SelectorExpr{
+							X:   ast.NewIdent("models"),
+							Sel: ast.NewIdent(baseName + "Response"),
+						},
+					},
+				}},
+			},
+			Results: &ast.FieldList{},
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.SwitchStmt{
+					Tag: &ast.SelectorExpr{
+						X:   ast.NewIdent("response"),
+						Sel: ast.NewIdent("StatusCode"),
+					},
+					Body: switchBody,
+				},
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("w"),
+							Sel: ast.NewIdent("WriteHeader"),
+						},
+						Args: []ast.Expr{
+							&ast.SelectorExpr{
+								X:   ast.NewIdent("response"),
+								Sel: ast.NewIdent("StatusCode"),
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, response *openapi3.ResponseRef) error {
+	var body []ast.Stmt
+
+	if len(response.Value.Headers) > 0 {
+		h.AddImport("encoding/json")
+		body = append(body, &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				ast.NewIdent("headersJSON"),
+				ast.NewIdent("err"),
+			},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   ast.NewIdent("json"),
+						Sel: ast.NewIdent("Marshal"),
+					},
+					Args: []ast.Expr{
+						ast.NewIdent("h"),
+					},
+				},
+			},
+		})
+		body = append(body, &ast.IfStmt{
+			Cond: &ast.BinaryExpr{
+				X:  ast.NewIdent("err"),
+				Op: token.NEQ,
+				Y:  ast.NewIdent("nil"),
+			},
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   ast.NewIdent("http"),
+								Sel: ast.NewIdent("Error"),
+							},
+							Args: []ast.Expr{
+								ast.NewIdent("w"),
+								&ast.BasicLit{
+									Kind:  token.STRING,
+									Value: `"InternalServerError"`,
+								},
+								&ast.SelectorExpr{
+									X:   ast.NewIdent("http"),
+									Sel: ast.NewIdent("StatusInternalServerError"),
+								},
+							},
+						},
+					},
+					&ast.ReturnStmt{},
+				},
+			},
+		})
+		body = append(body, &ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{ast.NewIdent("headers")},
+						Type: &ast.MapType{
+							Key:   ast.NewIdent("string"),
+							Value: ast.NewIdent("string"),
+						},
+					},
+				},
+			},
+		})
+		body = append(body, &ast.AssignStmt{
+			Lhs: []ast.Expr{ast.NewIdent("err")},
+			Tok: token.ASSIGN,
+			Rhs: []ast.Expr{
+				&ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   ast.NewIdent("json"),
+						Sel: ast.NewIdent("Unmarshal"),
+					},
+					Args: []ast.Expr{
+						ast.NewIdent("headersJSON"),
+						&ast.UnaryExpr{
+							Op: token.AND,
+							X:  ast.NewIdent("headers"),
+						},
+					},
+				},
+			},
+		})
+		body = append(body, &ast.IfStmt{
+			Cond: &ast.BinaryExpr{
+				X:  ast.NewIdent("err"),
+				Op: token.NEQ,
+				Y:  ast.NewIdent("nil"),
+			},
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   ast.NewIdent("http"),
+								Sel: ast.NewIdent("Error"),
+							},
+							Args: []ast.Expr{
+								ast.NewIdent("w"),
+								&ast.BasicLit{
+									Kind:  token.STRING,
+									Value: `"InternalServerError"`,
+								},
+								&ast.SelectorExpr{
+									X:   ast.NewIdent("http"),
+									Sel: ast.NewIdent("StatusInternalServerError"),
+								},
+							},
+						},
+					},
+					&ast.ReturnStmt{},
+				},
+			},
+		})
+		body = append(body, &ast.RangeStmt{
+			Key:   ast.NewIdent("key"),
+			Value: ast.NewIdent("value"),
+			Tok:   token.DEFINE,
+			X:     ast.NewIdent("headers"),
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   ast.NewIdent("w"),
+										Sel: ast.NewIdent("Header"),
+									},
+									Args: []ast.Expr{},
+								},
+								Sel: ast.NewIdent("Set"),
+							},
+							Args: []ast.Expr{
+								ast.NewIdent("key"),
+								ast.NewIdent("value"),
+							},
+						},
+					},
+				},
+			},
+		})
+	}
+
+	/*
+		    err := json.NewEncoder(w).Encode(r.Body)
+			if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			return
+		}*/
+	if len(response.Value.Content) > 1 {
+		return errors.New("multiple responses are not supported")
+	}
+	for key, value := range response.Value.Content {
+		if key != applicationJSONCT {
+			return errors.New("only application/json content type is supported")
+		}
+		if value.Schema != nil {
+			h.AddImport("encoding/json")
+			body = append(body, &ast.AssignStmt{
+				Lhs: []ast.Expr{ast.NewIdent("err")},
+				Tok: token.ASSIGN,
+				Rhs: []ast.Expr{
+					&ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X:   ast.NewIdent("json"),
+									Sel: ast.NewIdent("NewEncoder"),
+								},
+								Args: []ast.Expr{ast.NewIdent("w")},
+							},
+							Sel: ast.NewIdent("Encode"),
+						},
+						Args: []ast.Expr{
+							&ast.SelectorExpr{
+								X:   ast.NewIdent("r"),
+								Sel: ast.NewIdent("Body"),
+							},
+						},
+					},
+				},
+			})
+			body = append(body, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent("err"),
+					Op: token.NEQ,
+					Y:  ast.NewIdent("nil"),
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ExprStmt{
+							X: &ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X:   ast.NewIdent("http"),
+									Sel: ast.NewIdent("Error"),
+								},
+								Args: []ast.Expr{
+									ast.NewIdent("w"),
+									&ast.BasicLit{
+										Kind:  token.STRING,
+										Value: `"InternalServerError"`,
+									},
+									&ast.SelectorExpr{
+										X:   ast.NewIdent("http"),
+										Sel: ast.NewIdent("StatusInternalServerError"),
+									},
+								},
+							},
+						},
+						&ast.ReturnStmt{},
+					},
+				},
+			})
+		}
+	}
+
+	if len(body) > 0 {
+		body = append([]ast.Stmt{&ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{ast.NewIdent("err")},
+						Type:  ast.NewIdent("error"),
+					},
+				},
+			},
+		}}, body...)
+	}
+
+	h.restDecls = append(h.restDecls, &ast.FuncDecl{
+		Name: ast.NewIdent("write" + baseName + code + "Response"),
+		Recv: &ast.FieldList{
+			List: []*ast.Field{{
+				Names: []*ast.Ident{ast.NewIdent("h")},
+				Type: &ast.StarExpr{
+					X: ast.NewIdent("Handler"),
+				},
+			}},
+		},
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{
+				List: []*ast.Field{{
+					Names: []*ast.Ident{ast.NewIdent("w")},
+					Type: &ast.SelectorExpr{
+						X:   ast.NewIdent("http"),
+						Sel: ast.NewIdent("ResponseWriter"),
+					},
+				}, {
+					Names: []*ast.Ident{ast.NewIdent("r")},
+					Type: &ast.StarExpr{
+						X: &ast.SelectorExpr{
+							X:   ast.NewIdent("models"),
+							Sel: ast.NewIdent(baseName + "Response" + code),
+						},
+					},
+				}},
+			},
+			Results: &ast.FieldList{},
+		},
+		Body: &ast.BlockStmt{
+			List: body,
+		},
+	})
+
+	/*func (h *Handler) WriteGetHelloJson200Response(w http.ResponseWriter, r *models.GetHelloJsonResponse200) {
+		if r.Body != nil {
+			if err := json.NewEncoder(w).Encode(r.Body); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+
+				return
+			}
+		}
+		if r.Headers != nil {
+			headers, err := r.Headers.Map()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			for key, value := range headers {
+				w.Header().Set(key, value)
+			}
+		}
+	}*/
+	return nil
 }
