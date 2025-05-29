@@ -1566,11 +1566,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, required bool)
 			},
 		},
 	})
-	/*	err = h.validator.Struct(body)
-		if err != nil {
-			return nil, err
-		}
-	*/
+
 	bodyList = append(bodyList, &ast.AssignStmt{
 		Lhs: []ast.Expr{ast.NewIdent("err")},
 		Tok: token.ASSIGN,

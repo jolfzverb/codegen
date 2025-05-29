@@ -14,10 +14,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Mock implementations of the handler interfaces
-type mockPostSessionNewJSONHandler struct{}
+type mockHandler struct{}
 
-func (m *mockPostSessionNewJSONHandler) HandlePostPathToParamResourseJSON(ctx context.Context, r *models.PostPathToParamResourseJSONRequest) (*models.PostPathToParamResourseJSONResponse, error) {
+func (m *mockHandler) HandlePostPathToParamResourseJSON(ctx context.Context, r *models.PostPathToParamResourseJSONRequest) (*models.PostPathToParamResourseJSONResponse, error) {
 	if r.Body.CodeForResponse != nil {
 		switch *r.Body.CodeForResponse {
 		case 400:
@@ -51,7 +50,7 @@ func (m *mockPostSessionNewJSONHandler) HandlePostPathToParamResourseJSON(ctx co
 func TestHandler(t *testing.T) {
 	router := chi.NewRouter()
 	handler := api.NewHandler(
-		&mockPostSessionNewJSONHandler{},
+		&mockHandler{},
 	)
 	handler.AddRoutes(router)
 
@@ -59,7 +58,6 @@ func TestHandler(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	// Test POST /session/new
 	t.Run("200 Success", func(t *testing.T) {
 		requestBody := `{"name": "value", "description": "descr"}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
