@@ -30,14 +30,12 @@ func GetModelName(yamlFilePath string) string {
 
 func Generate(ctx context.Context, yamlFilePath string, outputPathPrefix string, outputImportPrefix string) error {
 	const op = "generator.Generate"
-	// Open the file for reading
 	file, err := os.Open(yamlFilePath)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
 	defer file.Close()
 
-	// Use the file as an io.Reader
 	reader := io.Reader(file)
 
 	modelName := GetModelName(yamlFilePath)

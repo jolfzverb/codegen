@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
 )
 
@@ -24,6 +25,7 @@ type SchemaField struct {
 	Type        string
 	TagJSON     []string
 	TagValidate []string
+	Required    bool
 }
 
 func NewSchemasFile() *SchemasFile {
@@ -65,17 +67,26 @@ func (m *SchemasFile) AddSchema(model SchemaStruct) {
 		if len(tags) > 0 {
 			tags = "`" + tags + "`"
 		}
-
-		fieldList = append(fieldList, &ast.Field{
-			Names: []*ast.Ident{ast.NewIdent(field.Name)},
-			Type: &ast.StarExpr{
+		var typeExpr ast.Expr
+		if field.Required {
+			typeExpr = ast.NewIdent(field.Type)
+		} else {
+			typeExpr = &ast.StarExpr{
 				Star: token.NoPos,
 				X:    ast.NewIdent(field.Type),
-			},
-			Tag: &ast.BasicLit{
+			}
+		}
+		var tag *ast.BasicLit
+		if len(tags) > 0 {
+			tag = &ast.BasicLit{
 				Kind:  token.STRING,
 				Value: tags,
-			},
+			}
+		}
+		fieldList = append(fieldList, &ast.Field{
+			Names: []*ast.Ident{ast.NewIdent(field.Name)},
+			Type:  typeExpr,
+			Tag:   tag,
 		})
 	}
 
@@ -120,4 +131,56 @@ func (m *SchemasFile) AddSliceAlias(name string, typeName string) {
 			},
 		},
 	})
+}
+
+func (m *SchemasFile) AddParamsModel(baseName string, paramType string, params openapi3.Parameters) error {
+	fields := make([]SchemaField, 0, len(params))
+	for _, param := range params {
+		if !param.Value.Schema.Value.Type.Permits(openapi3.TypeString) {
+			return errors.New("only string type parameters are supported for " + paramType + " parameters")
+		}
+		field := SchemaField{
+			Name:    FormatGoLikeIdentifier(param.Value.Name),
+			Type:    "string",
+			TagJSON: []string{param.Value.Name},
+		}
+		if param.Value.Required {
+			field.TagValidate = append(field.TagValidate, "required")
+		}
+		fields = append(fields, field)
+	}
+
+	model := SchemaStruct{
+		Name:   baseName + paramType,
+		Fields: fields,
+	}
+	m.AddSchema(model)
+
+	return nil
+}
+
+func (m *SchemasFile) AddHeadersModel(baseName string, headers openapi3.Headers) error {
+	fields := make([]SchemaField, 0, len(headers))
+	for name, header := range headers {
+		if !header.Value.Schema.Value.Type.Permits(openapi3.TypeString) {
+			return errors.New("only string type parameters are supported for response headers")
+		}
+		field := SchemaField{
+			Name:    FormatGoLikeIdentifier(name),
+			Type:    "string",
+			TagJSON: []string{name},
+		}
+		if header.Value.Required {
+			field.TagValidate = append(field.TagValidate, "required")
+		}
+		fields = append(fields, field)
+	}
+
+	model := SchemaStruct{
+		Name:   baseName + "Headers",
+		Fields: fields,
+	}
+	m.AddSchema(model)
+
+	return nil
 }

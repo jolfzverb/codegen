@@ -676,9 +676,36 @@ info:
   title: API
   version: 1.0.0
 paths:
-  /example:
-    get:
+  /example/{param_name}:
+    post:
       summary: Example
+      parameters:
+        - name: param_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: param_name2
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: X-Header
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+              required:
+                - code
       responses:
         '200':
           description: OK
@@ -696,6 +723,43 @@ paths:
           description: OK
 `,
 			expectedModels: `package models
+
+type GetExample2JsonRequest struct {
+}
+type GetExample2JsonResponse200 struct {
+}
+type GetExample2JsonResponse struct {
+	StatusCode  int
+	Response200 *GetExample2JsonResponse200
+}
+type PostExampleParamNameJsonPathParams struct {
+	ParamName *string ` + "`json:\"param_name\" validate:\"required\"`" + `
+}
+type PostExampleParamNameJsonQueryParams struct {
+	ParamName2 *string ` + "`json:\"param_name2\" validate:\"required\"`" + `
+}
+type PostExampleParamNameJsonHeaders struct {
+	XHeader *string ` + "`json:\"X-Header\" validate:\"required\"`" + `
+}
+type PostExampleParamNameJsonRequestBody struct {
+	Code *string ` + "`json:\"code\" validate:\"required\"`" + `
+}
+type PostExampleParamNameJsonRequest struct {
+	Path    PostExampleParamNameJsonPathParams
+	Query   PostExampleParamNameJsonQueryParams
+	Headers PostExampleParamNameJsonHeaders
+	Body    PostExampleParamNameJsonRequestBody
+}
+type PostExampleParamNameJsonResponse200Headers struct {
+	XHeader *string ` + "`json:\"X-Header\" validate:\"required\"`" + `
+}
+type PostExampleParamNameJsonResponse200 struct {
+	Headers *PostExampleParamNameJsonResponse200Headers
+}
+type PostExampleParamNameJsonResponse struct {
+	StatusCode  int
+	Response200 *PostExampleParamNameJsonResponse200
+}
 `,
 			expectedHandlers: `package packagename
 
@@ -705,27 +769,31 @@ import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"net/http"
+	"github.com/go-faster/errors"
 	"encoding/json"
 )
 
 type GetExample2JsonHandler interface {
 	HandleGetExample2Json(ctx context.Context, r *models.GetExample2JsonRequest) (*models.GetExample2JsonResponse, error)
 }
-type GetExampleJsonHandler interface {
-	HandleGetExampleJson(ctx context.Context, r *models.GetExampleJsonRequest) (*models.GetExampleJsonResponse, error)
+type PostExampleParamNameJsonHandler interface {
+	HandlePostExampleParamNameJson(ctx context.Context, r *models.PostExampleParamNameJsonRequest) (*models.PostExampleParamNameJsonResponse, error)
 }
 type Handler struct {
-	validator       *validator.Validate
-	getExample2Json GetExample2JsonHandler
-	getExampleJson  GetExampleJsonHandler
+	validator                *validator.Validate
+	getExample2Json          GetExample2JsonHandler
+	postExampleParamNameJson PostExampleParamNameJsonHandler
 }
 
-func NewHandler(getExample2Json GetExample2JsonHandler, getExampleJson GetExampleJsonHandler) *Handler {
-	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), getExample2Json: getExample2Json, getExampleJson: getExampleJson}
+func NewHandler(getExample2Json GetExample2JsonHandler, postExampleParamNameJson PostExampleParamNameJsonHandler) *Handler {
+	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), getExample2Json: getExample2Json, postExampleParamNameJson: postExampleParamNameJson}
 }
 func (h *Handler) AddRoutes(router chi.Router) {
 	router.Get("/example2", h.handleGetExample2)
-	router.Get("/example", h.handleGetExample)
+	router.Post("/example/{param_name}", h.handlePostExampleParamName)
+}
+func (h *Handler) parseGetExample2JsonRequest(r *http.Request) (*models.GetExample2JsonRequest, error) {
+	return &models.GetExample2JsonRequest{}, nil
 }
 func (h *Handler) writeGetExample2Json200Response(w http.ResponseWriter, r *models.GetExample2JsonResponse200) {
 }
@@ -748,7 +816,7 @@ func (h *Handler) handleGetExample2Json(w http.ResponseWriter, r *http.Request) 
 	}
 	ctx := r.Context()
 	response, err := h.getExample2Json.HandleGetExample2Json(ctx, request)
-	if (err != nil) | (response == nil) {
+	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
 	}
@@ -768,7 +836,61 @@ func (h *Handler) handleGetExample2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func (h *Handler) writeGetExampleJson200Response(w http.ResponseWriter, r *models.GetExampleJsonResponse200) {
+func (h *Handler) parsePostExampleParamNameJsonPathParams(r *http.Request) (*models.PostExampleParamNameJsonPathParams, error) {
+	var pathParams models.PostExampleParamNameJsonPathParams
+	paramName := chi.URLParam(r, "param_name")
+	if paramName == "" {
+		return nil, errors.New("param_name is required in path parameters")
+	}
+	pathParams.ParamName = &paramName
+	return &pathParams, nil
+}
+func (h *Handler) parsePostExampleParamNameJsonQueryParams(r *http.Request) (*models.PostExampleParamNameJsonQueryParams, error) {
+	var queryParams models.PostExampleParamNameJsonQueryParams
+	paramName2 := r.URL.Query().Get("param_name2")
+	if paramName2 == "" {
+		return nil, errors.New("param_name2 is required in query parameters")
+	}
+	queryParams.ParamName2 = &paramName2
+	return &queryParams, nil
+}
+func (h *Handler) parsePostExampleParamNameJsonHeaders(r *http.Request) (*models.PostExampleParamNameJsonHeaders, error) {
+	var headers models.PostExampleParamNameJsonHeaders
+	xHeader := r.Header.Get("X-Header")
+	if xHeader == "" {
+		return nil, errors.New("X-Header is required in headers")
+	}
+	headers.XHeader = &xHeader
+	return &headers, nil
+}
+func (h *Handler) parsePostExampleParamNameJsonRequestBody(r *http.Request) (*models.PostExampleParamNameJsonRequestBody, error) {
+	var body models.PostExampleParamNameJsonRequestBody
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, err
+	}
+	return &body, nil
+}
+func (h *Handler) parsePostExampleParamNameJsonRequest(r *http.Request) (*models.PostExampleParamNameJsonRequest, error) {
+	pathParams, err := h.parsePostExampleParamNameJsonPathParams(r)
+	if err != nil {
+		return nil, err
+	}
+	queryParams, err := h.parsePostExampleParamNameJsonQueryParams(r)
+	if err != nil {
+		return nil, err
+	}
+	headers, err := h.parsePostExampleParamNameJsonHeaders(r)
+	if err != nil {
+		return nil, err
+	}
+	body, err := h.parsePostExampleParamNameJsonRequestBody(r)
+	if err != nil {
+		return nil, err
+	}
+	return &models.PostExampleParamNameJsonRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Body: *body}, nil
+}
+func (h *Handler) writePostExampleParamNameJson200Response(w http.ResponseWriter, r *models.PostExampleParamNameJsonResponse200) {
 	var err error
 	headersJSON, err := json.Marshal(h)
 	if err != nil {
@@ -785,39 +907,39 @@ func (h *Handler) writeGetExampleJson200Response(w http.ResponseWriter, r *model
 		w.Header().Set(key, value)
 	}
 }
-func (h *Handler) writeGetExampleJsonResponse(w http.ResponseWriter, response *models.GetExampleJsonResponse) {
+func (h *Handler) writePostExampleParamNameJsonResponse(w http.ResponseWriter, response *models.PostExampleParamNameJsonResponse) {
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
 			http.Error(w, "InternalServerError", http.StatusInternalServerError)
 			return
 		}
-		h.writeGetExampleJson200Response(w, response.Response200)
+		h.writePostExampleParamNameJson200Response(w, response.Response200)
 	}
 	w.WriteHeader(response.StatusCode)
 }
-func (h *Handler) handleGetExampleJson(w http.ResponseWriter, r *http.Request) {
-	request, err := h.parseGetExampleJsonRequest(r)
+func (h *Handler) handlePostExampleParamNameJson(w http.ResponseWriter, r *http.Request) {
+	request, err := h.parsePostExampleParamNameJsonRequest(r)
 	if err != nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
 	}
 	ctx := r.Context()
-	response, err := h.getExampleJson.HandleGetExampleJson(ctx, request)
-	if (err != nil) | (response == nil) {
+	response, err := h.postExampleParamNameJson.HandlePostExampleParamNameJson(ctx, request)
+	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
 	}
-	h.writeGetExampleJsonResponse(w, response)
+	h.writePostExampleParamNameJsonResponse(w, response)
 	return
 }
-func (h *Handler) handleGetExample(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handlePostExampleParamName(w http.ResponseWriter, r *http.Request) {
 	switch r.Header.Get("Content-Type") {
 	case "application/json":
-		h.handleGetExampleJson(w, r)
+		h.handlePostExampleParamNameJson(w, r)
 		return
 	case "":
-		h.handleGetExampleJson(w, r)
+		h.handlePostExampleParamNameJson(w, r)
 		return
 	default:
 		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
