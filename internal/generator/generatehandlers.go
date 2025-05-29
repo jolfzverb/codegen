@@ -223,19 +223,17 @@ func (g *Generator) ProcessApplicationJSONOperation(pathName string, method stri
 	g.AddInterface(handlerBaseName + suffix)
 	g.AddDependencyToHandler(handlerBaseName + suffix)
 	g.AddRoute(handlerBaseName, method, pathName)
-	// add parse params method
 	err = g.AddParseParamsMethods(handlerBaseName+suffix, contentType, operation)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	// add handlejson method
 	err = g.AddWriteResponseMethod(handlerBaseName+suffix, operation)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
 	g.AddHandleOperationMethod(handlerBaseName + suffix)
 	g.AddContentTypeToHandler(handlerBaseName, contentType, suffix)
-	// add response model to models
+
 	return nil
 }
 

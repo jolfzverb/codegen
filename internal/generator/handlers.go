@@ -170,26 +170,15 @@ func (h *HandlersFile) InitRoutesFunc() {
 }
 
 func (h *HandlersFile) InitFields(packageName string, modelsImportPath string) {
-	// package
 	h.packageName = ast.NewIdent(packageName)
 
-	// imports
 	h.InitImports(modelsImportPath)
 
-	// list of interfaces
-
-	// handler
 	h.InitHandlerStruct()
 
-	// handler constructor
 	h.InitHandlerConstructor()
 
-	// add routes func
 	h.InitRoutesFunc()
-
-	// parse functions
-	// handle functions
-	// handle by content type
 }
 
 func NewHandlersFile(packageName string, modelsImportPath string) *HandlersFile {
@@ -1222,7 +1211,6 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
 			continue
 		}
-		// 	queryParam := r.URL.Query().Get("query_param")
 
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
 		bodyList = append(bodyList, &ast.AssignStmt{
