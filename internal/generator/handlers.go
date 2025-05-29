@@ -554,13 +554,16 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 									},
 									Args: []ast.Expr{
 										ast.NewIdent("w"),
-										&ast.BasicLit{
-											Kind:  token.STRING,
-											Value: `"InternalServerError"`,
+										&ast.CallExpr{
+											Fun: &ast.SelectorExpr{
+												X:   ast.NewIdent("err"),
+												Sel: ast.NewIdent("Error"),
+											},
+											Args: []ast.Expr{},
 										},
 										&ast.SelectorExpr{
 											X:   ast.NewIdent("http"),
-											Sel: ast.NewIdent("StatusInternalServerError"),
+											Sel: ast.NewIdent("StatusBadRequest"),
 										},
 									},
 								},
@@ -806,7 +809,10 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 						Sel: ast.NewIdent("Marshal"),
 					},
 					Args: []ast.Expr{
-						ast.NewIdent("h"),
+						&ast.SelectorExpr{
+							X:   ast.NewIdent("r"),
+							Sel: ast.NewIdent("Headers"),
+						},
 					},
 				},
 			},
@@ -1554,7 +1560,46 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, required bool)
 			},
 		},
 	})
-
+	/*	err = h.validator.Struct(body)
+		if err != nil {
+			return nil, err
+		}
+	*/
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("err")},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.SelectorExpr{
+						X:   ast.NewIdent("h"),
+						Sel: ast.NewIdent("validator"),
+					},
+					Sel: ast.NewIdent("Struct"),
+				},
+				Args: []ast.Expr{
+					ast.NewIdent("body"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						ast.NewIdent("nil"),
+						ast.NewIdent("err"),
+					},
+				},
+			},
+		},
+	})
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
 			Results: []ast.Expr{

@@ -1,0 +1,51 @@
+package models
+
+type NewResourseResponse struct {
+	Count       *string `json:"count" validate:"required"`
+	Description *string `json:"description,omitempty" validate:"omitempty"`
+	Name        *string `json:"name" validate:"required"`
+	Param       *string `json:"param" validate:"required"`
+}
+type PostPathToParamResourseJSONPathParams struct {
+	Param *string `json:"param" validate:"required"`
+}
+type PostPathToParamResourseJSONQueryParams struct {
+	Count *string `json:"count" validate:"required"`
+}
+type PostPathToParamResourseJSONHeaders struct {
+	IdempotencyKey *string `json:"Idempotency-Key" validate:"required"`
+}
+type PostPathToParamResourseJSONRequestBody struct {
+	CodeForResponse *int    `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
+	Description     *string `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
+	Name            *string `json:"name" validate:"required,min=1,max=10"`
+}
+type PostPathToParamResourseJSONRequest struct {
+	Path    PostPathToParamResourseJSONPathParams
+	Query   PostPathToParamResourseJSONQueryParams
+	Headers PostPathToParamResourseJSONHeaders
+	Body    PostPathToParamResourseJSONRequestBody
+}
+type PostPathToParamResourseJSONResponse200Body struct {
+	Count       *string `json:"count" validate:"required"`
+	Description *string `json:"description,omitempty" validate:"omitempty"`
+	Name        *string `json:"name" validate:"required"`
+	Param       *string `json:"param" validate:"required"`
+}
+type PostPathToParamResourseJSONResponse200Headers struct {
+	IdempotencyKey *string `json:"Idempotency-Key"`
+}
+type PostPathToParamResourseJSONResponse200 struct {
+	Body    PostPathToParamResourseJSONResponse200Body
+	Headers *PostPathToParamResourseJSONResponse200Headers
+}
+type PostPathToParamResourseJSONResponse400 struct {
+}
+type PostPathToParamResourseJSONResponse404 struct {
+}
+type PostPathToParamResourseJSONResponse struct {
+	StatusCode  int
+	Response200 *PostPathToParamResourseJSONResponse200
+	Response400 *PostPathToParamResourseJSONResponse400
+	Response404 *PostPathToParamResourseJSONResponse404
+}
