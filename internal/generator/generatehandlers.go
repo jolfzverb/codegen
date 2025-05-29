@@ -36,17 +36,173 @@ func (g *Generator) AddHandleOperationMethod(baseName string) {
 	g.HandlersFile.AddHandleOperationMethod(baseName)
 }
 
+func (g *Generator) AddResponseCodeModels(baseName string, code string, response *openapi3.ResponseRef) error {
+	const op = "generator.AddResponseCodeModels"
+	if len(response.Value.Content) > 1 {
+		return errors.New("multiple response content types are not supported")
+	}
+	model := SchemaStruct{
+		Name:   baseName + "Response" + code,
+		Fields: []SchemaField{},
+	}
+	for _, content := range response.Value.Content {
+		if content.Schema != nil {
+			err := g.ProcessObjectSchema(baseName+"Response"+code+"Body", content.Schema)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
+			model.Fields = append(model.Fields, SchemaField{
+				Name:        "Body",
+				Type:        baseName + "Response" + code + "Body",
+				TagJSON:     []string{},
+				TagValidate: []string{},
+				Required:    true,
+			})
+		}
+	}
+	if len(response.Value.Headers) > 0 {
+		err := g.SchemasFile.AddHeadersModel(baseName+"Response"+code, response.Value.Headers)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		model.Fields = append(model.Fields, SchemaField{
+			Name: "Headers",
+			Type: baseName + "Response" + code + "Headers",
+		})
+	}
+	g.SchemasFile.AddSchema(model)
+
+	return nil
+}
+
+func (g *Generator) AddResponseModel(baseName string, responseCodes []string) {
+	model := SchemaStruct{
+		Name: baseName + "Response",
+		Fields: []SchemaField{
+			{
+				Name:     "StatusCode",
+				Type:     "int",
+				Required: true,
+			},
+		},
+	}
+	for _, code := range responseCodes {
+		field := SchemaField{
+			Name: "Response" + code,
+			Type: baseName + "Response" + code,
+		}
+		model.Fields = append(model.Fields, field)
+	}
+	g.SchemasFile.AddSchema(model)
+}
+
 func (g *Generator) AddWriteResponseMethod(baseName string, operation *openapi3.Operation) error {
 	const op = "generator.AddWriteResponseMethod"
+	var err error
 	codes := make([]string, 0, len(operation.Responses.Map()))
-	for code, response := range operation.Responses.Map() {
-		err := g.HandlersFile.AddWriteResponseCode(baseName, code, response)
+	keys := make([]string, 0, len(operation.Responses.Map()))
+	for code := range operation.Responses.Map() {
+		keys = append(keys, code)
+	}
+	sort.Strings(keys)
+	for _, code := range keys {
+		response := operation.Responses.Value(code)
+		err = g.AddResponseCodeModels(baseName, code, response)
+		if err != nil {
+			return errors.Wrapf(err, op)
+		}
+		err = g.HandlersFile.AddWriteResponseCode(baseName, code, response)
 		if err != nil {
 			return errors.Wrapf(err, op)
 		}
 		codes = append(codes, code)
 	}
 	g.HandlersFile.AddWriteResponseMethod(baseName, codes)
+	g.AddResponseModel(baseName, keys)
+
+	return nil
+}
+
+func (g *Generator) GetOperationParamsByType(operation *openapi3.Operation, paramIn string) openapi3.Parameters {
+	var result openapi3.Parameters
+	for _, p := range operation.Parameters {
+		if p.Value.In == paramIn {
+			result = append(result, p)
+		}
+	}
+
+	return result
+}
+
+func (g *Generator) AddParseParamsMethods(baseName string, contentType string, operation *openapi3.Operation) error {
+	const op = "generator.AddParseParamsMethods"
+	var err error
+
+	pathParams := g.GetOperationParamsByType(operation, openapi3.ParameterInPath)
+	if len(pathParams) > 0 {
+		err = g.SchemasFile.AddParamsModel(baseName, "PathParams", pathParams)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		err = g.HandlersFile.AddParsePathParamsMethod(baseName, pathParams)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+	}
+	queryParams := g.GetOperationParamsByType(operation, openapi3.ParameterInQuery)
+	if len(queryParams) > 0 {
+		err = g.SchemasFile.AddParamsModel(baseName, "QueryParams", queryParams)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		err = g.HandlersFile.AddParseQueryParamsMethod(baseName, queryParams)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+	}
+	headerParams := g.GetOperationParamsByType(operation, openapi3.ParameterInHeader)
+	if len(headerParams) > 0 {
+		err = g.SchemasFile.AddParamsModel(baseName, "Headers", headerParams)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		err = g.HandlersFile.AddParseHeadersMethod(baseName, headerParams)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+	}
+	cookieParams := g.GetOperationParamsByType(operation, openapi3.ParameterInCookie)
+	if len(cookieParams) > 0 {
+		return errors.New("cookie parameters are not supported yet")
+		// g.HandlersFile.AddParseCookieParamsMethod(baseName, cookieParams)
+	}
+	hasBody := false
+	bodyRequired := false
+	if operation.RequestBody != nil && operation.RequestBody.Value != nil {
+		content, ok := operation.RequestBody.Value.Content[contentType]
+		if ok && content.Schema != nil {
+			err = g.ProcessObjectSchema(baseName+"RequestBody", content.Schema)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
+			err = g.HandlersFile.AddParseRequestBodyMethod(baseName, operation.RequestBody.Value.Required)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
+			hasBody = true
+			bodyRequired = operation.RequestBody.Value.Required
+		}
+	}
+	detectedParams := DetectedParams{
+		len(pathParams) > 0,
+		len(queryParams) > 0,
+		len(headerParams) > 0,
+		len(cookieParams) > 0,
+		hasBody,
+		bodyRequired,
+	}
+	g.HandlersFile.AddParseRequestMethod(baseName, detectedParams)
+	g.GenerateRequestModel(baseName, detectedParams)
 
 	return nil
 }
@@ -67,25 +223,18 @@ func (g *Generator) ProcessApplicationJSONOperation(pathName string, method stri
 	g.AddInterface(handlerBaseName + suffix)
 	g.AddDependencyToHandler(handlerBaseName + suffix)
 	g.AddRoute(handlerBaseName, method, pathName)
-	// if path params add ParsePathParams method
-	// if query params add ParseQueryParams method
-	// if header params add ParseHeaderParams method
-	// if cookie params add ParseCookieParams method
-	// if request body add ParseRequestBody method
 	// add parse params method
+	err = g.AddParseParamsMethods(handlerBaseName+suffix, contentType, operation)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
 	// add handlejson method
 	err = g.AddWriteResponseMethod(handlerBaseName+suffix, operation)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
 	g.AddHandleOperationMethod(handlerBaseName + suffix)
-	// add/modify handle method
 	g.AddContentTypeToHandler(handlerBaseName, contentType, suffix)
-	// add path params model to models
-	// add query params model to models
-	// add header params model to models
-	// add cookie params model to models
-	// add request body model to models
 	// add response model to models
 	return nil
 }

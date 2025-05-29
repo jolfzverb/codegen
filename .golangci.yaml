@@ -17,7 +17,6 @@ linters:
     - copyloopvar
     - decorder
     - dogsled
-    - dupl
     - dupword
     - durationcheck
     - err113
@@ -101,6 +100,8 @@ linters:
     - tagliatelle
     - varnamelen
     - wsl
+    - dupl
+    - lll
   settings:
     nlreturn:
       block-size: 2

@@ -65,6 +65,9 @@ func GoIdentLowercase(name string) string {
 }
 
 func FormatGoLikeIdentifier(name string) string {
+	name = strings.ReplaceAll(name, "{", "")
+	name = strings.ReplaceAll(name, "}", "")
+
 	items := strings.Split(name, "/")
 	items2 := make([]string, 0, len(items))
 	for _, item := range items {
@@ -82,7 +85,6 @@ func FormatGoLikeIdentifier(name string) string {
 	for _, item := range items3 {
 		if commonInitialisms[upperCaser.String(item)] {
 			result = append(result, upperCaser.String(item))
-
 			continue
 		}
 
