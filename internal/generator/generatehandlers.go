@@ -214,10 +214,11 @@ func (g *Generator) ProcessApplicationJSONOperation(pathName string, method stri
 	if contentType == "" {
 		contentType = applicationJSONCT
 	}
-	suffix, err := NameSuffixFromContentType(contentType)
+	rawSuffix, err := NameSuffixFromContentType(contentType)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
+	suffix := FormatGoLikeIdentifier(rawSuffix)
 	handlerBaseName := FormatGoLikeIdentifier(method) + FormatGoLikeIdentifier(pathName)
 
 	g.AddInterface(handlerBaseName + suffix)

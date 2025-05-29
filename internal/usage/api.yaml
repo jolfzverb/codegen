@@ -1,0 +1,80 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+
+paths:
+  /path/to/{param}/resourse:
+    post:
+      summary: Create new resource
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema:
+            type: string
+          required: true
+        - name: param
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: count
+          in: query
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 10
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 10
+                code_for_response:
+                  type: integer
+                  minimum: 100
+                  maximum: 999
+              required:
+                - name
+      responses:
+        '200':
+          description: Resource created successfully
+          headers:
+            Idempotency-Key:
+              description: Idempotency key from request
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewResourseResponse'       
+        '400':
+          description: Bad request
+        '404':
+          description: Not found
+components:
+  schemas:
+    NewResourseResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        param:
+          type: string
+        count:
+          type: string
+      required:
+        - name
+        - param
+        - count
+        

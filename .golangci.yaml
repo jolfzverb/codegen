@@ -112,6 +112,8 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
+    paths-except:
+      - "internal/usage/generated/*"
 
 formatters:
   enable:
