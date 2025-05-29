@@ -6,15 +6,17 @@ import (
 	"go/format"
 	"go/token"
 	"io"
+	"sort"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
 )
 
 type HandlersFile struct {
+	importPrefix   string
 	packageName    *ast.Ident
-	packageImports []*ast.ImportSpec
-	importDecl     *ast.GenDecl
+	packageImports []string
 	interfaceDecls []*ast.GenDecl
 
 	handlerDecl            *ast.GenDecl
@@ -30,19 +32,7 @@ type HandlersFile struct {
 }
 
 func (h *HandlersFile) InitImports(modelsImportPath string) {
-	importSpec := &ast.ImportSpec{
-		Path: &ast.BasicLit{
-			Kind:  token.STRING,
-			Value: fmt.Sprintf("%q", "github.com/go-playground/validator/v10"),
-		},
-	}
-	importDecl := &ast.GenDecl{
-		Tok:   token.IMPORT,
-		Specs: []ast.Spec{importSpec},
-	}
-	h.importDecl = importDecl
-	h.packageImports = append(h.packageImports, importSpec)
-
+	h.AddImport("github.com/go-playground/validator/v10")
 	h.AddImport(modelsImportPath)
 	h.AddImport("context")
 	h.AddImport("github.com/go-chi/chi/v5")
@@ -181,8 +171,8 @@ func (h *HandlersFile) InitFields(packageName string, modelsImportPath string) {
 	h.InitRoutesFunc()
 }
 
-func NewHandlersFile(packageName string, modelsImportPath string) *HandlersFile {
-	h := &HandlersFile{}
+func NewHandlersFile(packageName string, importPrefix string, modelsImportPath string) *HandlersFile {
+	h := &HandlersFile{importPrefix: importPrefix}
 	h.InitFields(packageName, modelsImportPath)
 
 	return h
@@ -282,29 +272,91 @@ func (h *HandlersFile) AddDependencyToHandler(baseName string) {
 
 func (h *HandlersFile) AddImport(path string) {
 	for _, imp := range h.packageImports {
-		if imp.Path.Value == fmt.Sprintf("%q", path) {
+		if imp == path {
 			return
 		}
 	}
-	imp := &ast.ImportSpec{
-		Path: &ast.BasicLit{
-			Kind:  token.STRING,
-			Value: fmt.Sprintf("%q", path),
-		},
+	h.packageImports = append(h.packageImports, path)
+}
+
+func (h *HandlersFile) GenerateImportsSpecs(imp []string) ([]*ast.ImportSpec, []ast.Spec) {
+	var systemImports []string //nolint:prealloc
+	var libImports []string
+	var myImports []string
+	for _, path := range imp {
+		if strings.HasPrefix(path, h.importPrefix) {
+			myImports = append(myImports, path)
+
+			continue
+		}
+		prefix := strings.SplitN(path, "/", 2)[0] //nolint:mnd
+		if strings.Contains(prefix, ".") {
+			libImports = append(libImports, path)
+
+			continue
+		}
+		systemImports = append(systemImports, path)
 	}
-	h.packageImports = append(h.packageImports, imp)
-	h.importDecl.Specs = append(h.importDecl.Specs, imp)
+
+	sort.Strings(systemImports)
+	sort.Strings(libImports)
+	sort.Strings(myImports)
+
+	specs := make([]*ast.ImportSpec, 0, len(imp))
+	for _, path := range systemImports {
+		specs = append(specs, &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", path),
+			},
+		})
+	}
+
+	// Add a space to separate system and library imports
+	// but go/ast is too great for that
+	for _, path := range libImports {
+		specs = append(specs, &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", path),
+			},
+		})
+	}
+
+	// Add a space to separate library and user imports
+	// but go/ast is too great for that
+	for _, path := range myImports {
+		specs = append(specs, &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", path),
+			},
+		})
+	}
+
+	declSpecs := make([]ast.Spec, 0, len(specs))
+	for _, spec := range specs {
+		declSpecs = append(declSpecs, spec)
+	}
+
+	return specs, declSpecs
 }
 
 func (h *HandlersFile) GenerateFile() *ast.File {
+	importSpecs, declSpecs := h.GenerateImportsSpecs(h.packageImports)
+
 	h.FinalizeHandlerSwitches()
+
 	file := &ast.File{
 		Name:    h.packageName,
 		Decls:   []ast.Decl{},
-		Imports: h.packageImports,
+		Imports: importSpecs,
 	}
 
-	file.Decls = append(file.Decls, h.importDecl)
+	file.Decls = append(file.Decls, &ast.GenDecl{
+		Tok:   token.IMPORT,
+		Specs: declSpecs,
+	})
 	for _, d := range h.interfaceDecls {
 		file.Decls = append(file.Decls, d)
 	}

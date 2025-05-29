@@ -3,13 +3,13 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
 	"github.com/jolfzverb/codegen/internal/usage/generated/api/models"
-	"context"
-	"github.com/go-chi/chi/v5"
-	"net/http"
-	"github.com/go-faster/errors"
-	"encoding/json"
 )
 
 type PostPathToParamResourseJSONHandler interface {

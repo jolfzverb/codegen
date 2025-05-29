@@ -818,13 +818,13 @@ type PostExampleParamNameJSONResponse struct {
 package packagename
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
 	"imports/models"
-	"context"
-	"github.com/go-chi/chi/v5"
-	"net/http"
-	"github.com/go-faster/errors"
-	"encoding/json"
 )
 
 type GetExample2JSONHandler interface {
