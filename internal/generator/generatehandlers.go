@@ -47,7 +47,7 @@ func (g *Generator) AddResponseCodeModels(baseName string, code string, response
 	}
 	for _, content := range response.Value.Content {
 		if content.Schema != nil {
-			err := g.ProcessObjectSchema(baseName+"Response"+code+"Body", content.Schema)
+			err := g.SchemasFile.ProcessObjectSchema(baseName+"Response"+code+"Body", content.Schema)
 			if err != nil {
 				return errors.Wrap(err, op)
 			}
@@ -181,7 +181,7 @@ func (g *Generator) AddParseParamsMethods(baseName string, contentType string, o
 	if operation.RequestBody != nil && operation.RequestBody.Value != nil {
 		content, ok := operation.RequestBody.Value.Content[contentType]
 		if ok && content.Schema != nil {
-			err = g.ProcessObjectSchema(baseName+"RequestBody", content.Schema)
+			err = g.SchemasFile.ProcessObjectSchema(baseName+"RequestBody", content.Schema)
 			if err != nil {
 				return errors.Wrap(err, op)
 			}

@@ -42,6 +42,9 @@ paths:
                   type: integer
                   minimum: 100
                   maximum: 999
+                date:
+                  type: string
+                  format: date-time
               required:
                 - name
       responses:
@@ -73,6 +76,9 @@ components:
           type: string
         count:
           type: string
+        date:
+          type: string
+          format: date-time
       required:
         - name
         - param

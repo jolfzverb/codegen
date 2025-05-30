@@ -2,11 +2,14 @@
 
 package models
 
+import "time"
+
 type NewResourseResponse struct {
-	Count       *string `json:"count" validate:"required"`
-	Description *string `json:"description,omitempty" validate:"omitempty"`
-	Name        *string `json:"name" validate:"required"`
-	Param       *string `json:"param" validate:"required"`
+	Count       *string    `json:"count" validate:"required"`
+	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
+	Description *string    `json:"description,omitempty" validate:"omitempty"`
+	Name        *string    `json:"name" validate:"required"`
+	Param       *string    `json:"param" validate:"required"`
 }
 type PostPathToParamResourseJSONPathParams struct {
 	Param *string `json:"param" validate:"required"`
@@ -18,9 +21,10 @@ type PostPathToParamResourseJSONHeaders struct {
 	IdempotencyKey *string `json:"Idempotency-Key" validate:"required"`
 }
 type PostPathToParamResourseJSONRequestBody struct {
-	CodeForResponse *int    `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
-	Description     *string `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
-	Name            *string `json:"name" validate:"required,min=1,max=10"`
+	CodeForResponse *int       `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
+	Date            *time.Time `json:"date,omitempty" validate:"omitempty"`
+	Description     *string    `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
+	Name            *string    `json:"name" validate:"required,min=1,max=10"`
 }
 type PostPathToParamResourseJSONRequest struct {
 	Path    PostPathToParamResourseJSONPathParams
@@ -29,10 +33,11 @@ type PostPathToParamResourseJSONRequest struct {
 	Body    PostPathToParamResourseJSONRequestBody
 }
 type PostPathToParamResourseJSONResponse200Body struct {
-	Count       *string `json:"count" validate:"required"`
-	Description *string `json:"description,omitempty" validate:"omitempty"`
-	Name        *string `json:"name" validate:"required"`
-	Param       *string `json:"param" validate:"required"`
+	Count       *string    `json:"count" validate:"required"`
+	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
+	Description *string    `json:"description,omitempty" validate:"omitempty"`
+	Name        *string    `json:"name" validate:"required"`
+	Param       *string    `json:"param" validate:"required"`
 }
 type PostPathToParamResourseJSONResponse200Headers struct {
 	IdempotencyKey *string `json:"Idempotency-Key"`
