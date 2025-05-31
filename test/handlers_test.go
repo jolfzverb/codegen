@@ -17,18 +17,18 @@ import (
 
 type mockHandler struct{}
 
-func (m *mockHandler) HandlePostPathToParamResourseJSON(ctx context.Context, r *models.PostPathToParamResourseJSONRequest) (*models.PostPathToParamResourseJSONResponse, error) {
+func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSONRequest) (*models.CreateJSONResponse, error) {
 	if r.Body.CodeForResponse != nil {
 		switch *r.Body.CodeForResponse {
 		case 400:
-			return &models.PostPathToParamResourseJSONResponse{
+			return &models.CreateJSONResponse{
 				StatusCode:  400,
-				Response400: &models.PostPathToParamResourseJSONResponse400{},
+				Response400: &models.CreateJSONResponse400{},
 			}, nil
 		case 404:
-			return &models.PostPathToParamResourseJSONResponse{
+			return &models.CreateJSONResponse{
 				StatusCode:  404,
-				Response404: &models.PostPathToParamResourseJSONResponse404{},
+				Response404: &models.CreateJSONResponse404{},
 			}, nil
 		}
 	}
@@ -42,9 +42,9 @@ func (m *mockHandler) HandlePostPathToParamResourseJSON(ctx context.Context, r *
 		date2 = new(time.Time)
 		*date2 = r.Headers.OptionalHeader.UTC()
 	}
-	return &models.PostPathToParamResourseJSONResponse{
+	return &models.CreateJSONResponse{
 		StatusCode: 200,
-		Response200: &models.PostPathToParamResourseJSONResponse200{
+		Response200: &models.CreateJSONResponse200{
 			Body: models.NewResourseResponse{
 				Count:       r.Query.Count,
 				Description: r.Body.Description,
@@ -54,7 +54,7 @@ func (m *mockHandler) HandlePostPathToParamResourseJSON(ctx context.Context, r *
 				Date2:       date2,
 				EnumVal:     r.Body.EnumVal,
 			},
-			Headers: &models.PostPathToParamResourseJSONResponse200Headers{
+			Headers: &models.CreateJSONResponse200Headers{
 				IdempotencyKey: r.Headers.IdempotencyKey,
 			},
 		},

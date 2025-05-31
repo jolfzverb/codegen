@@ -6,6 +6,7 @@ info:
 paths:
   /path/to/{param}/resourse:
     post:
+      operationId: create
       summary: Create new resource
       parameters:
         - name: Idempotency-Key

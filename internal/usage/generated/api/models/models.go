@@ -13,43 +13,43 @@ type NewResourseResponse struct {
 	Name        *string    `json:"name" validate:"required"`
 	Param       *string    `json:"param" validate:"required"`
 }
-type PostPathToParamResourseJSONPathParams struct {
+type CreateJSONPathParams struct {
 	Param *string `json:"param" validate:"required"`
 }
-type PostPathToParamResourseJSONQueryParams struct {
+type CreateJSONQueryParams struct {
 	Count *string `json:"count" validate:"required"`
 }
-type PostPathToParamResourseJSONHeaders struct {
+type CreateJSONHeaders struct {
 	IdempotencyKey *string    `json:"Idempotency-Key" validate:"required"`
 	OptionalHeader *time.Time `json:"Optional-Header,omitempty" validate:"omitempty"`
 }
-type PostPathToParamResourseJSONRequestBody struct {
+type CreateJSONRequestBody struct {
 	CodeForResponse *int       `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
 	Date            *time.Time `json:"date,omitempty" validate:"omitempty"`
 	Description     *string    `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
 	EnumVal         *string    `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
 	Name            *string    `json:"name" validate:"required,min=1,max=10"`
 }
-type PostPathToParamResourseJSONRequest struct {
-	Path    PostPathToParamResourseJSONPathParams
-	Query   PostPathToParamResourseJSONQueryParams
-	Headers PostPathToParamResourseJSONHeaders
-	Body    PostPathToParamResourseJSONRequestBody
+type CreateJSONRequest struct {
+	Path    CreateJSONPathParams
+	Query   CreateJSONQueryParams
+	Headers CreateJSONHeaders
+	Body    CreateJSONRequestBody
 }
-type PostPathToParamResourseJSONResponse200Headers struct {
+type CreateJSONResponse200Headers struct {
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty" validate:"omitempty"`
 }
-type PostPathToParamResourseJSONResponse200 struct {
+type CreateJSONResponse200 struct {
 	Body    NewResourseResponse
-	Headers *PostPathToParamResourseJSONResponse200Headers
+	Headers *CreateJSONResponse200Headers
 }
-type PostPathToParamResourseJSONResponse400 struct {
+type CreateJSONResponse400 struct {
 }
-type PostPathToParamResourseJSONResponse404 struct {
+type CreateJSONResponse404 struct {
 }
-type PostPathToParamResourseJSONResponse struct {
+type CreateJSONResponse struct {
 	StatusCode  int
-	Response200 *PostPathToParamResourseJSONResponse200
-	Response400 *PostPathToParamResourseJSONResponse400
-	Response404 *PostPathToParamResourseJSONResponse404
+	Response200 *CreateJSONResponse200
+	Response400 *CreateJSONResponse400
+	Response404 *CreateJSONResponse404
 }

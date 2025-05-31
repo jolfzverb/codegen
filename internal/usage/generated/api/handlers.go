@@ -13,22 +13,22 @@ import (
 	"github.com/jolfzverb/codegen/internal/usage/generated/api/models"
 )
 
-type PostPathToParamResourseJSONHandler interface {
-	HandlePostPathToParamResourseJSON(ctx context.Context, r *models.PostPathToParamResourseJSONRequest) (*models.PostPathToParamResourseJSONResponse, error)
+type CreateJSONHandler interface {
+	HandleCreateJSON(ctx context.Context, r *models.CreateJSONRequest) (*models.CreateJSONResponse, error)
 }
 type Handler struct {
-	validator                   *validator.Validate
-	postPathToParamResourseJSON PostPathToParamResourseJSONHandler
+	validator  *validator.Validate
+	createJSON CreateJSONHandler
 }
 
-func NewHandler(postPathToParamResourseJSON PostPathToParamResourseJSONHandler) *Handler {
-	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), postPathToParamResourseJSON: postPathToParamResourseJSON}
+func NewHandler(createJSON CreateJSONHandler) *Handler {
+	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), createJSON: createJSON}
 }
 func (h *Handler) AddRoutes(router chi.Router) {
-	router.Post("/path/to/{param}/resourse", h.handlePostPathToParamResourse)
+	router.Post("/path/to/{param}/resourse", h.handleCreate)
 }
-func (h *Handler) parsePostPathToParamResourseJSONPathParams(r *http.Request) (*models.PostPathToParamResourseJSONPathParams, error) {
-	var pathParams models.PostPathToParamResourseJSONPathParams
+func (h *Handler) parseCreateJSONPathParams(r *http.Request) (*models.CreateJSONPathParams, error) {
+	var pathParams models.CreateJSONPathParams
 	param := chi.URLParam(r, "param")
 	if param == "" {
 		return nil, errors.New("param path param is required")
@@ -36,8 +36,8 @@ func (h *Handler) parsePostPathToParamResourseJSONPathParams(r *http.Request) (*
 	pathParams.Param = &param
 	return &pathParams, nil
 }
-func (h *Handler) parsePostPathToParamResourseJSONQueryParams(r *http.Request) (*models.PostPathToParamResourseJSONQueryParams, error) {
-	var queryParams models.PostPathToParamResourseJSONQueryParams
+func (h *Handler) parseCreateJSONQueryParams(r *http.Request) (*models.CreateJSONQueryParams, error) {
+	var queryParams models.CreateJSONQueryParams
 	count := r.URL.Query().Get("count")
 	if count == "" {
 		return nil, errors.New("count query param is required")
@@ -45,8 +45,8 @@ func (h *Handler) parsePostPathToParamResourseJSONQueryParams(r *http.Request) (
 	queryParams.Count = &count
 	return &queryParams, nil
 }
-func (h *Handler) parsePostPathToParamResourseJSONHeaders(r *http.Request) (*models.PostPathToParamResourseJSONHeaders, error) {
-	var headers models.PostPathToParamResourseJSONHeaders
+func (h *Handler) parseCreateJSONHeaders(r *http.Request) (*models.CreateJSONHeaders, error) {
+	var headers models.CreateJSONHeaders
 	idempotencyKey := r.Header.Get("Idempotency-Key")
 	if idempotencyKey == "" {
 		return nil, errors.New("Idempotency-Key header is required")
@@ -62,8 +62,8 @@ func (h *Handler) parsePostPathToParamResourseJSONHeaders(r *http.Request) (*mod
 	}
 	return &headers, nil
 }
-func (h *Handler) parsePostPathToParamResourseJSONRequestBody(r *http.Request) (*models.PostPathToParamResourseJSONRequestBody, error) {
-	var body models.PostPathToParamResourseJSONRequestBody
+func (h *Handler) parseCreateJSONRequestBody(r *http.Request) (*models.CreateJSONRequestBody, error) {
+	var body models.CreateJSONRequestBody
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, err
@@ -74,26 +74,26 @@ func (h *Handler) parsePostPathToParamResourseJSONRequestBody(r *http.Request) (
 	}
 	return &body, nil
 }
-func (h *Handler) parsePostPathToParamResourseJSONRequest(r *http.Request) (*models.PostPathToParamResourseJSONRequest, error) {
-	pathParams, err := h.parsePostPathToParamResourseJSONPathParams(r)
+func (h *Handler) parseCreateJSONRequest(r *http.Request) (*models.CreateJSONRequest, error) {
+	pathParams, err := h.parseCreateJSONPathParams(r)
 	if err != nil {
 		return nil, err
 	}
-	queryParams, err := h.parsePostPathToParamResourseJSONQueryParams(r)
+	queryParams, err := h.parseCreateJSONQueryParams(r)
 	if err != nil {
 		return nil, err
 	}
-	headers, err := h.parsePostPathToParamResourseJSONHeaders(r)
+	headers, err := h.parseCreateJSONHeaders(r)
 	if err != nil {
 		return nil, err
 	}
-	body, err := h.parsePostPathToParamResourseJSONRequestBody(r)
+	body, err := h.parseCreateJSONRequestBody(r)
 	if err != nil {
 		return nil, err
 	}
-	return &models.PostPathToParamResourseJSONRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Body: *body}, nil
+	return &models.CreateJSONRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Body: *body}, nil
 }
-func (h *Handler) writePostPathToParamResourseJSON200Response(w http.ResponseWriter, r *models.PostPathToParamResourseJSONResponse200) {
+func (h *Handler) writeCreateJSON200Response(w http.ResponseWriter, r *models.CreateJSONResponse200) {
 	var err error
 	headersJSON, err := json.Marshal(r.Headers)
 	if err != nil {
@@ -115,55 +115,55 @@ func (h *Handler) writePostPathToParamResourseJSON200Response(w http.ResponseWri
 		return
 	}
 }
-func (h *Handler) writePostPathToParamResourseJSON400Response(w http.ResponseWriter, r *models.PostPathToParamResourseJSONResponse400) {
+func (h *Handler) writeCreateJSON400Response(w http.ResponseWriter, r *models.CreateJSONResponse400) {
 }
-func (h *Handler) writePostPathToParamResourseJSON404Response(w http.ResponseWriter, r *models.PostPathToParamResourseJSONResponse404) {
+func (h *Handler) writeCreateJSON404Response(w http.ResponseWriter, r *models.CreateJSONResponse404) {
 }
-func (h *Handler) writePostPathToParamResourseJSONResponse(w http.ResponseWriter, response *models.PostPathToParamResourseJSONResponse) {
+func (h *Handler) writeCreateJSONResponse(w http.ResponseWriter, response *models.CreateJSONResponse) {
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
 			http.Error(w, "InternalServerError", http.StatusInternalServerError)
 			return
 		}
-		h.writePostPathToParamResourseJSON200Response(w, response.Response200)
+		h.writeCreateJSON200Response(w, response.Response200)
 	case 400:
 		if response.Response400 == nil {
 			http.Error(w, "InternalServerError", http.StatusInternalServerError)
 			return
 		}
-		h.writePostPathToParamResourseJSON400Response(w, response.Response400)
+		h.writeCreateJSON400Response(w, response.Response400)
 	case 404:
 		if response.Response404 == nil {
 			http.Error(w, "InternalServerError", http.StatusInternalServerError)
 			return
 		}
-		h.writePostPathToParamResourseJSON404Response(w, response.Response404)
+		h.writeCreateJSON404Response(w, response.Response404)
 	}
 	w.WriteHeader(response.StatusCode)
 }
-func (h *Handler) handlePostPathToParamResourseJSON(w http.ResponseWriter, r *http.Request) {
-	request, err := h.parsePostPathToParamResourseJSONRequest(r)
+func (h *Handler) handleCreateJSON(w http.ResponseWriter, r *http.Request) {
+	request, err := h.parseCreateJSONRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
-	response, err := h.postPathToParamResourseJSON.HandlePostPathToParamResourseJSON(ctx, request)
+	response, err := h.createJSON.HandleCreateJSON(ctx, request)
 	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
 	}
-	h.writePostPathToParamResourseJSONResponse(w, response)
+	h.writeCreateJSONResponse(w, response)
 	return
 }
-func (h *Handler) handlePostPathToParamResourse(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	switch r.Header.Get("Content-Type") {
 	case "application/json":
-		h.handlePostPathToParamResourseJSON(w, r)
+		h.handleCreateJSON(w, r)
 		return
 	case "":
-		h.handlePostPathToParamResourseJSON(w, r)
+		h.handleCreateJSON(w, r)
 		return
 	default:
 		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)

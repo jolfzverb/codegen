@@ -220,6 +220,9 @@ func (g *Generator) ProcessApplicationJSONOperation(pathName string, method stri
 	}
 	suffix := FormatGoLikeIdentifier(rawSuffix)
 	handlerBaseName := FormatGoLikeIdentifier(method) + FormatGoLikeIdentifier(pathName)
+	if operation.OperationID != "" {
+		handlerBaseName = FormatGoLikeIdentifier(operation.OperationID)
+	}
 
 	g.AddInterface(handlerBaseName + suffix)
 	g.AddDependencyToHandler(handlerBaseName + suffix)
