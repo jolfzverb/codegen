@@ -499,3 +499,69 @@ func (m *SchemasFile) ProcessSchema(modelName string, schema *openapi3.SchemaRef
 
 	return errors.Errorf("unsupported schema type %s for model %s", schema.Value.Type, modelName)
 }
+
+func (m *SchemasFile) GenerateRequestModel(baseName string, contentType string, pathParams openapi3.Parameters,
+	queryParams openapi3.Parameters, headers openapi3.Parameters, cookieParams openapi3.Parameters,
+	body *openapi3.RequestBodyRef,
+) {
+	model := SchemaStruct{
+		Name:   baseName + "Request",
+		Fields: []SchemaField{},
+	}
+	if len(pathParams) > 0 {
+		model.Fields = append(model.Fields, SchemaField{
+			Name:        "Path",
+			Type:        baseName + "PathParams",
+			TagJSON:     []string{},
+			TagValidate: []string{},
+			Required:    true,
+		})
+	}
+	if len(queryParams) > 0 {
+		model.Fields = append(model.Fields, SchemaField{
+			Name:        "Query",
+			Type:        baseName + "QueryParams",
+			TagJSON:     []string{},
+			TagValidate: []string{},
+			Required:    true,
+		})
+	}
+	if len(headers) > 0 {
+		model.Fields = append(model.Fields, SchemaField{
+			Name:        "Headers",
+			Type:        baseName + "Headers",
+			TagJSON:     []string{},
+			TagValidate: []string{},
+			Required:    true,
+		})
+	}
+	if len(cookieParams) > 0 {
+		model.Fields = append(model.Fields, SchemaField{
+			Name:        "Cookies",
+			Type:        baseName + "Cookies",
+			TagJSON:     []string{},
+			TagValidate: []string{},
+			Required:    true,
+		})
+	}
+	if body != nil && body.Value != nil {
+		content, ok := body.Value.Content[contentType]
+		if ok && content.Schema != nil {
+			typeName := baseName + "RequestBody"
+
+			if content.Schema.Ref != "" {
+				typeName = ParseRefTypeName(content.Schema.Ref)
+			}
+
+			model.Fields = append(model.Fields, SchemaField{
+				Name:        "Body",
+				Type:        typeName,
+				TagJSON:     []string{},
+				TagValidate: []string{},
+				Required:    body.Value.Required,
+			})
+		}
+	}
+
+	m.AddSchema(model)
+}

@@ -45,7 +45,7 @@ func (m *mockHandler) HandlePostPathToParamResourseJSON(ctx context.Context, r *
 	return &models.PostPathToParamResourseJSONResponse{
 		StatusCode: 200,
 		Response200: &models.PostPathToParamResourseJSONResponse200{
-			Body: models.PostPathToParamResourseJSONResponse200Body{
+			Body: models.NewResourseResponse{
 				Count:       r.Query.Count,
 				Description: r.Body.Description,
 				Name:        r.Body.Name,

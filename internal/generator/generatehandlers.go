@@ -47,13 +47,19 @@ func (g *Generator) AddResponseCodeModels(baseName string, code string, response
 	}
 	for _, content := range response.Value.Content {
 		if content.Schema != nil {
-			err := g.SchemasFile.ProcessObjectSchema(baseName+"Response"+code+"Body", content.Schema)
-			if err != nil {
-				return errors.Wrap(err, op)
+			if content.Schema.Ref == "" {
+				err := g.SchemasFile.ProcessObjectSchema(baseName+"Response"+code+"Body", content.Schema)
+				if err != nil {
+					return errors.Wrap(err, op)
+				}
+			}
+			typeName := baseName + "Response" + code + "Body"
+			if content.Schema.Ref != "" {
+				typeName = ParseRefTypeName(content.Schema.Ref)
 			}
 			model.Fields = append(model.Fields, SchemaField{
 				Name:        "Body",
-				Type:        baseName + "Response" + code + "Body",
+				Type:        typeName,
 				TagJSON:     []string{},
 				TagValidate: []string{},
 				Required:    true,
@@ -176,33 +182,27 @@ func (g *Generator) AddParseParamsMethods(baseName string, contentType string, o
 		return errors.New("cookie parameters are not supported yet")
 		// g.HandlersFile.AddParseCookieParamsMethod(baseName, cookieParams)
 	}
-	hasBody := false
-	bodyRequired := false
 	if operation.RequestBody != nil && operation.RequestBody.Value != nil {
 		content, ok := operation.RequestBody.Value.Content[contentType]
 		if ok && content.Schema != nil {
-			err = g.SchemasFile.ProcessObjectSchema(baseName+"RequestBody", content.Schema)
+			if content.Schema.Ref == "" {
+				err = g.SchemasFile.ProcessObjectSchema(baseName+"RequestBody", content.Schema)
+				if err != nil {
+					return errors.Wrap(err, op)
+				}
+			}
+			err = g.HandlersFile.AddParseRequestBodyMethod(baseName, contentType, operation.RequestBody)
 			if err != nil {
 				return errors.Wrap(err, op)
 			}
-			err = g.HandlersFile.AddParseRequestBodyMethod(baseName, operation.RequestBody.Value.Required)
-			if err != nil {
-				return errors.Wrap(err, op)
-			}
-			hasBody = true
-			bodyRequired = operation.RequestBody.Value.Required
 		}
 	}
-	detectedParams := DetectedParams{
-		len(pathParams) > 0,
-		len(queryParams) > 0,
-		len(headerParams) > 0,
-		len(cookieParams) > 0,
-		hasBody,
-		bodyRequired,
-	}
-	g.HandlersFile.AddParseRequestMethod(baseName, detectedParams)
-	g.GenerateRequestModel(baseName, detectedParams)
+	g.HandlersFile.AddParseRequestMethod(baseName, contentType,
+		pathParams, queryParams, headerParams, cookieParams, operation.RequestBody,
+	)
+	g.SchemasFile.GenerateRequestModel(baseName, contentType,
+		pathParams, queryParams, headerParams, cookieParams, operation.RequestBody,
+	)
 
 	return nil
 }
