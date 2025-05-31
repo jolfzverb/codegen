@@ -17,7 +17,7 @@ type Generator struct {
 func NewGenerator(importPrefix string, packageName string) *Generator {
 	return &Generator{
 		SchemasFile:  NewSchemasFile(),
-		HandlersFile: NewHandlersFile(packageName, path.Join(importPrefix, "models")),
+		HandlersFile: NewHandlersFile(packageName, importPrefix, path.Join(importPrefix, "models")),
 	}
 }
 
