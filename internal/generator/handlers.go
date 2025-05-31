@@ -6,15 +6,17 @@ import (
 	"go/format"
 	"go/token"
 	"io"
+	"sort"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
 )
 
 type HandlersFile struct {
+	importPrefix   string
 	packageName    *ast.Ident
-	packageImports []*ast.ImportSpec
-	importDecl     *ast.GenDecl
+	packageImports []string
 	interfaceDecls []*ast.GenDecl
 
 	handlerDecl            *ast.GenDecl
@@ -30,19 +32,7 @@ type HandlersFile struct {
 }
 
 func (h *HandlersFile) InitImports(modelsImportPath string) {
-	importSpec := &ast.ImportSpec{
-		Path: &ast.BasicLit{
-			Kind:  token.STRING,
-			Value: fmt.Sprintf("%q", "github.com/go-playground/validator/v10"),
-		},
-	}
-	importDecl := &ast.GenDecl{
-		Tok:   token.IMPORT,
-		Specs: []ast.Spec{importSpec},
-	}
-	h.importDecl = importDecl
-	h.packageImports = append(h.packageImports, importSpec)
-
+	h.AddImport("github.com/go-playground/validator/v10")
 	h.AddImport(modelsImportPath)
 	h.AddImport("context")
 	h.AddImport("github.com/go-chi/chi/v5")
@@ -181,8 +171,8 @@ func (h *HandlersFile) InitFields(packageName string, modelsImportPath string) {
 	h.InitRoutesFunc()
 }
 
-func NewHandlersFile(packageName string, modelsImportPath string) *HandlersFile {
-	h := &HandlersFile{}
+func NewHandlersFile(packageName string, importPrefix string, modelsImportPath string) *HandlersFile {
+	h := &HandlersFile{importPrefix: importPrefix}
 	h.InitFields(packageName, modelsImportPath)
 
 	return h
@@ -282,29 +272,91 @@ func (h *HandlersFile) AddDependencyToHandler(baseName string) {
 
 func (h *HandlersFile) AddImport(path string) {
 	for _, imp := range h.packageImports {
-		if imp.Path.Value == fmt.Sprintf("%q", path) {
+		if imp == path {
 			return
 		}
 	}
-	imp := &ast.ImportSpec{
-		Path: &ast.BasicLit{
-			Kind:  token.STRING,
-			Value: fmt.Sprintf("%q", path),
-		},
+	h.packageImports = append(h.packageImports, path)
+}
+
+func (h *HandlersFile) GenerateImportsSpecs(imp []string) ([]*ast.ImportSpec, []ast.Spec) {
+	var systemImports []string //nolint:prealloc
+	var libImports []string
+	var myImports []string
+	for _, path := range imp {
+		if strings.HasPrefix(path, h.importPrefix) {
+			myImports = append(myImports, path)
+
+			continue
+		}
+		prefix := strings.SplitN(path, "/", 2)[0] //nolint:mnd
+		if strings.Contains(prefix, ".") {
+			libImports = append(libImports, path)
+
+			continue
+		}
+		systemImports = append(systemImports, path)
 	}
-	h.packageImports = append(h.packageImports, imp)
-	h.importDecl.Specs = append(h.importDecl.Specs, imp)
+
+	sort.Strings(systemImports)
+	sort.Strings(libImports)
+	sort.Strings(myImports)
+
+	specs := make([]*ast.ImportSpec, 0, len(imp))
+	for _, path := range systemImports {
+		specs = append(specs, &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", path),
+			},
+		})
+	}
+
+	// Add a space to separate system and library imports
+	// but go/ast is too great for that
+	for _, path := range libImports {
+		specs = append(specs, &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", path),
+			},
+		})
+	}
+
+	// Add a space to separate library and user imports
+	// but go/ast is too great for that
+	for _, path := range myImports {
+		specs = append(specs, &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", path),
+			},
+		})
+	}
+
+	declSpecs := make([]ast.Spec, 0, len(specs))
+	for _, spec := range specs {
+		declSpecs = append(declSpecs, spec)
+	}
+
+	return specs, declSpecs
 }
 
 func (h *HandlersFile) GenerateFile() *ast.File {
+	importSpecs, declSpecs := h.GenerateImportsSpecs(h.packageImports)
+
 	h.FinalizeHandlerSwitches()
+
 	file := &ast.File{
 		Name:    h.packageName,
 		Decls:   []ast.Decl{},
-		Imports: h.packageImports,
+		Imports: importSpecs,
 	}
 
-	file.Decls = append(file.Decls, h.importDecl)
+	file.Decls = append(file.Decls, &ast.GenDecl{
+		Tok:   token.IMPORT,
+		Specs: declSpecs,
+	})
 	for _, d := range h.interfaceDecls {
 		file.Decls = append(file.Decls, d)
 	}
@@ -1120,7 +1172,7 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 					&ast.ReturnStmt{
 						Results: []ast.Expr{
 							ast.NewIdent("nil"),
-							ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" is required in path parameters")),
+							ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" path param is required")),
 						},
 					},
 				},
@@ -1148,6 +1200,41 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 			return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
 		}
 	}
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("err")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.SelectorExpr{
+						X:   ast.NewIdent("h"),
+						Sel: ast.NewIdent("validator"),
+					},
+					Sel: ast.NewIdent("Struct"),
+				},
+				Args: []ast.Expr{
+					ast.NewIdent("pathParams"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						ast.NewIdent("nil"),
+						ast.NewIdent("err"),
+					},
+				},
+			},
+		},
+	})
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
 			Results: []ast.Expr{
@@ -1252,45 +1339,81 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 				},
 			},
 		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: &ast.BinaryExpr{
-				X:  ast.NewIdent(varName),
-				Op: token.EQL,
-				Y:  ast.NewIdent(`""`),
-			},
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ReturnStmt{
-						Results: []ast.Expr{
-							ast.NewIdent("nil"),
-							ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" is required in query parameters")),
+		if param.Value.Required {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent(varName),
+					Op: token.EQL,
+					Y:  ast.NewIdent(`""`),
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								ast.NewIdent("nil"),
+								ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" query param is required")),
+							},
 						},
 					},
 				},
-			},
-		})
-		h.AddImport("github.com/go-faster/errors")
-		switch {
-		case param.Value.Schema.Value.Type.Permits("string"):
-			bodyList = append(bodyList, &ast.AssignStmt{
-				Lhs: []ast.Expr{
-					&ast.SelectorExpr{
-						X:   ast.NewIdent("queryParams"),
-						Sel: ast.NewIdent(FormatGoLikeIdentifier(param.Value.Name)),
-					},
+			})
+			h.AddImport("github.com/go-faster/errors")
+			switch {
+			case param.Value.Schema.Value.Type.Permits("string"):
+				bodyList = append(bodyList,
+					h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema)...,
+				)
+			default:
+				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
+			}
+		} else {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent(varName),
+					Op: token.NEQ,
+					Y:  ast.NewIdent(`""`),
 				},
-				Tok: token.ASSIGN,
-				Rhs: []ast.Expr{
-					&ast.UnaryExpr{
-						Op: token.AND,
-						X:  ast.NewIdent(varName),
-					},
+				Body: &ast.BlockStmt{
+					List: h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema),
 				},
 			})
-		default:
-			return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
 		}
 	}
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("err")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.SelectorExpr{
+						X:   ast.NewIdent("h"),
+						Sel: ast.NewIdent("validator"),
+					},
+					Sel: ast.NewIdent("Struct"),
+				},
+				Args: []ast.Expr{
+					ast.NewIdent("queryParams"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						ast.NewIdent("nil"),
+						ast.NewIdent("err"),
+					},
+				},
+			},
+		},
+	})
 
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
@@ -1346,6 +1469,84 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 	return nil
 }
 
+func (h *HandlersFile) AssignStringField(paramsName string, varName string, fieldName string, param *openapi3.SchemaRef) []ast.Stmt {
+	if param.Value.Format == "date-time" {
+		h.AddImport("time")
+		var result []ast.Stmt
+		result = append(result, &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				ast.NewIdent("parsed" + fieldName),
+				ast.NewIdent("err"),
+			},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   ast.NewIdent("time"),
+						Sel: ast.NewIdent("Parse"),
+					},
+					Args: []ast.Expr{
+						&ast.SelectorExpr{
+							X:   ast.NewIdent("time"),
+							Sel: ast.NewIdent("RFC3339"),
+						},
+						ast.NewIdent(varName),
+					},
+				},
+			},
+		})
+		result = append(result, &ast.IfStmt{
+			Cond: &ast.BinaryExpr{
+				X:  ast.NewIdent("err"),
+				Op: token.NEQ,
+				Y:  ast.NewIdent("nil"),
+			},
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ReturnStmt{
+						Results: []ast.Expr{
+							ast.NewIdent("nil"),
+							ast.NewIdent(fmt.Sprintf("errors.Wrap(err, %q)", fieldName+" is not a valid date-time format")),
+						},
+					},
+				},
+			},
+		})
+
+		return append(result, &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				&ast.SelectorExpr{
+					X:   ast.NewIdent(paramsName),
+					Sel: ast.NewIdent(fieldName),
+				},
+			},
+			Tok: token.ASSIGN,
+			Rhs: []ast.Expr{
+				&ast.UnaryExpr{
+					Op: token.AND,
+					X:  ast.NewIdent("parsed" + fieldName),
+				},
+			},
+		})
+	}
+
+	return []ast.Stmt{&ast.AssignStmt{
+		Lhs: []ast.Expr{
+			&ast.SelectorExpr{
+				X:   ast.NewIdent(paramsName),
+				Sel: ast.NewIdent(fieldName),
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.UnaryExpr{
+				Op: token.AND,
+				X:  ast.NewIdent(varName),
+			},
+		},
+	}}
+}
+
 func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Parameters) error {
 	bodyList := []ast.Stmt{
 		&ast.DeclStmt{
@@ -1389,45 +1590,81 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 				},
 			},
 		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: &ast.BinaryExpr{
-				X:  ast.NewIdent(varName),
-				Op: token.EQL,
-				Y:  ast.NewIdent(`""`),
-			},
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ReturnStmt{
-						Results: []ast.Expr{
-							ast.NewIdent("nil"),
-							ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" is required in headers")),
+		if param.Value.Required {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent(varName),
+					Op: token.EQL,
+					Y:  ast.NewIdent(`""`),
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								ast.NewIdent("nil"),
+								ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" header is required")),
+							},
 						},
 					},
 				},
-			},
-		})
-		h.AddImport("github.com/go-faster/errors")
-		switch {
-		case param.Value.Schema.Value.Type.Permits("string"):
-			bodyList = append(bodyList, &ast.AssignStmt{
-				Lhs: []ast.Expr{
-					&ast.SelectorExpr{
-						X:   ast.NewIdent("headers"),
-						Sel: ast.NewIdent(FormatGoLikeIdentifier(param.Value.Name)),
-					},
+			})
+			h.AddImport("github.com/go-faster/errors")
+			switch {
+			case param.Value.Schema.Value.Type.Permits("string"):
+				bodyList = append(bodyList,
+					h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema)...,
+				)
+			default:
+				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
+			}
+		} else {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent(varName),
+					Op: token.NEQ,
+					Y:  ast.NewIdent(`""`),
 				},
-				Tok: token.ASSIGN,
-				Rhs: []ast.Expr{
-					&ast.UnaryExpr{
-						Op: token.AND,
-						X:  ast.NewIdent(varName),
-					},
+				Body: &ast.BlockStmt{
+					List: h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema),
 				},
 			})
-		default:
-			return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
 		}
 	}
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("err")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.SelectorExpr{
+						X:   ast.NewIdent("h"),
+						Sel: ast.NewIdent("validator"),
+					},
+					Sel: ast.NewIdent("Struct"),
+				},
+				Args: []ast.Expr{
+					ast.NewIdent("headers"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						ast.NewIdent("nil"),
+						ast.NewIdent("err"),
+					},
+				},
+			},
+		},
+	})
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
 			Results: []ast.Expr{
@@ -1482,9 +1719,9 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 	return nil
 }
 
-func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, required bool) error {
+func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType string, body *openapi3.RequestBodyRef) error {
 	bodyList := []ast.Stmt{}
-	if !required {
+	if !body.Value.Required {
 		bodyList = append(bodyList, &ast.IfStmt{
 			Cond: &ast.BinaryExpr{
 				X:  &ast.SelectorExpr{X: ast.NewIdent("r"), Sel: ast.NewIdent("Body")},
@@ -1504,6 +1741,15 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, required bool)
 		})
 	}
 
+	typeName := baseName + "RequestBody"
+
+	content, ok := body.Value.Content[contentType]
+	if ok && content.Schema != nil {
+		if content.Schema.Ref != "" {
+			typeName = ParseRefTypeName(content.Schema.Ref)
+		}
+	}
+
 	bodyList = append(bodyList, &ast.DeclStmt{
 		Decl: &ast.GenDecl{
 			Tok: token.VAR,
@@ -1512,7 +1758,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, required bool)
 					Names: []*ast.Ident{ast.NewIdent("body")},
 					Type: &ast.SelectorExpr{
 						X:   ast.NewIdent("models"),
-						Sel: ast.NewIdent(baseName + "RequestBody"),
+						Sel: ast.NewIdent(typeName),
 					},
 				},
 			},
@@ -1641,7 +1887,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, required bool)
 					Type: &ast.StarExpr{
 						X: &ast.SelectorExpr{
 							X:   ast.NewIdent("models"),
-							Sel: ast.NewIdent(baseName + "RequestBody"),
+							Sel: ast.NewIdent(typeName),
 						},
 					},
 				}, {
@@ -1657,19 +1903,13 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, required bool)
 	return nil
 }
 
-type DetectedParams struct {
-	HasPath        bool
-	HasQuery       bool
-	HasHeaders     bool
-	HasCookies     bool
-	HasRequestBody bool
-	BodyRequired   bool
-}
-
-func (h *HandlersFile) AddParseRequestMethod(baseName string, params DetectedParams) {
+func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string, pathParams openapi3.Parameters,
+	queryParams openapi3.Parameters, headers openapi3.Parameters, cookieParams openapi3.Parameters,
+	body *openapi3.RequestBodyRef,
+) {
 	bodyList := []ast.Stmt{}
 	elts := []ast.Expr{}
-	if params.HasPath {
+	if len(pathParams) > 0 {
 		elts = append(elts, &ast.KeyValueExpr{
 			Key: ast.NewIdent("Path"),
 			Value: &ast.StarExpr{
@@ -1712,7 +1952,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, params DetectedPar
 			},
 		})
 	}
-	if params.HasQuery {
+	if len(queryParams) > 0 {
 		elts = append(elts, &ast.KeyValueExpr{
 			Key: ast.NewIdent("Query"),
 			Value: &ast.StarExpr{
@@ -1755,7 +1995,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, params DetectedPar
 			},
 		})
 	}
-	if params.HasHeaders {
+	if len(headers) > 0 {
 		elts = append(elts, &ast.KeyValueExpr{
 			Key: ast.NewIdent("Headers"),
 			Value: &ast.StarExpr{
@@ -1798,7 +2038,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, params DetectedPar
 			},
 		})
 	}
-	if params.HasCookies {
+	if len(cookieParams) > 0 {
 		elts = append(elts, &ast.KeyValueExpr{
 			Key: ast.NewIdent("Cookies"),
 			Value: &ast.StarExpr{
@@ -1841,55 +2081,58 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, params DetectedPar
 			},
 		})
 	}
-	if params.HasRequestBody {
-		if params.BodyRequired {
-			elts = append(elts, &ast.KeyValueExpr{
-				Key: ast.NewIdent("Body"),
-				Value: &ast.StarExpr{
-					X: ast.NewIdent("body"),
-				},
-			})
-		} else {
-			elts = append(elts, &ast.KeyValueExpr{
-				Key:   ast.NewIdent("Body"),
-				Value: ast.NewIdent("body"),
-			})
-		}
-		bodyList = append(bodyList, &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				ast.NewIdent("body"),
-				ast.NewIdent("err"),
-			},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("parse" + baseName + "RequestBody"),
+	if body != nil && body.Value != nil {
+		content, ok := body.Value.Content[contentType]
+		if ok && content.Schema != nil {
+			if body.Value.Required {
+				elts = append(elts, &ast.KeyValueExpr{
+					Key: ast.NewIdent("Body"),
+					Value: &ast.StarExpr{
+						X: ast.NewIdent("body"),
 					},
-					Args: []ast.Expr{
-						ast.NewIdent("r"),
-					},
+				})
+			} else {
+				elts = append(elts, &ast.KeyValueExpr{
+					Key:   ast.NewIdent("Body"),
+					Value: ast.NewIdent("body"),
+				})
+			}
+			bodyList = append(bodyList, &ast.AssignStmt{
+				Lhs: []ast.Expr{
+					ast.NewIdent("body"),
+					ast.NewIdent("err"),
 				},
-			},
-		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: &ast.BinaryExpr{
-				X:  ast.NewIdent("err"),
-				Op: token.NEQ,
-				Y:  ast.NewIdent("nil"),
-			},
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ReturnStmt{
-						Results: []ast.Expr{
-							ast.NewIdent("nil"),
-							ast.NewIdent("err"),
+				Tok: token.DEFINE,
+				Rhs: []ast.Expr{
+					&ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("h"),
+							Sel: ast.NewIdent("parse" + baseName + "RequestBody"),
+						},
+						Args: []ast.Expr{
+							ast.NewIdent("r"),
 						},
 					},
 				},
-			},
-		})
+			})
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent("err"),
+					Op: token.NEQ,
+					Y:  ast.NewIdent("nil"),
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								ast.NewIdent("nil"),
+								ast.NewIdent("err"),
+							},
+						},
+					},
+				},
+			})
+		}
 	}
 
 	bodyList = append(bodyList,

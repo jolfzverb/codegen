@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -20,6 +21,32 @@ func GetSchemaValidators(schema *openapi3.SchemaRef) []string {
 		}
 		if schema.Value.Pattern != "" {
 			slog.Warn("pattern validator is not supported", slog.String("pattern", schema.Value.Pattern))
+		}
+		if len(schema.Value.Enum) > 0 {
+			enumStrValues := make([]string, 0, len(schema.Value.Enum))
+			for _, enumValue := range schema.Value.Enum {
+				var enumStrValue string
+				if strValue, ok := enumValue.(string); ok {
+					enumStrValue = strValue
+				} else {
+					slog.Warn("enum value is not a string", slog.Any("value", enumValue))
+					enumStrValue = fmt.Sprintf("%v", enumValue)
+				}
+				if strings.Contains(enumStrValue, " ") {
+					enumStrValue = "'" + enumStrValue + "'"
+				}
+				enumStrValues = append(enumStrValues, enumStrValue)
+			}
+			joinedEnum := strings.Join(enumStrValues, " ")
+			validateTags = append(validateTags, "oneof="+joinedEnum)
+		}
+		switch schema.Value.Format {
+		case "ip":
+			validateTags = append(validateTags, "ip")
+		case "ipv4":
+			validateTags = append(validateTags, "ipv4")
+		case "ipv6":
+			validateTags = append(validateTags, "ipv6")
 		}
 
 	case schema.Value.Type.Permits(openapi3.TypeInteger):
