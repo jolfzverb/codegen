@@ -13,6 +13,8 @@ paths:
           in: header
           schema:
             type: string
+            minLength: 1
+            maxLength: 100
           required: true
         - name: Optional-Header
           in: header

@@ -897,6 +897,10 @@ func (h *Handler) parsePostExampleParamNameJSONPathParams(r *http.Request) (*mod
 		return nil, errors.New("param_name path param is required")
 	}
 	pathParams.ParamName = &paramName
+	err := h.validator.Struct(pathParams)
+	if err != nil {
+		return nil, err
+	}
 	return &pathParams, nil
 }
 func (h *Handler) parsePostExampleParamNameJSONQueryParams(r *http.Request) (*models.PostExampleParamNameJSONQueryParams, error) {
@@ -906,6 +910,10 @@ func (h *Handler) parsePostExampleParamNameJSONQueryParams(r *http.Request) (*mo
 		return nil, errors.New("param_name2 query param is required")
 	}
 	queryParams.ParamName2 = &paramName2
+	err := h.validator.Struct(queryParams)
+	if err != nil {
+		return nil, err
+	}
 	return &queryParams, nil
 }
 func (h *Handler) parsePostExampleParamNameJSONHeaders(r *http.Request) (*models.PostExampleParamNameJSONHeaders, error) {
@@ -915,6 +923,10 @@ func (h *Handler) parsePostExampleParamNameJSONHeaders(r *http.Request) (*models
 		return nil, errors.New("X-Header header is required")
 	}
 	headers.XHeader = &xHeader
+	err := h.validator.Struct(headers)
+	if err != nil {
+		return nil, err
+	}
 	return &headers, nil
 }
 func (h *Handler) parsePostExampleParamNameJSONRequestBody(r *http.Request) (*models.PostExampleParamNameJSONRequestBody, error) {

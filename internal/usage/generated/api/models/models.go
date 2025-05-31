@@ -20,7 +20,7 @@ type CreateJSONQueryParams struct {
 	Count *string `json:"count" validate:"required"`
 }
 type CreateJSONHeaders struct {
-	IdempotencyKey *string    `json:"Idempotency-Key" validate:"required"`
+	IdempotencyKey *string    `json:"Idempotency-Key" validate:"required,min=1,max=100"`
 	OptionalHeader *time.Time `json:"Optional-Header,omitempty" validate:"omitempty"`
 }
 type CreateJSONRequestBody struct {

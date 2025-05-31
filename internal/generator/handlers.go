@@ -1200,6 +1200,41 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 			return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
 		}
 	}
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("err")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.SelectorExpr{
+						X:   ast.NewIdent("h"),
+						Sel: ast.NewIdent("validator"),
+					},
+					Sel: ast.NewIdent("Struct"),
+				},
+				Args: []ast.Expr{
+					ast.NewIdent("pathParams"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						ast.NewIdent("nil"),
+						ast.NewIdent("err"),
+					},
+				},
+			},
+		},
+	})
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
 			Results: []ast.Expr{
@@ -1344,6 +1379,41 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 			})
 		}
 	}
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("err")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.SelectorExpr{
+						X:   ast.NewIdent("h"),
+						Sel: ast.NewIdent("validator"),
+					},
+					Sel: ast.NewIdent("Struct"),
+				},
+				Args: []ast.Expr{
+					ast.NewIdent("queryParams"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						ast.NewIdent("nil"),
+						ast.NewIdent("err"),
+					},
+				},
+			},
+		},
+	})
 
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
@@ -1560,6 +1630,41 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 			})
 		}
 	}
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("err")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.SelectorExpr{
+						X:   ast.NewIdent("h"),
+						Sel: ast.NewIdent("validator"),
+					},
+					Sel: ast.NewIdent("Struct"),
+				},
+				Args: []ast.Expr{
+					ast.NewIdent("headers"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						ast.NewIdent("nil"),
+						ast.NewIdent("err"),
+					},
+				},
+			},
+		},
+	})
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
 			Results: []ast.Expr{

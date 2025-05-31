@@ -34,6 +34,10 @@ func (h *Handler) parseCreateJSONPathParams(r *http.Request) (*models.CreateJSON
 		return nil, errors.New("param path param is required")
 	}
 	pathParams.Param = &param
+	err := h.validator.Struct(pathParams)
+	if err != nil {
+		return nil, err
+	}
 	return &pathParams, nil
 }
 func (h *Handler) parseCreateJSONQueryParams(r *http.Request) (*models.CreateJSONQueryParams, error) {
@@ -43,6 +47,10 @@ func (h *Handler) parseCreateJSONQueryParams(r *http.Request) (*models.CreateJSO
 		return nil, errors.New("count query param is required")
 	}
 	queryParams.Count = &count
+	err := h.validator.Struct(queryParams)
+	if err != nil {
+		return nil, err
+	}
 	return &queryParams, nil
 }
 func (h *Handler) parseCreateJSONHeaders(r *http.Request) (*models.CreateJSONHeaders, error) {
@@ -59,6 +67,10 @@ func (h *Handler) parseCreateJSONHeaders(r *http.Request) (*models.CreateJSONHea
 			return nil, errors.Wrap(err, "OptionalHeader is not a valid date-time format")
 		}
 		headers.OptionalHeader = &parsedOptionalHeader
+	}
+	err := h.validator.Struct(headers)
+	if err != nil {
+		return nil, err
 	}
 	return &headers, nil
 }
