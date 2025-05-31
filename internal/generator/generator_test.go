@@ -894,7 +894,7 @@ func (h *Handler) parsePostExampleParamNameJSONPathParams(r *http.Request) (*mod
 	var pathParams models.PostExampleParamNameJSONPathParams
 	paramName := chi.URLParam(r, "param_name")
 	if paramName == "" {
-		return nil, errors.New("param_name is required in path parameters")
+		return nil, errors.New("param_name path param is required")
 	}
 	pathParams.ParamName = &paramName
 	return &pathParams, nil
@@ -903,7 +903,7 @@ func (h *Handler) parsePostExampleParamNameJSONQueryParams(r *http.Request) (*mo
 	var queryParams models.PostExampleParamNameJSONQueryParams
 	paramName2 := r.URL.Query().Get("param_name2")
 	if paramName2 == "" {
-		return nil, errors.New("param_name2 is required in query parameters")
+		return nil, errors.New("param_name2 query param is required")
 	}
 	queryParams.ParamName2 = &paramName2
 	return &queryParams, nil
@@ -912,7 +912,7 @@ func (h *Handler) parsePostExampleParamNameJSONHeaders(r *http.Request) (*models
 	var headers models.PostExampleParamNameJSONHeaders
 	xHeader := r.Header.Get("X-Header")
 	if xHeader == "" {
-		return nil, errors.New("X-Header is required in headers")
+		return nil, errors.New("X-Header header is required")
 	}
 	headers.XHeader = &xHeader
 	return &headers, nil

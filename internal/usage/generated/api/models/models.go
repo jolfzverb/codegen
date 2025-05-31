@@ -7,6 +7,7 @@ import "time"
 type NewResourseResponse struct {
 	Count       *string    `json:"count" validate:"required"`
 	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
+	Date2       *time.Time `json:"date2,omitempty" validate:"omitempty"`
 	Description *string    `json:"description,omitempty" validate:"omitempty"`
 	Name        *string    `json:"name" validate:"required"`
 	Param       *string    `json:"param" validate:"required"`
@@ -18,7 +19,8 @@ type PostPathToParamResourseJSONQueryParams struct {
 	Count *string `json:"count" validate:"required"`
 }
 type PostPathToParamResourseJSONHeaders struct {
-	IdempotencyKey *string `json:"Idempotency-Key" validate:"required"`
+	IdempotencyKey *string    `json:"Idempotency-Key" validate:"required"`
+	OptionalHeader *time.Time `json:"Optional-Header,omitempty" validate:"omitempty"`
 }
 type PostPathToParamResourseJSONRequestBody struct {
 	CodeForResponse *int       `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
@@ -35,12 +37,13 @@ type PostPathToParamResourseJSONRequest struct {
 type PostPathToParamResourseJSONResponse200Body struct {
 	Count       *string    `json:"count" validate:"required"`
 	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
+	Date2       *time.Time `json:"date2,omitempty" validate:"omitempty"`
 	Description *string    `json:"description,omitempty" validate:"omitempty"`
 	Name        *string    `json:"name" validate:"required"`
 	Param       *string    `json:"param" validate:"required"`
 }
 type PostPathToParamResourseJSONResponse200Headers struct {
-	IdempotencyKey *string `json:"Idempotency-Key"`
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty" validate:"omitempty"`
 }
 type PostPathToParamResourseJSONResponse200 struct {
 	Body    PostPathToParamResourseJSONResponse200Body

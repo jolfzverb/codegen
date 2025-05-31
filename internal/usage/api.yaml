@@ -13,6 +13,11 @@ paths:
           schema:
             type: string
           required: true
+        - name: Optional-Header
+          in: header
+          schema:
+            type: string
+            format: date-time
         - name: param
           in: path
           schema:
@@ -77,6 +82,9 @@ components:
         count:
           type: string
         date:
+          type: string
+          format: date-time
+        date2:
           type: string
           format: date-time
       required:

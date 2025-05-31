@@ -1172,7 +1172,7 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 					&ast.ReturnStmt{
 						Results: []ast.Expr{
 							ast.NewIdent("nil"),
-							ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" is required in path parameters")),
+							ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" path param is required")),
 						},
 					},
 				},
@@ -1304,43 +1304,44 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 				},
 			},
 		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: &ast.BinaryExpr{
-				X:  ast.NewIdent(varName),
-				Op: token.EQL,
-				Y:  ast.NewIdent(`""`),
-			},
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ReturnStmt{
-						Results: []ast.Expr{
-							ast.NewIdent("nil"),
-							ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" is required in query parameters")),
+		if param.Value.Required {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent(varName),
+					Op: token.EQL,
+					Y:  ast.NewIdent(`""`),
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								ast.NewIdent("nil"),
+								ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" query param is required")),
+							},
 						},
 					},
 				},
-			},
-		})
-		h.AddImport("github.com/go-faster/errors")
-		switch {
-		case param.Value.Schema.Value.Type.Permits("string"):
-			bodyList = append(bodyList, &ast.AssignStmt{
-				Lhs: []ast.Expr{
-					&ast.SelectorExpr{
-						X:   ast.NewIdent("queryParams"),
-						Sel: ast.NewIdent(FormatGoLikeIdentifier(param.Value.Name)),
-					},
+			})
+			h.AddImport("github.com/go-faster/errors")
+			switch {
+			case param.Value.Schema.Value.Type.Permits("string"):
+				bodyList = append(bodyList,
+					h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema)...,
+				)
+			default:
+				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
+			}
+		} else {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent(varName),
+					Op: token.NEQ,
+					Y:  ast.NewIdent(`""`),
 				},
-				Tok: token.ASSIGN,
-				Rhs: []ast.Expr{
-					&ast.UnaryExpr{
-						Op: token.AND,
-						X:  ast.NewIdent(varName),
-					},
+				Body: &ast.BlockStmt{
+					List: h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema),
 				},
 			})
-		default:
-			return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
 		}
 	}
 
@@ -1398,6 +1399,84 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 	return nil
 }
 
+func (h *HandlersFile) AssignStringField(paramsName string, varName string, fieldName string, param *openapi3.SchemaRef) []ast.Stmt {
+	if param.Value.Format == "date-time" {
+		h.AddImport("time")
+		var result []ast.Stmt
+		result = append(result, &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				ast.NewIdent("parsed" + fieldName),
+				ast.NewIdent("err"),
+			},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   ast.NewIdent("time"),
+						Sel: ast.NewIdent("Parse"),
+					},
+					Args: []ast.Expr{
+						&ast.SelectorExpr{
+							X:   ast.NewIdent("time"),
+							Sel: ast.NewIdent("RFC3339"),
+						},
+						ast.NewIdent(varName),
+					},
+				},
+			},
+		})
+		result = append(result, &ast.IfStmt{
+			Cond: &ast.BinaryExpr{
+				X:  ast.NewIdent("err"),
+				Op: token.NEQ,
+				Y:  ast.NewIdent("nil"),
+			},
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ReturnStmt{
+						Results: []ast.Expr{
+							ast.NewIdent("nil"),
+							ast.NewIdent(fmt.Sprintf("errors.Wrap(err, %q)", fieldName+" is not a valid date-time format")),
+						},
+					},
+				},
+			},
+		})
+
+		return append(result, &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				&ast.SelectorExpr{
+					X:   ast.NewIdent(paramsName),
+					Sel: ast.NewIdent(fieldName),
+				},
+			},
+			Tok: token.ASSIGN,
+			Rhs: []ast.Expr{
+				&ast.UnaryExpr{
+					Op: token.AND,
+					X:  ast.NewIdent("parsed" + fieldName),
+				},
+			},
+		})
+	}
+
+	return []ast.Stmt{&ast.AssignStmt{
+		Lhs: []ast.Expr{
+			&ast.SelectorExpr{
+				X:   ast.NewIdent(paramsName),
+				Sel: ast.NewIdent(fieldName),
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.UnaryExpr{
+				Op: token.AND,
+				X:  ast.NewIdent(varName),
+			},
+		},
+	}}
+}
+
 func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Parameters) error {
 	bodyList := []ast.Stmt{
 		&ast.DeclStmt{
@@ -1441,43 +1520,44 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 				},
 			},
 		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: &ast.BinaryExpr{
-				X:  ast.NewIdent(varName),
-				Op: token.EQL,
-				Y:  ast.NewIdent(`""`),
-			},
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ReturnStmt{
-						Results: []ast.Expr{
-							ast.NewIdent("nil"),
-							ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" is required in headers")),
+		if param.Value.Required {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent(varName),
+					Op: token.EQL,
+					Y:  ast.NewIdent(`""`),
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								ast.NewIdent("nil"),
+								ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" header is required")),
+							},
 						},
 					},
 				},
-			},
-		})
-		h.AddImport("github.com/go-faster/errors")
-		switch {
-		case param.Value.Schema.Value.Type.Permits("string"):
-			bodyList = append(bodyList, &ast.AssignStmt{
-				Lhs: []ast.Expr{
-					&ast.SelectorExpr{
-						X:   ast.NewIdent("headers"),
-						Sel: ast.NewIdent(FormatGoLikeIdentifier(param.Value.Name)),
-					},
+			})
+			h.AddImport("github.com/go-faster/errors")
+			switch {
+			case param.Value.Schema.Value.Type.Permits("string"):
+				bodyList = append(bodyList,
+					h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema)...,
+				)
+			default:
+				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
+			}
+		} else {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent(varName),
+					Op: token.NEQ,
+					Y:  ast.NewIdent(`""`),
 				},
-				Tok: token.ASSIGN,
-				Rhs: []ast.Expr{
-					&ast.UnaryExpr{
-						Op: token.AND,
-						X:  ast.NewIdent(varName),
-					},
+				Body: &ast.BlockStmt{
+					List: h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema),
 				},
 			})
-		default:
-			return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
 		}
 	}
 	bodyList = append(bodyList,

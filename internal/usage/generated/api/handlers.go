@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
@@ -30,7 +31,7 @@ func (h *Handler) parsePostPathToParamResourseJSONPathParams(r *http.Request) (*
 	var pathParams models.PostPathToParamResourseJSONPathParams
 	param := chi.URLParam(r, "param")
 	if param == "" {
-		return nil, errors.New("param is required in path parameters")
+		return nil, errors.New("param path param is required")
 	}
 	pathParams.Param = &param
 	return &pathParams, nil
@@ -39,7 +40,7 @@ func (h *Handler) parsePostPathToParamResourseJSONQueryParams(r *http.Request) (
 	var queryParams models.PostPathToParamResourseJSONQueryParams
 	count := r.URL.Query().Get("count")
 	if count == "" {
-		return nil, errors.New("count is required in query parameters")
+		return nil, errors.New("count query param is required")
 	}
 	queryParams.Count = &count
 	return &queryParams, nil
@@ -48,9 +49,17 @@ func (h *Handler) parsePostPathToParamResourseJSONHeaders(r *http.Request) (*mod
 	var headers models.PostPathToParamResourseJSONHeaders
 	idempotencyKey := r.Header.Get("Idempotency-Key")
 	if idempotencyKey == "" {
-		return nil, errors.New("Idempotency-Key is required in headers")
+		return nil, errors.New("Idempotency-Key header is required")
 	}
 	headers.IdempotencyKey = &idempotencyKey
+	optionalHeader := r.Header.Get("Optional-Header")
+	if optionalHeader != "" {
+		parsedOptionalHeader, err := time.Parse(time.RFC3339, optionalHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, "OptionalHeader is not a valid date-time format")
+		}
+		headers.OptionalHeader = &parsedOptionalHeader
+	}
 	return &headers, nil
 }
 func (h *Handler) parsePostPathToParamResourseJSONRequestBody(r *http.Request) (*models.PostPathToParamResourseJSONRequestBody, error) {

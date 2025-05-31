@@ -208,17 +208,26 @@ func (m *SchemasFile) AddParamsModel(baseName string, paramType string, params o
 		if !param.Value.Schema.Value.Type.Permits(openapi3.TypeString) {
 			return errors.New("only string type parameters are supported for " + paramType + " parameters")
 		}
+		var jsonTags []string
+		var validateTags []string
+		jsonTags = append(jsonTags, param.Value.Name)
+		if param.Value.Required {
+			validateTags = append(validateTags, "required")
+		} else {
+			jsonTags = append(jsonTags, "omitempty")
+			validateTags = append(validateTags, "omitempty")
+		}
+
+		validateTags = append(validateTags, GetSchemaValidators(param.Value.Schema)...)
 		fieldType, err := m.GetFieldTypeFromSchema(name, "", param.Value.Schema)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
 		field := SchemaField{
-			Name:    name,
-			Type:    fieldType,
-			TagJSON: []string{param.Value.Name},
-		}
-		if param.Value.Required {
-			field.TagValidate = append(field.TagValidate, "required")
+			Name:        name,
+			Type:        fieldType,
+			TagJSON:     jsonTags,
+			TagValidate: validateTags,
 		}
 		fields = append(fields, field)
 	}
@@ -239,17 +248,26 @@ func (m *SchemasFile) AddHeadersModel(baseName string, headers openapi3.Headers)
 		if !header.Value.Schema.Value.Type.Permits(openapi3.TypeString) {
 			return errors.New("only string type parameters are supported for response headers")
 		}
+		var jsonTags []string
+		var validateTags []string
+		jsonTags = append(jsonTags, name)
+		if header.Value.Required {
+			validateTags = append(validateTags, "required")
+		} else {
+			jsonTags = append(jsonTags, "omitempty")
+			validateTags = append(validateTags, "omitempty")
+		}
+
+		validateTags = append(validateTags, GetSchemaValidators(header.Value.Schema)...)
 		fieldType, err := m.GetFieldTypeFromSchema(FormatGoLikeIdentifier(name), "", header.Value.Schema)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
 		field := SchemaField{
-			Name:    FormatGoLikeIdentifier(name),
-			Type:    fieldType,
-			TagJSON: []string{name},
-		}
-		if header.Value.Required {
-			field.TagValidate = append(field.TagValidate, "required")
+			Name:        FormatGoLikeIdentifier(name),
+			Type:        fieldType,
+			TagJSON:     jsonTags,
+			TagValidate: validateTags,
 		}
 		fields = append(fields, field)
 	}
