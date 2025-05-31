@@ -9,6 +9,7 @@ type NewResourseResponse struct {
 	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
 	Date2       *time.Time `json:"date2,omitempty" validate:"omitempty"`
 	Description *string    `json:"description,omitempty" validate:"omitempty"`
+	EnumVal     *string    `json:"enum-val,omitempty" validate:"omitempty"`
 	Name        *string    `json:"name" validate:"required"`
 	Param       *string    `json:"param" validate:"required"`
 }
@@ -26,6 +27,7 @@ type PostPathToParamResourseJSONRequestBody struct {
 	CodeForResponse *int       `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
 	Date            *time.Time `json:"date,omitempty" validate:"omitempty"`
 	Description     *string    `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
+	EnumVal         *string    `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
 	Name            *string    `json:"name" validate:"required,min=1,max=10"`
 }
 type PostPathToParamResourseJSONRequest struct {
@@ -39,6 +41,7 @@ type PostPathToParamResourseJSONResponse200Body struct {
 	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
 	Date2       *time.Time `json:"date2,omitempty" validate:"omitempty"`
 	Description *string    `json:"description,omitempty" validate:"omitempty"`
+	EnumVal     *string    `json:"enum-val,omitempty" validate:"omitempty"`
 	Name        *string    `json:"name" validate:"required"`
 	Param       *string    `json:"param" validate:"required"`
 }

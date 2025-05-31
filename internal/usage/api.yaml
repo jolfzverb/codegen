@@ -50,6 +50,9 @@ paths:
                 date:
                   type: string
                   format: date-time
+                enum-val:
+                  type: string
+                  enum: [value1, value2, value3]
               required:
                 - name
       responses:
@@ -87,6 +90,8 @@ components:
         date2:
           type: string
           format: date-time
+        enum-val:
+          type: string
       required:
         - name
         - param
