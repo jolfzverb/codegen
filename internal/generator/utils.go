@@ -40,6 +40,14 @@ func GetSchemaValidators(schema *openapi3.SchemaRef) []string {
 			joinedEnum := strings.Join(enumStrValues, " ")
 			validateTags = append(validateTags, "oneof="+joinedEnum)
 		}
+		switch schema.Value.Format {
+		case "ip":
+			validateTags = append(validateTags, "ip")
+		case "ipv4":
+			validateTags = append(validateTags, "ipv4")
+		case "ipv6":
+			validateTags = append(validateTags, "ipv6")
+		}
 
 	case schema.Value.Type.Permits(openapi3.TypeInteger):
 		if schema.Value.Min != nil {
