@@ -9,15 +9,21 @@ import (
 	"github.com/go-faster/errors"
 )
 
+type Options struct {
+	ImportPrefix              string
+	PackageName               string
+	RequiredFieldsArePointers bool
+}
+
 type Generator struct {
 	SchemasFile  *SchemasFile
 	HandlersFile *HandlersFile
 }
 
-func NewGenerator(importPrefix string, packageName string) *Generator {
+func NewGenerator(opts Options) *Generator {
 	return &Generator{
-		SchemasFile:  NewSchemasFile(),
-		HandlersFile: NewHandlersFile(packageName, importPrefix, path.Join(importPrefix, "models")),
+		SchemasFile:  NewSchemasFile(opts.RequiredFieldsArePointers),
+		HandlersFile: NewHandlersFile(opts.PackageName, opts.ImportPrefix, path.Join(opts.ImportPrefix, "models"), opts.RequiredFieldsArePointers),
 	}
 }
 
@@ -64,7 +70,11 @@ func GenerateToIO(ctx context.Context, input io.Reader, schemasOutput io.Writer,
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	generator := NewGenerator(importPrefix, packageName)
+	generator := NewGenerator(Options{
+		ImportPrefix:              importPrefix,
+		PackageName:               packageName,
+		RequiredFieldsArePointers: false,
+	})
 	generator.Generate(yaml)
 
 	err = generator.WriteToOutput(schemasOutput, handlersOutput)

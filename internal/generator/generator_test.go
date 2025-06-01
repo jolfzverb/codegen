@@ -64,8 +64,8 @@ type ExampleModelField4 struct {
 type ExampleModel struct {
 	Field4     *ExampleModelField4 ` + "`json:\"field4,omitempty\" validate:\"omitempty\"`" + `
 	Field5     *ObjectModel        ` + "`json:\"field5,omitempty\" validate:\"omitempty\"`" + `
-	Field6     *float64            ` + "`json:\"field6\" validate:\"required,min=1.5,max=10.5\"`" + `
-	FieldOne   *string             ` + "`json:\"field_one\" validate:\"required,min=3,max=10\"`" + `
+	Field6     float64             ` + "`json:\"field6\" validate:\"required,min=1.5,max=10.5\"`" + `
+	FieldOne   string              ` + "`json:\"field_one\" validate:\"required,min=3,max=10\"`" + `
 	FieldThree *StringModel        ` + "`json:\"field_three,omitempty\" validate:\"omitempty\"`" + `
 	FieldTwo   *int                ` + "`json:\"field_two,omitempty\" validate:\"omitempty\"`" + `
 }
@@ -785,16 +785,16 @@ type GetExample2JSONResponse struct {
 	Response200 *GetExample2JSONResponse200
 }
 type PostExampleParamNameJSONPathParams struct {
-	ParamName *string ` + "`json:\"param_name\" validate:\"required\"`" + `
+	ParamName string ` + "`json:\"param_name\" validate:\"required\"`" + `
 }
 type PostExampleParamNameJSONQueryParams struct {
-	ParamName2 *string ` + "`json:\"param_name2\" validate:\"required\"`" + `
+	ParamName2 string ` + "`json:\"param_name2\" validate:\"required\"`" + `
 }
 type PostExampleParamNameJSONHeaders struct {
-	XHeader *string ` + "`json:\"X-Header\" validate:\"required\"`" + `
+	XHeader string ` + "`json:\"X-Header\" validate:\"required\"`" + `
 }
 type PostExampleParamNameJSONRequestBody struct {
-	Code *string ` + "`json:\"code\" validate:\"required\"`" + `
+	Code string ` + "`json:\"code\" validate:\"required\"`" + `
 }
 type PostExampleParamNameJSONRequest struct {
 	Path    PostExampleParamNameJSONPathParams
@@ -803,7 +803,7 @@ type PostExampleParamNameJSONRequest struct {
 	Body    PostExampleParamNameJSONRequestBody
 }
 type PostExampleParamNameJSONResponse200Headers struct {
-	XHeader *string ` + "`json:\"X-Header\" validate:\"required\"`" + `
+	XHeader string ` + "`json:\"X-Header\" validate:\"required\"`" + `
 }
 type PostExampleParamNameJSONResponse200 struct {
 	Headers *PostExampleParamNameJSONResponse200Headers
@@ -896,7 +896,7 @@ func (h *Handler) parsePostExampleParamNameJSONPathParams(r *http.Request) (*mod
 	if paramName == "" {
 		return nil, errors.New("param_name path param is required")
 	}
-	pathParams.ParamName = &paramName
+	pathParams.ParamName = paramName
 	err := h.validator.Struct(pathParams)
 	if err != nil {
 		return nil, err
@@ -909,7 +909,7 @@ func (h *Handler) parsePostExampleParamNameJSONQueryParams(r *http.Request) (*mo
 	if paramName2 == "" {
 		return nil, errors.New("param_name2 query param is required")
 	}
-	queryParams.ParamName2 = &paramName2
+	queryParams.ParamName2 = paramName2
 	err := h.validator.Struct(queryParams)
 	if err != nil {
 		return nil, err
@@ -922,7 +922,7 @@ func (h *Handler) parsePostExampleParamNameJSONHeaders(r *http.Request) (*models
 	if xHeader == "" {
 		return nil, errors.New("X-Header header is required")
 	}
-	headers.XHeader = &xHeader
+	headers.XHeader = xHeader
 	err := h.validator.Struct(headers)
 	if err != nil {
 		return nil, err
