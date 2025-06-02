@@ -5,22 +5,22 @@ package models
 import "time"
 
 type NewResourseResponse struct {
-	Count       *string    `json:"count" validate:"required"`
+	Count       string     `json:"count" validate:"required"`
 	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
 	Date2       *time.Time `json:"date2,omitempty" validate:"omitempty"`
 	Description *string    `json:"description,omitempty" validate:"omitempty"`
 	EnumVal     *string    `json:"enum-val,omitempty" validate:"omitempty"`
-	Name        *string    `json:"name" validate:"required"`
-	Param       *string    `json:"param" validate:"required"`
+	Name        string     `json:"name" validate:"required"`
+	Param       string     `json:"param" validate:"required"`
 }
 type CreateJSONPathParams struct {
-	Param *string `json:"param" validate:"required"`
+	Param string `json:"param" validate:"required"`
 }
 type CreateJSONQueryParams struct {
-	Count *string `json:"count" validate:"required"`
+	Count string `json:"count" validate:"required"`
 }
 type CreateJSONHeaders struct {
-	IdempotencyKey *string    `json:"Idempotency-Key" validate:"required,min=1,max=100"`
+	IdempotencyKey string     `json:"Idempotency-Key" validate:"required,min=1,max=100"`
 	OptionalHeader *time.Time `json:"Optional-Header,omitempty" validate:"omitempty"`
 }
 type CreateJSONRequestBody struct {
@@ -28,7 +28,7 @@ type CreateJSONRequestBody struct {
 	Date            *time.Time `json:"date,omitempty" validate:"omitempty"`
 	Description     *string    `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
 	EnumVal         *string    `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
-	Name            *string    `json:"name" validate:"required,min=1,max=10"`
+	Name            string     `json:"name" validate:"required,min=1,max=10"`
 }
 type CreateJSONRequest struct {
 	Path    CreateJSONPathParams

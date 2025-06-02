@@ -33,7 +33,7 @@ func (h *Handler) parseCreateJSONPathParams(r *http.Request) (*models.CreateJSON
 	if param == "" {
 		return nil, errors.New("param path param is required")
 	}
-	pathParams.Param = &param
+	pathParams.Param = param
 	err := h.validator.Struct(pathParams)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (h *Handler) parseCreateJSONQueryParams(r *http.Request) (*models.CreateJSO
 	if count == "" {
 		return nil, errors.New("count query param is required")
 	}
-	queryParams.Count = &count
+	queryParams.Count = count
 	err := h.validator.Struct(queryParams)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (h *Handler) parseCreateJSONHeaders(r *http.Request) (*models.CreateJSONHea
 	if idempotencyKey == "" {
 		return nil, errors.New("Idempotency-Key header is required")
 	}
-	headers.IdempotencyKey = &idempotencyKey
+	headers.IdempotencyKey = idempotencyKey
 	optionalHeader := r.Header.Get("Optional-Header")
 	if optionalHeader != "" {
 		parsedOptionalHeader, err := time.Parse(time.RFC3339, optionalHeader)

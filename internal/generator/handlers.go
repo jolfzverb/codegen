@@ -14,10 +14,11 @@ import (
 )
 
 type HandlersFile struct {
-	importPrefix   string
-	packageName    *ast.Ident
-	packageImports []string
-	interfaceDecls []*ast.GenDecl
+	requiredFieldsArePointers bool
+	importPrefix              string
+	packageName               *ast.Ident
+	packageImports            []string
+	interfaceDecls            []*ast.GenDecl
 
 	handlerDecl            *ast.GenDecl
 	handlerDeclQAFieldList *ast.FieldList // quick access to handler struct field list
@@ -171,8 +172,11 @@ func (h *HandlersFile) InitFields(packageName string, modelsImportPath string) {
 	h.InitRoutesFunc()
 }
 
-func NewHandlersFile(packageName string, importPrefix string, modelsImportPath string) *HandlersFile {
-	h := &HandlersFile{importPrefix: importPrefix}
+func NewHandlersFile(packageName string, importPrefix string, modelsImportPath string, requiredFieldsArePointers bool) *HandlersFile {
+	h := &HandlersFile{
+		importPrefix:              importPrefix,
+		requiredFieldsArePointers: requiredFieldsArePointers,
+	}
 	h.InitFields(packageName, modelsImportPath)
 
 	return h
@@ -1190,10 +1194,7 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 				},
 				Tok: token.ASSIGN,
 				Rhs: []ast.Expr{
-					&ast.UnaryExpr{
-						Op: token.AND,
-						X:  ast.NewIdent(varName),
-					},
+					ast.NewIdent(varName),
 				},
 			})
 		default:
@@ -1361,7 +1362,7 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
 				bodyList = append(bodyList,
-					h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema)...,
+					h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)...,
 				)
 			default:
 				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
@@ -1374,7 +1375,7 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 					Y:  ast.NewIdent(`""`),
 				},
 				Body: &ast.BlockStmt{
-					List: h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema),
+					List: h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required),
 				},
 			})
 		}
@@ -1469,7 +1470,7 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 	return nil
 }
 
-func (h *HandlersFile) AssignStringField(paramsName string, varName string, fieldName string, param *openapi3.SchemaRef) []ast.Stmt {
+func (h *HandlersFile) AssignStringField(paramsName string, varName string, fieldName string, param *openapi3.SchemaRef, required bool) []ast.Stmt {
 	if param.Value.Format == "date-time" {
 		h.AddImport("time")
 		var result []ast.Stmt
@@ -1512,6 +1513,15 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 				},
 			},
 		})
+		var rhs ast.Expr
+		if required && !h.requiredFieldsArePointers {
+			rhs = ast.NewIdent("parsed" + fieldName)
+		} else {
+			rhs = &ast.UnaryExpr{
+				Op: token.AND,
+				X:  ast.NewIdent("parsed" + fieldName),
+			}
+		}
 
 		return append(result, &ast.AssignStmt{
 			Lhs: []ast.Expr{
@@ -1521,13 +1531,17 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 				},
 			},
 			Tok: token.ASSIGN,
-			Rhs: []ast.Expr{
-				&ast.UnaryExpr{
-					Op: token.AND,
-					X:  ast.NewIdent("parsed" + fieldName),
-				},
-			},
+			Rhs: []ast.Expr{rhs},
 		})
+	}
+	var rhs ast.Expr
+	if required && !h.requiredFieldsArePointers {
+		rhs = ast.NewIdent(varName)
+	} else {
+		rhs = &ast.UnaryExpr{
+			Op: token.AND,
+			X:  ast.NewIdent(varName),
+		}
 	}
 
 	return []ast.Stmt{&ast.AssignStmt{
@@ -1538,12 +1552,7 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 			},
 		},
 		Tok: token.ASSIGN,
-		Rhs: []ast.Expr{
-			&ast.UnaryExpr{
-				Op: token.AND,
-				X:  ast.NewIdent(varName),
-			},
-		},
+		Rhs: []ast.Expr{rhs},
 	}}
 }
 
@@ -1612,7 +1621,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
 				bodyList = append(bodyList,
-					h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema)...,
+					h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)...,
 				)
 			default:
 				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
@@ -1625,7 +1634,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 					Y:  ast.NewIdent(`""`),
 				},
 				Body: &ast.BlockStmt{
-					List: h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema),
+					List: h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required),
 				},
 			})
 		}

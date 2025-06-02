@@ -55,7 +55,7 @@ func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSON
 				EnumVal:     r.Body.EnumVal,
 			},
 			Headers: &models.CreateJSONResponse200Headers{
-				IdempotencyKey: r.Headers.IdempotencyKey,
+				IdempotencyKey: &r.Headers.IdempotencyKey,
 			},
 		},
 	}, nil

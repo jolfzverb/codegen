@@ -7,6 +7,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
+	"github.com/jolfzverb/codegen/internal/generator/options"
 )
 
 type Generator struct {
@@ -14,10 +15,10 @@ type Generator struct {
 	HandlersFile *HandlersFile
 }
 
-func NewGenerator(importPrefix string, packageName string) *Generator {
+func NewGenerator(importPrefix string, packageName string, requiredFieldsArePointers bool) *Generator {
 	return &Generator{
-		SchemasFile:  NewSchemasFile(),
-		HandlersFile: NewHandlersFile(packageName, importPrefix, path.Join(importPrefix, "models")),
+		SchemasFile:  NewSchemasFile(requiredFieldsArePointers),
+		HandlersFile: NewHandlersFile(packageName, importPrefix, path.Join(importPrefix, "models"), requiredFieldsArePointers),
 	}
 }
 
@@ -52,7 +53,7 @@ func (g *Generator) Generate(yaml *openapi3.T) {
 }
 
 func GenerateToIO(ctx context.Context, input io.Reader, schemasOutput io.Writer, handlersOutput io.Writer,
-	importPrefix string, packageName string,
+	importPrefix string, packageName string, opts *options.Options,
 ) error {
 	const op = "generator.GenerateToIO"
 	loader := &openapi3.Loader{Context: ctx, IsExternalRefsAllowed: true}
@@ -64,7 +65,10 @@ func GenerateToIO(ctx context.Context, input io.Reader, schemasOutput io.Writer,
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	generator := NewGenerator(importPrefix, packageName)
+	generator := NewGenerator(importPrefix,
+		packageName,
+		opts.RequiredFieldsArePointers,
+	)
 	generator.Generate(yaml)
 
 	err = generator.WriteToOutput(schemasOutput, handlersOutput)

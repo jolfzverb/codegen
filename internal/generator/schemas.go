@@ -14,8 +14,9 @@ import (
 )
 
 type SchemasFile struct {
-	packageImports []string
-	decls          []*ast.GenDecl
+	requiredFieldsArePointers bool
+	packageImports            []string
+	decls                     []*ast.GenDecl
 }
 
 type SchemaStruct struct {
@@ -31,8 +32,10 @@ type SchemaField struct {
 	Required    bool
 }
 
-func NewSchemasFile() *SchemasFile {
-	return &SchemasFile{}
+func NewSchemasFile(requiredFieldsArePointers bool) *SchemasFile {
+	return &SchemasFile{
+		requiredFieldsArePointers: requiredFieldsArePointers,
+	}
 }
 
 func (m *SchemasFile) GenerateImportsSpecs(imp []string) ([]*ast.ImportSpec, []ast.Spec) {
@@ -223,11 +226,16 @@ func (m *SchemasFile) AddParamsModel(baseName string, paramType string, params o
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
+		required := false
+		if !m.requiredFieldsArePointers {
+			required = param.Value.Required
+		}
 		field := SchemaField{
 			Name:        name,
 			Type:        fieldType,
 			TagJSON:     jsonTags,
 			TagValidate: validateTags,
+			Required:    required,
 		}
 		fields = append(fields, field)
 	}
@@ -263,11 +271,16 @@ func (m *SchemasFile) AddHeadersModel(baseName string, headers openapi3.Headers)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
+		required := false
+		if !m.requiredFieldsArePointers {
+			required = header.Value.Required
+		}
 		field := SchemaField{
 			Name:        FormatGoLikeIdentifier(name),
 			Type:        fieldType,
 			TagJSON:     jsonTags,
 			TagValidate: validateTags,
+			Required:    required,
 		}
 		fields = append(fields, field)
 	}
@@ -395,11 +408,16 @@ func (m *SchemasFile) ProcessObjectSchema(modelName string, schema *openapi3.Sch
 		if err != nil {
 			return errors.Wrapf(err, op)
 		}
+		required := false
+		if !m.requiredFieldsArePointers {
+			required = requiredFields[fieldName]
+		}
 		field := SchemaField{
 			Name:        FormatGoLikeIdentifier(fieldName),
 			Type:        fieldType,
 			TagJSON:     jsonTags,
 			TagValidate: validateTags,
+			Required:    required,
 		}
 		model.Fields = append(model.Fields, field)
 	}
