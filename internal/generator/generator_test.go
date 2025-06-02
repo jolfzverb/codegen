@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/jolfzverb/codegen/internal/generator"
+	"github.com/jolfzverb/codegen/internal/generator/options"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -80,7 +81,7 @@ type StringModel string
 	outputModels := &bytes.Buffer{}
 	outputHandlers := &bytes.Buffer{}
 
-	err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename")
+	err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 	assert.NoError(t, err)
 
@@ -704,7 +705,7 @@ type ObjectModel struct {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename")
+			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, outputModels.String())
@@ -1024,7 +1025,7 @@ func (h *Handler) handlePostExampleParamName(w http.ResponseWriter, r *http.Requ
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename")
+			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedModels, outputModels.String())
@@ -1178,7 +1179,7 @@ func (h *Handler) handlePostExample(w http.ResponseWriter, r *http.Request) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename")
+			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedModels, outputModels.String())
@@ -1333,7 +1334,7 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename")
+			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedModels, outputModels.String())
