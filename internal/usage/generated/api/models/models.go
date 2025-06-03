@@ -27,6 +27,8 @@ type CreateJSONRequestBody struct {
 	CodeForResponse *int       `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
 	Date            *time.Time `json:"date,omitempty" validate:"omitempty"`
 	Description     *string    `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
+	EnumInt         *int       `json:"enum-int,omitempty" validate:"omitempty,oneof=1 2 3"`
+	EnumNumber      *float64   `json:"enum-number,omitempty" validate:"omitempty,oneof=1.1 2.2 3.3"`
 	EnumVal         *string    `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
 	Name            string     `json:"name" validate:"required,min=1,max=10"`
 }

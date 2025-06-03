@@ -111,4 +111,13 @@ func TestHandler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
+	t.Run("400 number enum", func(t *testing.T) {
+		requestBody := `{"name": "value", "enum-int": 15}`
+		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
+		resp, err := http.DefaultClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
 }

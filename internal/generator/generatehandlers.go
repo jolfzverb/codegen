@@ -290,6 +290,27 @@ func (g *Generator) ProcessPaths(paths *openapi3.Paths) error {
 				return errors.Wrap(err, op)
 			}
 		}
+		if pathItem.Delete != nil {
+			if pathItem.Delete.RequestBody != nil {
+				return errors.New("DELETE method should not have request body")
+			}
+			err := g.ProcessOperation(pathName, "Delete", pathItem.Delete)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
+		}
+		if pathItem.Put != nil {
+			err := g.ProcessOperation(pathName, "Put", pathItem.Put)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
+		}
+		if pathItem.Patch != nil {
+			err := g.ProcessOperation(pathName, "Patch", pathItem.Patch)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
+		}
 	}
 
 	return nil
