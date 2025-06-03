@@ -62,6 +62,8 @@ paths:
                 enum-number:
                   type: number
                   enum: [1.1, 2.2, 3.3]
+                #external-ref:
+                #  $ref: '../internal/usage/def.yml#/components/schemas/ExternalRef'
               required:
                 - name
       responses:
