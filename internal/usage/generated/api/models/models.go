@@ -43,7 +43,7 @@ type CreateJSONResponse200Headers struct {
 }
 type CreateJSONResponse200 struct {
 	Body    NewResourseResponse
-	Headers *CreateJSONResponse200Headers
+	Headers CreateJSONResponse200Headers
 }
 type CreateJSONResponse400 struct {
 }

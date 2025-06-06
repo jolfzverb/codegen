@@ -807,7 +807,7 @@ type PostExampleParamNameJSONResponse200Headers struct {
 	XHeader string ` + "`json:\"X-Header\" validate:\"required\"`" + `
 }
 type PostExampleParamNameJSONResponse200 struct {
-	Headers *PostExampleParamNameJSONResponse200Headers
+	Headers PostExampleParamNameJSONResponse200Headers
 }
 type PostExampleParamNameJSONResponse struct {
 	StatusCode  int
@@ -849,6 +849,9 @@ func (h *Handler) AddRoutes(router chi.Router) {
 }
 func (h *Handler) parseGetExample2JSONRequest(r *http.Request) (*models.GetExample2JSONRequest, error) {
 	return &models.GetExample2JSONRequest{}, nil
+}
+func GetExample2JSON200Response() *models.GetExample2JSONResponse {
+	return &models.GetExample2JSONResponse{StatusCode: 200, Response200: &models.GetExample2JSONResponse200{}}
 }
 func (h *Handler) writeGetExample2JSON200Response(w http.ResponseWriter, r *models.GetExample2JSONResponse200) {
 }
@@ -960,6 +963,9 @@ func (h *Handler) parsePostExampleParamNameJSONRequest(r *http.Request) (*models
 		return nil, err
 	}
 	return &models.PostExampleParamNameJSONRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Body: *body}, nil
+}
+func PostExampleParamNameJSON200Response(headers models.PostExampleParamNameJSONResponse200Headers) *models.PostExampleParamNameJSONResponse {
+	return &models.PostExampleParamNameJSONResponse{StatusCode: 200, Response200: &models.PostExampleParamNameJSONResponse200{Headers: headers}}
 }
 func (h *Handler) writePostExampleParamNameJSON200Response(w http.ResponseWriter, r *models.PostExampleParamNameJSONResponse200) {
 	var err error
@@ -1130,6 +1136,9 @@ func (h *Handler) parsePostExampleJSONRequest(r *http.Request) (*models.PostExam
 	}
 	return &models.PostExampleJSONRequest{Body: *body}, nil
 }
+func PostExampleJSON200Response() *models.PostExampleJSONResponse {
+	return &models.PostExampleJSONResponse{StatusCode: 200, Response200: &models.PostExampleJSONResponse200{}}
+}
 func (h *Handler) writePostExampleJSON200Response(w http.ResponseWriter, r *models.PostExampleJSONResponse200) {
 }
 func (h *Handler) writePostExampleJSONResponse(w http.ResponseWriter, response *models.PostExampleJSONResponse) {
@@ -1284,6 +1293,9 @@ func (h *Handler) parseOpJSONRequest(r *http.Request) (*models.OpJSONRequest, er
 		return nil, err
 	}
 	return &models.OpJSONRequest{Body: *body}, nil
+}
+func OpJSON200Response() *models.OpJSONResponse {
+	return &models.OpJSONResponse{StatusCode: 200, Response200: &models.OpJSONResponse200{}}
 }
 func (h *Handler) writeOpJSON200Response(w http.ResponseWriter, r *models.OpJSONResponse200) {
 }

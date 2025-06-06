@@ -72,11 +72,16 @@ func (g *Generator) AddResponseCodeModels(baseName string, code string, response
 			return errors.Wrap(err, op)
 		}
 		model.Fields = append(model.Fields, SchemaField{
-			Name: "Headers",
-			Type: baseName + "Response" + code + "Headers",
+			Name:     "Headers",
+			Type:     baseName + "Response" + code + "Headers",
+			Required: true,
 		})
 	}
 	g.SchemasFile.AddSchema(model)
+	err := g.HandlersFile.AddCreateResponseModel(baseName, code, response)
+	if err != nil {
+		return errors.Wrapf(err, op)
+	}
 
 	return nil
 }

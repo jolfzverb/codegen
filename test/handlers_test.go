@@ -21,15 +21,9 @@ func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSON
 	if r.Body.CodeForResponse != nil {
 		switch *r.Body.CodeForResponse {
 		case 400:
-			return &models.CreateJSONResponse{
-				StatusCode:  400,
-				Response400: &models.CreateJSONResponse400{},
-			}, nil
+			return api.CreateJSON400Response(), nil
 		case 404:
-			return &models.CreateJSONResponse{
-				StatusCode:  404,
-				Response404: &models.CreateJSONResponse404{},
-			}, nil
+			return api.CreateJSON404Response(), nil
 		}
 	}
 	var date *time.Time
@@ -42,23 +36,20 @@ func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSON
 		date2 = new(time.Time)
 		*date2 = r.Headers.OptionalHeader.UTC()
 	}
-	return &models.CreateJSONResponse{
-		StatusCode: 200,
-		Response200: &models.CreateJSONResponse200{
-			Body: models.NewResourseResponse{
-				Count:       r.Query.Count,
-				Description: r.Body.Description,
-				Name:        r.Body.Name,
-				Param:       r.Path.Param,
-				Date:        date,
-				Date2:       date2,
-				EnumVal:     r.Body.EnumVal,
-			},
-			Headers: &models.CreateJSONResponse200Headers{
-				IdempotencyKey: &r.Headers.IdempotencyKey,
-			},
+	return api.CreateJSON200Response(
+		models.NewResourseResponse{
+			Count:       r.Query.Count,
+			Description: r.Body.Description,
+			Name:        r.Body.Name,
+			Param:       r.Path.Param,
+			Date:        date,
+			Date2:       date2,
+			EnumVal:     r.Body.EnumVal,
 		},
-	}, nil
+		models.CreateJSONResponse200Headers{
+			IdempotencyKey: &r.Headers.IdempotencyKey,
+		},
+	), nil
 }
 
 func TestHandler(t *testing.T) {

@@ -105,6 +105,9 @@ func (h *Handler) parseCreateJSONRequest(r *http.Request) (*models.CreateJSONReq
 	}
 	return &models.CreateJSONRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Body: *body}, nil
 }
+func CreateJSON200Response(body models.NewResourseResponse, headers models.CreateJSONResponse200Headers) *models.CreateJSONResponse {
+	return &models.CreateJSONResponse{StatusCode: 200, Response200: &models.CreateJSONResponse200{Body: body, Headers: headers}}
+}
 func (h *Handler) writeCreateJSON200Response(w http.ResponseWriter, r *models.CreateJSONResponse200) {
 	var err error
 	headersJSON, err := json.Marshal(r.Headers)
@@ -127,7 +130,13 @@ func (h *Handler) writeCreateJSON200Response(w http.ResponseWriter, r *models.Cr
 		return
 	}
 }
+func CreateJSON400Response() *models.CreateJSONResponse {
+	return &models.CreateJSONResponse{StatusCode: 400, Response400: &models.CreateJSONResponse400{}}
+}
 func (h *Handler) writeCreateJSON400Response(w http.ResponseWriter, r *models.CreateJSONResponse400) {
+}
+func CreateJSON404Response() *models.CreateJSONResponse {
+	return &models.CreateJSONResponse{StatusCode: 404, Response404: &models.CreateJSONResponse404{}}
 }
 func (h *Handler) writeCreateJSON404Response(w http.ResponseWriter, r *models.CreateJSONResponse404) {
 }

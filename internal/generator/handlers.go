@@ -2202,3 +2202,107 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 		},
 	})
 }
+
+func (h *HandlersFile) AddCreateResponseModel(baseName string, code string, response *openapi3.ResponseRef) error {
+	arglist := []*ast.Field{}
+	constructorArgs := []ast.Expr{}
+
+	if len(response.Value.Content) > 0 {
+		// assume there is a json body
+		json, ok := response.Value.Content["application/json"]
+		if !ok {
+			return errors.New("response content type 'application/json' not found")
+		}
+		if json.Schema != nil {
+			typeName := baseName + "Response" + code + "Body"
+			if json.Schema.Ref != "" {
+				typeName = ParseRefTypeName(json.Schema.Ref)
+			}
+			arglist = append(arglist, &ast.Field{
+				Names: []*ast.Ident{ast.NewIdent("body")},
+				Type: &ast.SelectorExpr{
+					X:   ast.NewIdent("models"),
+					Sel: ast.NewIdent(typeName),
+				},
+			})
+			constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
+				Key:   ast.NewIdent("Body"),
+				Value: ast.NewIdent("body"),
+			})
+		}
+	}
+
+	if len(response.Value.Headers) > 0 {
+		arglist = append(arglist, &ast.Field{
+			Names: []*ast.Ident{ast.NewIdent("headers")},
+			Type: &ast.SelectorExpr{
+				X:   ast.NewIdent("models"),
+				Sel: ast.NewIdent(baseName + "Response" + code + "Headers"),
+			},
+		})
+		constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
+			Key:   ast.NewIdent("Headers"),
+			Value: ast.NewIdent("headers"),
+		})
+	}
+
+	h.restDecls = append(h.restDecls, &ast.FuncDecl{
+		Name: ast.NewIdent(baseName + code + "Response"),
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{
+				List: arglist,
+			},
+			Results: &ast.FieldList{
+				List: []*ast.Field{{
+					Type: &ast.StarExpr{
+						X: &ast.SelectorExpr{
+							X:   ast.NewIdent("models"),
+							Sel: ast.NewIdent(baseName + "Response"),
+						},
+					},
+				}},
+			},
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						&ast.UnaryExpr{
+							Op: token.AND,
+							X: &ast.CompositeLit{
+								Type: &ast.SelectorExpr{
+									X:   ast.NewIdent("models"),
+									Sel: ast.NewIdent(baseName + "Response"),
+								},
+								Elts: []ast.Expr{
+									&ast.KeyValueExpr{
+										Key: ast.NewIdent("StatusCode"),
+										Value: &ast.BasicLit{
+											Kind:  token.INT,
+											Value: code,
+										},
+									},
+									&ast.KeyValueExpr{
+										Key: ast.NewIdent("Response" + code),
+										Value: &ast.UnaryExpr{
+											Op: token.AND,
+											X: &ast.CompositeLit{
+												Type: &ast.SelectorExpr{
+													X:   ast.NewIdent("models"),
+													Sel: ast.NewIdent(baseName + "Response" + code),
+												},
+												Elts: constructorArgs,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	return nil
+}
