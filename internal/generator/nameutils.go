@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"errors"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -101,15 +100,4 @@ func ParseRefTypeName(ref string) string {
 	}
 
 	return parts[len(parts)-1]
-}
-
-var ErrUnsupportedContentType = errors.New("unsupported content type")
-
-func NameSuffixFromContentType(contentType string) (string, error) {
-	switch contentType {
-	case applicationJSONCT:
-		return "Json", nil
-	default:
-		return "", ErrUnsupportedContentType
-	}
 }

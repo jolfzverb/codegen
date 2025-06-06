@@ -56,6 +56,14 @@ paths:
                 enum-val:
                   type: string
                   enum: [value1, value2, value3]
+                enum-int:
+                  type: integer
+                  enum: [1, 2, 3]
+                enum-number:
+                  type: number
+                  enum: [1.1, 2.2, 3.3]
+                #external-ref:
+                #  $ref: '../internal/usage/def.yml#/components/schemas/ExternalRef'
               required:
                 - name
       responses:

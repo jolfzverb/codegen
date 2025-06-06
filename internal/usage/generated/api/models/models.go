@@ -13,43 +13,45 @@ type NewResourseResponse struct {
 	Name        string     `json:"name" validate:"required"`
 	Param       string     `json:"param" validate:"required"`
 }
-type CreateJSONPathParams struct {
+type CreatePathParams struct {
 	Param string `json:"param" validate:"required"`
 }
-type CreateJSONQueryParams struct {
+type CreateQueryParams struct {
 	Count string `json:"count" validate:"required"`
 }
-type CreateJSONHeaders struct {
+type CreateHeaders struct {
 	IdempotencyKey string     `json:"Idempotency-Key" validate:"required,min=1,max=100"`
 	OptionalHeader *time.Time `json:"Optional-Header,omitempty" validate:"omitempty"`
 }
-type CreateJSONRequestBody struct {
+type CreateRequestBody struct {
 	CodeForResponse *int       `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
 	Date            *time.Time `json:"date,omitempty" validate:"omitempty"`
 	Description     *string    `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
+	EnumInt         *int       `json:"enum-int,omitempty" validate:"omitempty,oneof=1 2 3"`
+	EnumNumber      *float64   `json:"enum-number,omitempty" validate:"omitempty,oneof=1.1 2.2 3.3"`
 	EnumVal         *string    `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
 	Name            string     `json:"name" validate:"required,min=1,max=10"`
 }
-type CreateJSONRequest struct {
-	Path    CreateJSONPathParams
-	Query   CreateJSONQueryParams
-	Headers CreateJSONHeaders
-	Body    CreateJSONRequestBody
+type CreateRequest struct {
+	Path    CreatePathParams
+	Query   CreateQueryParams
+	Headers CreateHeaders
+	Body    CreateRequestBody
 }
-type CreateJSONResponse200Headers struct {
+type CreateResponse200Headers struct {
 	IdempotencyKey *string `json:"Idempotency-Key,omitempty" validate:"omitempty"`
 }
-type CreateJSONResponse200 struct {
+type CreateResponse200 struct {
 	Body    NewResourseResponse
-	Headers *CreateJSONResponse200Headers
+	Headers CreateResponse200Headers
 }
-type CreateJSONResponse400 struct {
+type CreateResponse400 struct {
 }
-type CreateJSONResponse404 struct {
+type CreateResponse404 struct {
 }
-type CreateJSONResponse struct {
+type CreateResponse struct {
 	StatusCode  int
-	Response200 *CreateJSONResponse200
-	Response400 *CreateJSONResponse400
-	Response404 *CreateJSONResponse404
+	Response200 *CreateResponse200
+	Response400 *CreateResponse400
+	Response404 *CreateResponse404
 }

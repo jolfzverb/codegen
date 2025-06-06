@@ -65,6 +65,15 @@ func GetSchemaValidators(schema *openapi3.SchemaRef) []string {
 		if schema.Value.ExclusiveMin {
 			slog.Warn("exclusiveMin validator is not supported")
 		}
+		if len(schema.Value.Enum) > 0 {
+			enumStrValues := make([]string, 0, len(schema.Value.Enum))
+			for _, enumValue := range schema.Value.Enum {
+				enumStrValue := fmt.Sprintf("%v", enumValue)
+				enumStrValues = append(enumStrValues, enumStrValue)
+			}
+			joinedEnum := strings.Join(enumStrValues, " ")
+			validateTags = append(validateTags, "oneof="+joinedEnum)
+		}
 
 	case schema.Value.Type.Permits(openapi3.TypeNumber):
 		if schema.Value.Min != nil {
@@ -81,6 +90,15 @@ func GetSchemaValidators(schema *openapi3.SchemaRef) []string {
 		}
 		if schema.Value.ExclusiveMin {
 			slog.Warn("exclusiveMin validator is not supported")
+		}
+		if len(schema.Value.Enum) > 0 {
+			enumStrValues := make([]string, 0, len(schema.Value.Enum))
+			for _, enumValue := range schema.Value.Enum {
+				enumStrValue := fmt.Sprintf("%v", enumValue)
+				enumStrValues = append(enumStrValues, enumStrValue)
+			}
+			joinedEnum := strings.Join(enumStrValues, " ")
+			validateTags = append(validateTags, "oneof="+joinedEnum)
 		}
 
 	case schema.Value.Type.Permits(openapi3.TypeArray):

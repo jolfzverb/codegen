@@ -17,19 +17,13 @@ import (
 
 type mockHandler struct{}
 
-func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSONRequest) (*models.CreateJSONResponse, error) {
+func (m *mockHandler) HandleCreate(ctx context.Context, r *models.CreateRequest) (*models.CreateResponse, error) {
 	if r.Body.CodeForResponse != nil {
 		switch *r.Body.CodeForResponse {
 		case 400:
-			return &models.CreateJSONResponse{
-				StatusCode:  400,
-				Response400: &models.CreateJSONResponse400{},
-			}, nil
+			return api.Create400Response(), nil
 		case 404:
-			return &models.CreateJSONResponse{
-				StatusCode:  404,
-				Response404: &models.CreateJSONResponse404{},
-			}, nil
+			return api.Create404Response(), nil
 		}
 	}
 	var date *time.Time
@@ -42,23 +36,20 @@ func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSON
 		date2 = new(time.Time)
 		*date2 = r.Headers.OptionalHeader.UTC()
 	}
-	return &models.CreateJSONResponse{
-		StatusCode: 200,
-		Response200: &models.CreateJSONResponse200{
-			Body: models.NewResourseResponse{
-				Count:       r.Query.Count,
-				Description: r.Body.Description,
-				Name:        r.Body.Name,
-				Param:       r.Path.Param,
-				Date:        date,
-				Date2:       date2,
-				EnumVal:     r.Body.EnumVal,
-			},
-			Headers: &models.CreateJSONResponse200Headers{
-				IdempotencyKey: &r.Headers.IdempotencyKey,
-			},
+	return api.Create200Response(
+		models.NewResourseResponse{
+			Count:       r.Query.Count,
+			Description: r.Body.Description,
+			Name:        r.Body.Name,
+			Param:       r.Path.Param,
+			Date:        date,
+			Date2:       date2,
+			EnumVal:     r.Body.EnumVal,
 		},
-	}, nil
+		models.CreateResponse200Headers{
+			IdempotencyKey: &r.Headers.IdempotencyKey,
+		},
+	), nil
 }
 
 func TestHandler(t *testing.T) {
@@ -104,6 +95,15 @@ func TestHandler(t *testing.T) {
 	})
 	t.Run("400 No name", func(t *testing.T) {
 		requestBody := `{}`
+		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
+		resp, err := http.DefaultClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+	t.Run("400 number enum", func(t *testing.T) {
+		requestBody := `{"name": "value", "enum-int": 15}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Idempotency-Key", "unique-idempotency-key")

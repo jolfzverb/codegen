@@ -18,7 +18,7 @@ func GetOptions() (*Options, error) {
 
 	flag.StringVar(&opts.YAMLFileName, "f", "", "Path to the OpenAPI YAML file")
 	flag.StringVar(&opts.DirPrefix, "d", "internal", "Directory prefix for generated files")
-	flag.StringVar(&opts.PackagePrefix, "p", "github.com/jolfzverb/codegen/internal", "Package prefix for imports")
+	flag.StringVar(&opts.PackagePrefix, "p", "internal", "Package prefix for imports")
 	flag.BoolVar(&opts.RequiredFieldsArePointers, "pointers", false, "Generate required fields as pointers")
 
 	flag.Parse()
