@@ -17,13 +17,13 @@ import (
 
 type mockHandler struct{}
 
-func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSONRequest) (*models.CreateJSONResponse, error) {
+func (m *mockHandler) HandleCreate(ctx context.Context, r *models.CreateRequest) (*models.CreateResponse, error) {
 	if r.Body.CodeForResponse != nil {
 		switch *r.Body.CodeForResponse {
 		case 400:
-			return api.CreateJSON400Response(), nil
+			return api.Create400Response(), nil
 		case 404:
-			return api.CreateJSON404Response(), nil
+			return api.Create404Response(), nil
 		}
 	}
 	var date *time.Time
@@ -36,7 +36,7 @@ func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSON
 		date2 = new(time.Time)
 		*date2 = r.Headers.OptionalHeader.UTC()
 	}
-	return api.CreateJSON200Response(
+	return api.Create200Response(
 		models.NewResourseResponse{
 			Count:       r.Query.Count,
 			Description: r.Body.Description,
@@ -46,7 +46,7 @@ func (m *mockHandler) HandleCreateJSON(ctx context.Context, r *models.CreateJSON
 			Date2:       date2,
 			EnumVal:     r.Body.EnumVal,
 		},
-		models.CreateJSONResponse200Headers{
+		models.CreateResponse200Headers{
 			IdempotencyKey: &r.Headers.IdempotencyKey,
 		},
 	), nil

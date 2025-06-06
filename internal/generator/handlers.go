@@ -503,7 +503,7 @@ func (h *HandlersFile) FinalizeHandlerSwitches() {
 	}
 }
 
-func (h *HandlersFile) AddContentTypeHandler(baseName string, rawContentType string, handlerSuffix string) {
+func (h *HandlersFile) AddContentTypeHandler(baseName string, rawContentType string) {
 	if h.handleDeclQASwitches == nil {
 		return
 	}
@@ -513,7 +513,7 @@ func (h *HandlersFile) AddContentTypeHandler(baseName string, rawContentType str
 				X: &ast.CallExpr{
 					Fun: &ast.SelectorExpr{
 						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("handle" + baseName + handlerSuffix),
+						Sel: ast.NewIdent("handle" + baseName + "Request"),
 					},
 					Args: []ast.Expr{
 						ast.NewIdent("w"),
@@ -551,7 +551,7 @@ func (h *HandlersFile) AddContentTypeHandler(baseName string, rawContentType str
 
 func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 	h.restDecls = append(h.restDecls, &ast.FuncDecl{
-		Name: ast.NewIdent("handle" + baseName),
+		Name: ast.NewIdent("handle" + baseName + "Request"),
 		Recv: &ast.FieldList{
 			List: []*ast.Field{{
 				Names: []*ast.Ident{ast.NewIdent("h")},

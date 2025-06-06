@@ -25,11 +25,11 @@ func (g *Generator) AddRoute(baseName string, method string, pathName string) {
 	g.HandlersFile.AddRouteToRouter(baseName, method, pathName)
 }
 
-func (g *Generator) AddContentTypeToHandler(baseName string, rawContentType string, handlerSuffix string) {
+func (g *Generator) AddContentTypeToHandler(baseName string, rawContentType string) {
 	if g.HandlersFile.GetHandler(baseName) == nil {
 		g.HandlersFile.CreateHandler(baseName)
 	}
-	g.HandlersFile.AddContentTypeHandler(baseName, rawContentType, handlerSuffix)
+	g.HandlersFile.AddContentTypeHandler(baseName, rawContentType)
 }
 
 func (g *Generator) AddHandleOperationMethod(baseName string) {
@@ -219,29 +219,24 @@ func (g *Generator) ProcessApplicationJSONOperation(pathName string, method stri
 	if contentType == "" {
 		contentType = applicationJSONCT
 	}
-	rawSuffix, err := NameSuffixFromContentType(contentType)
-	if err != nil {
-		return errors.Wrap(err, op)
-	}
-	suffix := FormatGoLikeIdentifier(rawSuffix)
 	handlerBaseName := FormatGoLikeIdentifier(method) + FormatGoLikeIdentifier(pathName)
 	if operation.OperationID != "" {
 		handlerBaseName = FormatGoLikeIdentifier(operation.OperationID)
 	}
 
-	g.AddInterface(handlerBaseName + suffix)
-	g.AddDependencyToHandler(handlerBaseName + suffix)
+	g.AddInterface(handlerBaseName)
+	g.AddDependencyToHandler(handlerBaseName)
 	g.AddRoute(handlerBaseName, method, pathName)
-	err = g.AddParseParamsMethods(handlerBaseName+suffix, contentType, operation)
+	err := g.AddParseParamsMethods(handlerBaseName, contentType, operation)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	err = g.AddWriteResponseMethod(handlerBaseName+suffix, operation)
+	err = g.AddWriteResponseMethod(handlerBaseName, operation)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	g.AddHandleOperationMethod(handlerBaseName + suffix)
-	g.AddContentTypeToHandler(handlerBaseName, contentType, suffix)
+	g.AddHandleOperationMethod(handlerBaseName)
+	g.AddContentTypeToHandler(handlerBaseName, contentType)
 
 	return nil
 }

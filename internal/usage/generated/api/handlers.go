@@ -13,22 +13,22 @@ import (
 	"github.com/jolfzverb/codegen/internal/usage/generated/api/models"
 )
 
-type CreateJSONHandler interface {
-	HandleCreateJSON(ctx context.Context, r *models.CreateJSONRequest) (*models.CreateJSONResponse, error)
+type CreateHandler interface {
+	HandleCreate(ctx context.Context, r *models.CreateRequest) (*models.CreateResponse, error)
 }
 type Handler struct {
-	validator  *validator.Validate
-	createJSON CreateJSONHandler
+	validator *validator.Validate
+	create    CreateHandler
 }
 
-func NewHandler(createJSON CreateJSONHandler) *Handler {
-	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), createJSON: createJSON}
+func NewHandler(create CreateHandler) *Handler {
+	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), create: create}
 }
 func (h *Handler) AddRoutes(router chi.Router) {
 	router.Post("/path/to/{param}/resourse", h.handleCreate)
 }
-func (h *Handler) parseCreateJSONPathParams(r *http.Request) (*models.CreateJSONPathParams, error) {
-	var pathParams models.CreateJSONPathParams
+func (h *Handler) parseCreatePathParams(r *http.Request) (*models.CreatePathParams, error) {
+	var pathParams models.CreatePathParams
 	param := chi.URLParam(r, "param")
 	if param == "" {
 		return nil, errors.New("param path param is required")
@@ -40,8 +40,8 @@ func (h *Handler) parseCreateJSONPathParams(r *http.Request) (*models.CreateJSON
 	}
 	return &pathParams, nil
 }
-func (h *Handler) parseCreateJSONQueryParams(r *http.Request) (*models.CreateJSONQueryParams, error) {
-	var queryParams models.CreateJSONQueryParams
+func (h *Handler) parseCreateQueryParams(r *http.Request) (*models.CreateQueryParams, error) {
+	var queryParams models.CreateQueryParams
 	count := r.URL.Query().Get("count")
 	if count == "" {
 		return nil, errors.New("count query param is required")
@@ -53,8 +53,8 @@ func (h *Handler) parseCreateJSONQueryParams(r *http.Request) (*models.CreateJSO
 	}
 	return &queryParams, nil
 }
-func (h *Handler) parseCreateJSONHeaders(r *http.Request) (*models.CreateJSONHeaders, error) {
-	var headers models.CreateJSONHeaders
+func (h *Handler) parseCreateHeaders(r *http.Request) (*models.CreateHeaders, error) {
+	var headers models.CreateHeaders
 	idempotencyKey := r.Header.Get("Idempotency-Key")
 	if idempotencyKey == "" {
 		return nil, errors.New("Idempotency-Key header is required")
@@ -74,8 +74,8 @@ func (h *Handler) parseCreateJSONHeaders(r *http.Request) (*models.CreateJSONHea
 	}
 	return &headers, nil
 }
-func (h *Handler) parseCreateJSONRequestBody(r *http.Request) (*models.CreateJSONRequestBody, error) {
-	var body models.CreateJSONRequestBody
+func (h *Handler) parseCreateRequestBody(r *http.Request) (*models.CreateRequestBody, error) {
+	var body models.CreateRequestBody
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, err
@@ -86,29 +86,29 @@ func (h *Handler) parseCreateJSONRequestBody(r *http.Request) (*models.CreateJSO
 	}
 	return &body, nil
 }
-func (h *Handler) parseCreateJSONRequest(r *http.Request) (*models.CreateJSONRequest, error) {
-	pathParams, err := h.parseCreateJSONPathParams(r)
+func (h *Handler) parseCreateRequest(r *http.Request) (*models.CreateRequest, error) {
+	pathParams, err := h.parseCreatePathParams(r)
 	if err != nil {
 		return nil, err
 	}
-	queryParams, err := h.parseCreateJSONQueryParams(r)
+	queryParams, err := h.parseCreateQueryParams(r)
 	if err != nil {
 		return nil, err
 	}
-	headers, err := h.parseCreateJSONHeaders(r)
+	headers, err := h.parseCreateHeaders(r)
 	if err != nil {
 		return nil, err
 	}
-	body, err := h.parseCreateJSONRequestBody(r)
+	body, err := h.parseCreateRequestBody(r)
 	if err != nil {
 		return nil, err
 	}
-	return &models.CreateJSONRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Body: *body}, nil
+	return &models.CreateRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Body: *body}, nil
 }
-func CreateJSON200Response(body models.NewResourseResponse, headers models.CreateJSONResponse200Headers) *models.CreateJSONResponse {
-	return &models.CreateJSONResponse{StatusCode: 200, Response200: &models.CreateJSONResponse200{Body: body, Headers: headers}}
+func Create200Response(body models.NewResourseResponse, headers models.CreateResponse200Headers) *models.CreateResponse {
+	return &models.CreateResponse{StatusCode: 200, Response200: &models.CreateResponse200{Body: body, Headers: headers}}
 }
-func (h *Handler) writeCreateJSON200Response(w http.ResponseWriter, r *models.CreateJSONResponse200) {
+func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *models.CreateResponse200) {
 	var err error
 	headersJSON, err := json.Marshal(r.Headers)
 	if err != nil {
@@ -130,61 +130,61 @@ func (h *Handler) writeCreateJSON200Response(w http.ResponseWriter, r *models.Cr
 		return
 	}
 }
-func CreateJSON400Response() *models.CreateJSONResponse {
-	return &models.CreateJSONResponse{StatusCode: 400, Response400: &models.CreateJSONResponse400{}}
+func Create400Response() *models.CreateResponse {
+	return &models.CreateResponse{StatusCode: 400, Response400: &models.CreateResponse400{}}
 }
-func (h *Handler) writeCreateJSON400Response(w http.ResponseWriter, r *models.CreateJSONResponse400) {
+func (h *Handler) writeCreate400Response(w http.ResponseWriter, r *models.CreateResponse400) {
 }
-func CreateJSON404Response() *models.CreateJSONResponse {
-	return &models.CreateJSONResponse{StatusCode: 404, Response404: &models.CreateJSONResponse404{}}
+func Create404Response() *models.CreateResponse {
+	return &models.CreateResponse{StatusCode: 404, Response404: &models.CreateResponse404{}}
 }
-func (h *Handler) writeCreateJSON404Response(w http.ResponseWriter, r *models.CreateJSONResponse404) {
+func (h *Handler) writeCreate404Response(w http.ResponseWriter, r *models.CreateResponse404) {
 }
-func (h *Handler) writeCreateJSONResponse(w http.ResponseWriter, response *models.CreateJSONResponse) {
+func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *models.CreateResponse) {
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
 			http.Error(w, "InternalServerError", http.StatusInternalServerError)
 			return
 		}
-		h.writeCreateJSON200Response(w, response.Response200)
+		h.writeCreate200Response(w, response.Response200)
 	case 400:
 		if response.Response400 == nil {
 			http.Error(w, "InternalServerError", http.StatusInternalServerError)
 			return
 		}
-		h.writeCreateJSON400Response(w, response.Response400)
+		h.writeCreate400Response(w, response.Response400)
 	case 404:
 		if response.Response404 == nil {
 			http.Error(w, "InternalServerError", http.StatusInternalServerError)
 			return
 		}
-		h.writeCreateJSON404Response(w, response.Response404)
+		h.writeCreate404Response(w, response.Response404)
 	}
 	w.WriteHeader(response.StatusCode)
 }
-func (h *Handler) handleCreateJSON(w http.ResponseWriter, r *http.Request) {
-	request, err := h.parseCreateJSONRequest(r)
+func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
+	request, err := h.parseCreateRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
-	response, err := h.createJSON.HandleCreateJSON(ctx, request)
+	response, err := h.create.HandleCreate(ctx, request)
 	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
 	}
-	h.writeCreateJSONResponse(w, response)
+	h.writeCreateResponse(w, response)
 	return
 }
 func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	switch r.Header.Get("Content-Type") {
 	case "application/json":
-		h.handleCreateJSON(w, r)
+		h.handleCreateRequest(w, r)
 		return
 	case "":
-		h.handleCreateJSON(w, r)
+		h.handleCreateRequest(w, r)
 		return
 	default:
 		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
