@@ -74,6 +74,28 @@ func (h *Handler) parseCreateHeaders(r *http.Request) (*models.CreateHeaders, er
 	}
 	return &headers, nil
 }
+func (h *Handler) parseCreateCookies(r *http.Request) (*models.CreateCookies, error) {
+	var cookies models.CreateCookies
+	cookieParam, err := r.Cookie("cookie-param")
+	if err != nil && !errors.Is(err, http.ErrNoCookie) {
+		return nil, err
+	}
+	if err == nil {
+		cookieParamValue := cookieParam.Value
+		cookies.CookieParam = &cookieParamValue
+	}
+	requiredCookieParam, err := r.Cookie("required-cookie-param")
+	if err != nil {
+		return nil, err
+	}
+	requiredCookieParamValue := requiredCookieParam.Value
+	cookies.RequiredCookieParam = requiredCookieParamValue
+	err = h.validator.Struct(cookies)
+	if err != nil {
+		return nil, err
+	}
+	return &cookies, nil
+}
 func (h *Handler) parseCreateRequestBody(r *http.Request) (*models.CreateRequestBody, error) {
 	var body models.CreateRequestBody
 	err := json.NewDecoder(r.Body).Decode(&body)
@@ -99,11 +121,15 @@ func (h *Handler) parseCreateRequest(r *http.Request) (*models.CreateRequest, er
 	if err != nil {
 		return nil, err
 	}
+	cookieParams, err := h.parseCreateCookies(r)
+	if err != nil {
+		return nil, err
+	}
 	body, err := h.parseCreateRequestBody(r)
 	if err != nil {
 		return nil, err
 	}
-	return &models.CreateRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Body: *body}, nil
+	return &models.CreateRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Cookies: *cookieParams, Body: *body}, nil
 }
 func Create200Response(body models.NewResourseResponse, headers models.CreateResponse200Headers) *models.CreateResponse {
 	return &models.CreateResponse{StatusCode: 200, Response200: &models.CreateResponse200{Body: body, Headers: headers}}

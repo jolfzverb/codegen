@@ -23,6 +23,10 @@ type CreateHeaders struct {
 	IdempotencyKey string     `json:"Idempotency-Key" validate:"required,min=1,max=100"`
 	OptionalHeader *time.Time `json:"Optional-Header,omitempty" validate:"omitempty"`
 }
+type CreateCookies struct {
+	CookieParam         *string `json:"cookie-param,omitempty" validate:"omitempty,min=10,max=15"`
+	RequiredCookieParam string  `json:"required-cookie-param" validate:"required,min=10,max=15"`
+}
 type CreateRequestBody struct {
 	CodeForResponse *int       `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
 	Date            *time.Time `json:"date,omitempty" validate:"omitempty"`
@@ -36,6 +40,7 @@ type CreateRequest struct {
 	Path    CreatePathParams
 	Query   CreateQueryParams
 	Headers CreateHeaders
+	Cookies CreateCookies
 	Body    CreateRequestBody
 }
 type CreateResponse200Headers struct {
