@@ -17,10 +17,7 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 				Specs: []ast.Spec{
 					&ast.ValueSpec{
 						Names: []*ast.Ident{ast.NewIdent("queryParams")},
-						Type: &ast.SelectorExpr{
-							X:   ast.NewIdent("models"),
-							Sel: ast.NewIdent(baseName + "QueryParams"),
-						},
+						Type:  Sel(ast.NewIdent("models"), baseName+"QueryParams"),
 					},
 				},
 			},
@@ -37,19 +34,10 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X: &ast.SelectorExpr{
-									X:   ast.NewIdent("r"),
-									Sel: ast.NewIdent("URL"),
-								},
-								Sel: ast.NewIdent("Query"),
-							},
-							Args: []ast.Expr{},
-						},
-						Sel: ast.NewIdent("Get"),
-					},
+					Fun: Sel(&ast.CallExpr{
+						Fun:  Sel(Sel(ast.NewIdent("r"), "URL"), "Query"),
+						Args: []ast.Expr{},
+					}, "Get"),
 					Args: []ast.Expr{
 						&ast.BasicLit{
 							Kind:  token.STRING,
@@ -104,13 +92,7 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 		Tok: token.DEFINE,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("validator"),
-					},
-					Sel: ast.NewIdent("Struct"),
-				},
+				Fun: Sel(Sel(ast.NewIdent("h"), "validator"), "Struct"),
 				Args: []ast.Expr{
 					ast.NewIdent("queryParams"),
 				},
@@ -173,15 +155,9 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("time"),
-						Sel: ast.NewIdent("Parse"),
-					},
+					Fun: Sel(ast.NewIdent("time"), "Parse"),
 					Args: []ast.Expr{
-						&ast.SelectorExpr{
-							X:   ast.NewIdent("time"),
-							Sel: ast.NewIdent("RFC3339"),
-						},
+						Sel(ast.NewIdent("time"), "RFC3339"),
 						ast.NewIdent(varName),
 					},
 				},
@@ -215,12 +191,7 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 		}
 
 		return append(result, &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				&ast.SelectorExpr{
-					X:   ast.NewIdent(paramsName),
-					Sel: ast.NewIdent(fieldName),
-				},
-			},
+			Lhs: []ast.Expr{Sel(ast.NewIdent(paramsName), fieldName)},
 			Tok: token.ASSIGN,
 			Rhs: []ast.Expr{rhs},
 		})
@@ -236,12 +207,7 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 	}
 
 	return []ast.Stmt{&ast.AssignStmt{
-		Lhs: []ast.Expr{
-			&ast.SelectorExpr{
-				X:   ast.NewIdent(paramsName),
-				Sel: ast.NewIdent(fieldName),
-			},
-		},
+		Lhs: []ast.Expr{Sel(ast.NewIdent(paramsName), fieldName)},
 		Tok: token.ASSIGN,
 		Rhs: []ast.Expr{rhs},
 	}}
@@ -255,10 +221,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 				Specs: []ast.Spec{
 					&ast.ValueSpec{
 						Names: []*ast.Ident{ast.NewIdent("headers")},
-						Type: &ast.SelectorExpr{
-							X:   ast.NewIdent("models"),
-							Sel: ast.NewIdent(baseName + "Headers"),
-						},
+						Type:  Sel(ast.NewIdent("models"), baseName+"Headers"),
 					},
 				},
 			},
@@ -274,13 +237,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X: &ast.SelectorExpr{
-							X:   ast.NewIdent("r"),
-							Sel: ast.NewIdent("Header"),
-						},
-						Sel: ast.NewIdent("Get"),
-					},
+					Fun: Sel(Sel(ast.NewIdent("r"), "Header"), "Get"),
 					Args: []ast.Expr{
 						&ast.BasicLit{
 							Kind:  token.STRING,
@@ -302,6 +259,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 						&ast.ReturnStmt{
 							Results: []ast.Expr{
 								ast.NewIdent("nil"),
+								// TODO
 								ast.NewIdent(fmt.Sprintf("errors.New(%q)", param.Value.Name+" header is required")),
 							},
 						},
@@ -312,10 +270,12 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
 				bodyList = append(bodyList,
-					h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)...,
+					h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name),
+						param.Value.Schema, param.Value.Required,
+					)...,
 				)
 			default:
-				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
+				return errors.New("unsupported path parameter type: " + fmt.Sprint(param.Value.Schema.Value.Type))
 			}
 		} else {
 			bodyList = append(bodyList, &ast.IfStmt{
@@ -325,7 +285,9 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 					Y:  ast.NewIdent(`""`),
 				},
 				Body: &ast.BlockStmt{
-					List: h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required),
+					List: h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name),
+						param.Value.Schema, param.Value.Required,
+					),
 				},
 			})
 		}
@@ -335,13 +297,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 		Tok: token.DEFINE,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("validator"),
-					},
-					Sel: ast.NewIdent("Struct"),
-				},
+				Fun: Sel(Sel(ast.NewIdent("h"), "validator"), "Struct"),
 				Args: []ast.Expr{
 					ast.NewIdent("headers"),
 				},
@@ -368,10 +324,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
 			Results: []ast.Expr{
-				&ast.UnaryExpr{
-					Op: token.AND,
-					X:  ast.NewIdent("headers"),
-				},
+				Amp(ast.NewIdent("headers")),
 				ast.NewIdent("nil"),
 			},
 		},
@@ -396,7 +349,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType st
 	if !body.Value.Required {
 		bodyList = append(bodyList, &ast.IfStmt{
 			Cond: &ast.BinaryExpr{
-				X:  &ast.SelectorExpr{X: ast.NewIdent("r"), Sel: ast.NewIdent("Body")},
+				X:  Sel(ast.NewIdent("r"), "Body"),
 				Op: token.EQL,
 				Y:  ast.NewIdent("nil"),
 			},
@@ -428,10 +381,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType st
 			Specs: []ast.Spec{
 				&ast.ValueSpec{
 					Names: []*ast.Ident{ast.NewIdent("body")},
-					Type: &ast.SelectorExpr{
-						X:   ast.NewIdent("models"),
-						Sel: ast.NewIdent(typeName),
-					},
+					Type:  Sel(ast.NewIdent("models"), typeName),
 				},
 			},
 		},
@@ -442,26 +392,15 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType st
 		Tok: token.DEFINE,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("json"),
-							Sel: ast.NewIdent("NewDecoder"),
-						},
-						Args: []ast.Expr{
-							&ast.SelectorExpr{
-								X:   ast.NewIdent("r"),
-								Sel: ast.NewIdent("Body"),
-							},
-						},
+				Fun: Sel(
+					&ast.CallExpr{
+						Fun:  Sel(ast.NewIdent("json"), "NewDecoder"),
+						Args: []ast.Expr{Sel(ast.NewIdent("r"), "Body")},
 					},
-					Sel: ast.NewIdent("Decode"),
-				},
+					"Decode",
+				),
 				Args: []ast.Expr{
-					&ast.UnaryExpr{
-						Op: token.AND,
-						X:  ast.NewIdent("body"),
-					},
+					Amp(ast.NewIdent("body")),
 				},
 			},
 		},
@@ -490,13 +429,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType st
 		Tok: token.ASSIGN,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("validator"),
-					},
-					Sel: ast.NewIdent("Struct"),
-				},
+				Fun: Sel(Sel(ast.NewIdent("h"), "validator"), "Struct"),
 				Args: []ast.Expr{
 					ast.NewIdent("body"),
 				},
@@ -523,10 +456,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType st
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
 			Results: []ast.Expr{
-				&ast.UnaryExpr{
-					Op: token.AND,
-					X:  ast.NewIdent("body"),
-				},
+				Amp(ast.NewIdent("body")),
 				ast.NewIdent("nil"),
 			},
 		},
@@ -556,10 +486,8 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 	elts := []ast.Expr{}
 	if len(pathParams) > 0 {
 		elts = append(elts, &ast.KeyValueExpr{
-			Key: ast.NewIdent("Path"),
-			Value: &ast.StarExpr{
-				X: ast.NewIdent("pathParams"),
-			},
+			Key:   ast.NewIdent("Path"),
+			Value: Star(ast.NewIdent("pathParams")),
 		})
 		bodyList = append(bodyList, &ast.AssignStmt{
 			Lhs: []ast.Expr{
@@ -569,10 +497,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("parse" + baseName + "PathParams"),
-					},
+					Fun: Sel(ast.NewIdent("h"), "parse"+baseName+"PathParams"),
 					Args: []ast.Expr{
 						ast.NewIdent("r"),
 					},
@@ -599,10 +524,8 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 	}
 	if len(queryParams) > 0 {
 		elts = append(elts, &ast.KeyValueExpr{
-			Key: ast.NewIdent("Query"),
-			Value: &ast.StarExpr{
-				X: ast.NewIdent("queryParams"),
-			},
+			Key:   ast.NewIdent("Query"),
+			Value: Star(ast.NewIdent("queryParams")),
 		})
 		bodyList = append(bodyList, &ast.AssignStmt{
 			Lhs: []ast.Expr{
@@ -612,10 +535,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("parse" + baseName + "QueryParams"),
-					},
+					Fun: Sel(ast.NewIdent("h"), "parse"+baseName+"QueryParams"),
 					Args: []ast.Expr{
 						ast.NewIdent("r"),
 					},
@@ -642,10 +562,8 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 	}
 	if len(headers) > 0 {
 		elts = append(elts, &ast.KeyValueExpr{
-			Key: ast.NewIdent("Headers"),
-			Value: &ast.StarExpr{
-				X: ast.NewIdent("headers"),
-			},
+			Key:   ast.NewIdent("Headers"),
+			Value: Star(ast.NewIdent("headers")),
 		})
 		bodyList = append(bodyList, &ast.AssignStmt{
 			Lhs: []ast.Expr{
@@ -655,10 +573,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("parse" + baseName + "Headers"),
-					},
+					Fun: Sel(ast.NewIdent("h"), "parse"+baseName+"Headers"),
 					Args: []ast.Expr{
 						ast.NewIdent("r"),
 					},
@@ -685,10 +600,8 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 	}
 	if len(cookieParams) > 0 {
 		elts = append(elts, &ast.KeyValueExpr{
-			Key: ast.NewIdent("Cookies"),
-			Value: &ast.StarExpr{
-				X: ast.NewIdent("cookieParams"),
-			},
+			Key:   ast.NewIdent("Cookies"),
+			Value: Star(ast.NewIdent("cookieParams")),
 		})
 		bodyList = append(bodyList, &ast.AssignStmt{
 			Lhs: []ast.Expr{
@@ -698,10 +611,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("parse" + baseName + "CookieParams"),
-					},
+					Fun: Sel(ast.NewIdent("h"), "parse"+baseName+"CookieParams"),
 					Args: []ast.Expr{
 						ast.NewIdent("r"),
 					},
@@ -731,10 +641,8 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 		if ok && content.Schema != nil {
 			if body.Value.Required {
 				elts = append(elts, &ast.KeyValueExpr{
-					Key: ast.NewIdent("Body"),
-					Value: &ast.StarExpr{
-						X: ast.NewIdent("body"),
-					},
+					Key:   ast.NewIdent("Body"),
+					Value: Star(ast.NewIdent("body")),
 				})
 			} else {
 				elts = append(elts, &ast.KeyValueExpr{
@@ -750,10 +658,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 				Tok: token.DEFINE,
 				Rhs: []ast.Expr{
 					&ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("h"),
-							Sel: ast.NewIdent("parse" + baseName + "RequestBody"),
-						},
+						Fun: Sel(ast.NewIdent("h"), "parse"+baseName+"RequestBody"),
 						Args: []ast.Expr{
 							ast.NewIdent("r"),
 						},
@@ -783,16 +688,10 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 	bodyList = append(bodyList,
 		&ast.ReturnStmt{
 			Results: []ast.Expr{
-				&ast.UnaryExpr{
-					Op: token.AND,
-					X: &ast.CompositeLit{
-						Type: &ast.SelectorExpr{
-							X:   ast.NewIdent("models"),
-							Sel: ast.NewIdent(baseName + "Request"),
-						},
-						Elts: elts,
-					},
-				},
+				Amp(&ast.CompositeLit{
+					Type: Sel(ast.NewIdent("models"), baseName+"Request"),
+					Elts: elts,
+				}),
 				ast.NewIdent("nil"),
 			},
 		},
@@ -829,10 +728,7 @@ func (h *HandlersFile) AddCreateResponseModel(baseName string, code string, resp
 			}
 			arglist = append(arglist, &ast.Field{
 				Names: []*ast.Ident{ast.NewIdent("body")},
-				Type: &ast.SelectorExpr{
-					X:   ast.NewIdent("models"),
-					Sel: ast.NewIdent(typeName),
-				},
+				Type:  Sel(ast.NewIdent("models"), typeName),
 			})
 			constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
 				Key:   ast.NewIdent("Body"),
@@ -844,10 +740,7 @@ func (h *HandlersFile) AddCreateResponseModel(baseName string, code string, resp
 	if len(response.Value.Headers) > 0 {
 		arglist = append(arglist, &ast.Field{
 			Names: []*ast.Ident{ast.NewIdent("headers")},
-			Type: &ast.SelectorExpr{
-				X:   ast.NewIdent("models"),
-				Sel: ast.NewIdent(baseName + "Response" + code + "Headers"),
-			},
+			Type:  Sel(ast.NewIdent("models"), baseName+"Response"+code+"Headers"),
 		})
 		constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
 			Key:   ast.NewIdent("Headers"),
@@ -864,37 +757,25 @@ func (h *HandlersFile) AddCreateResponseModel(baseName string, code string, resp
 		[]ast.Stmt{
 			&ast.ReturnStmt{
 				Results: []ast.Expr{
-					&ast.UnaryExpr{
-						Op: token.AND,
-						X: &ast.CompositeLit{
-							Type: &ast.SelectorExpr{
-								X:   ast.NewIdent("models"),
-								Sel: ast.NewIdent(baseName + "Response"),
+					Amp(&ast.CompositeLit{
+						Type: Sel(ast.NewIdent("models"), baseName+"Response"),
+						Elts: []ast.Expr{
+							&ast.KeyValueExpr{
+								Key: ast.NewIdent("StatusCode"),
+								Value: &ast.BasicLit{
+									Kind:  token.INT,
+									Value: code,
+								},
 							},
-							Elts: []ast.Expr{
-								&ast.KeyValueExpr{
-									Key: ast.NewIdent("StatusCode"),
-									Value: &ast.BasicLit{
-										Kind:  token.INT,
-										Value: code,
-									},
-								},
-								&ast.KeyValueExpr{
-									Key: ast.NewIdent("Response" + code),
-									Value: &ast.UnaryExpr{
-										Op: token.AND,
-										X: &ast.CompositeLit{
-											Type: &ast.SelectorExpr{
-												X:   ast.NewIdent("models"),
-												Sel: ast.NewIdent(baseName + "Response" + code),
-											},
-											Elts: constructorArgs,
-										},
-									},
-								},
+							&ast.KeyValueExpr{
+								Key: ast.NewIdent("Response" + code),
+								Value: Amp(&ast.CompositeLit{
+									Type: Sel(ast.NewIdent("models"), baseName+"Response"+code),
+									Elts: constructorArgs,
+								}),
 							},
 						},
-					},
+					}),
 				},
 			},
 		},
