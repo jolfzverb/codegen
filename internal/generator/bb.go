@@ -35,6 +35,10 @@ func Field(name string, fieldType ast.Expr, tags string) *ast.Field {
 	return ret
 }
 
+func FieldA(field *ast.Field) []*ast.Field {
+	return []*ast.Field{field}
+}
+
 func Star(field ast.Expr) ast.Expr {
 	return &ast.StarExpr{X: field}
 }
@@ -43,5 +47,12 @@ func Sel(field ast.Expr, sel string) ast.Expr {
 	return &ast.SelectorExpr{
 		X:   field,
 		Sel: ast.NewIdent(sel),
+	}
+}
+
+func Amp(field ast.Expr) ast.Expr {
+	return &ast.UnaryExpr{
+		Op: token.AND,
+		X:  field,
 	}
 }

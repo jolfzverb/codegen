@@ -6,6 +6,7 @@ import (
 	"go/format"
 	"go/token"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 
@@ -42,13 +43,7 @@ func (h *HandlersFile) InitImports(modelsImportPath string) {
 
 func (h *HandlersFile) InitHandlerStruct() {
 	fieldList := &ast.FieldList{
-		List: []*ast.Field{{
-			Names: []*ast.Ident{ast.NewIdent("validator")},
-			Type: &ast.StarExpr{
-				Star: token.NoPos,
-				X:    Sel(ast.NewIdent("validator"), "Validate"),
-			},
-		}},
+		List: []*ast.Field{Field("validator", Star(Sel(ast.NewIdent("validator"), "Validate")), "")},
 	}
 	handlerDecl := &ast.GenDecl{
 		Tok: token.TYPE,
@@ -67,9 +62,7 @@ func (h *HandlersFile) InitHandlerStruct() {
 
 func (h *HandlersFile) InitHandlerConstructor() {
 	initializerComposite := &ast.CompositeLit{
-		Type: &ast.Ident{
-			Name: "Handler",
-		},
+		Type: ast.NewIdent("Handler"),
 		Elts: []ast.Expr{
 			&ast.KeyValueExpr{
 				Key: ast.NewIdent("validator"),
@@ -88,10 +81,8 @@ func (h *HandlersFile) InitHandlerConstructor() {
 	h.handlerConstructorDecl = Func(
 		"NewHandler",
 		nil,
-		[]*ast.Field{},
-		[]*ast.Field{
-			Field("", Star(ast.NewIdent("Handler")), ""),
-		},
+		nil,
+		FieldA(Field("", Star(ast.NewIdent("Handler")), "")),
 		[]ast.Stmt{
 			&ast.ReturnStmt{
 				Results: []ast.Expr{
@@ -112,9 +103,7 @@ func (h *HandlersFile) InitRoutesFunc() {
 	h.addRoutesDecl = Func(
 		"AddRoutes",
 		Field("h", Star(ast.NewIdent("Handler")), ""),
-		[]*ast.Field{
-			Field("router", Sel(ast.NewIdent("chi"), "Router"), ""),
-		},
+		FieldA(Field("router", Sel(ast.NewIdent("chi"), "Router"), "")),
 		nil,
 		[]ast.Stmt{},
 	)
@@ -161,27 +150,11 @@ func (h *HandlersFile) WriteToOutput(output io.Writer) error {
 
 func (h *HandlersFile) AddInterface(name string, methodName string, requestName string, responseName string) {
 	var methodParams []*ast.Field
-	methodParams = append(methodParams, &ast.Field{
-		Names: []*ast.Ident{ast.NewIdent("ctx")},
-		Type:  ast.NewIdent("context.Context"),
-	})
-	methodParams = append(methodParams, &ast.Field{
-		Names: []*ast.Ident{ast.NewIdent("r")},
-		Type:  Star(Sel(ast.NewIdent("models"), requestName)),
-	})
+	methodParams = append(methodParams, Field("ctx", Sel(ast.NewIdent("context"), "Context"), ""))
+	methodParams = append(methodParams, Field("r", Star(Sel(ast.NewIdent("models"), requestName)), ""))
 	var methodResults []*ast.Field
-	methodResults = append(methodResults, &ast.Field{
-		Type: &ast.StarExpr{
-			Star: token.NoPos,
-			X: &ast.SelectorExpr{
-				X:   ast.NewIdent("models"),
-				Sel: ast.NewIdent(responseName),
-			},
-		},
-	})
-	methodResults = append(methodResults, &ast.Field{
-		Type: ast.NewIdent("error"),
-	})
+	methodResults = append(methodResults, Field("", Star(Sel(ast.NewIdent("models"), responseName)), ""))
+	methodResults = append(methodResults, Field("", ast.NewIdent("error"), ""))
 	h.interfaceDecls = append(h.interfaceDecls, &ast.GenDecl{
 		Tok: token.TYPE,
 		Specs: []ast.Spec{
@@ -210,15 +183,11 @@ func (h *HandlersFile) AddInterface(name string, methodName string, requestName 
 func (h *HandlersFile) AddDependencyToHandler(baseName string) {
 	fieldName := GoIdentLowercase(baseName)
 
-	h.handlerDeclQAFieldList.List = append(h.handlerDeclQAFieldList.List, &ast.Field{
-		Names: []*ast.Ident{ast.NewIdent(fieldName)},
-		Type:  ast.NewIdent(baseName + "Handler"),
-	})
+	h.handlerDeclQAFieldList.List = append(h.handlerDeclQAFieldList.List,
+		Field(fieldName, ast.NewIdent(baseName+"Handler"), ""))
 
-	h.handlerConstructorDeclQAArgs.List = append(h.handlerConstructorDeclQAArgs.List, &ast.Field{
-		Names: []*ast.Ident{ast.NewIdent(fieldName)},
-		Type:  ast.NewIdent(baseName + "Handler"),
-	})
+	h.handlerConstructorDeclQAArgs.List = append(h.handlerConstructorDeclQAArgs.List,
+		Field(fieldName, ast.NewIdent(baseName+"Handler"), ""))
 
 	h.handlerConstructorDeclQAConstructorComposite.Elts = append(
 		h.handlerConstructorDeclQAConstructorComposite.Elts, &ast.KeyValueExpr{
@@ -229,10 +198,8 @@ func (h *HandlersFile) AddDependencyToHandler(baseName string) {
 }
 
 func (h *HandlersFile) AddImport(path string) {
-	for _, imp := range h.packageImports {
-		if imp == path {
-			return
-		}
+	if slices.Contains(h.packageImports, path) {
+		return
 	}
 	h.packageImports = append(h.packageImports, path)
 }
@@ -332,19 +299,13 @@ func (h *HandlersFile) GenerateFile() *ast.File {
 func (h *HandlersFile) AddRouteToRouter(baseName string, method string, pathName string) {
 	h.addRoutesDecl.Body.List = append(h.addRoutesDecl.Body.List, &ast.ExprStmt{
 		X: &ast.CallExpr{
-			Fun: &ast.SelectorExpr{
-				X:   ast.NewIdent("router"),
-				Sel: ast.NewIdent(method),
-			},
+			Fun: Sel(ast.NewIdent("router"), method),
 			Args: []ast.Expr{
 				&ast.BasicLit{
 					Kind:  token.STRING,
 					Value: fmt.Sprintf("%q", pathName),
 				},
-				&ast.SelectorExpr{
-					X:   ast.NewIdent("h"),
-					Sel: ast.NewIdent("handle" + baseName),
-				},
+				Sel(ast.NewIdent("h"), "handle"+baseName),
 			},
 		},
 	})
@@ -377,10 +338,7 @@ func (h *HandlersFile) CreateHandler(baseName string) {
 		[]ast.Stmt{
 			&ast.SwitchStmt{
 				Tag: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("r.Header"),
-						Sel: ast.NewIdent("Get"),
-					},
+					Fun: Sel(ast.NewIdent("r.Header"), "Get"),
 					Args: []ast.Expr{
 						&ast.BasicLit{
 							Kind:  token.STRING,
@@ -411,20 +369,14 @@ func (h *HandlersFile) FinalizeHandlerSwitches() {
 			Body: []ast.Stmt{
 				&ast.ExprStmt{
 					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("http"),
-							Sel: ast.NewIdent("Error"),
-						},
+						Fun: Sel(ast.NewIdent("http"), "Error"),
 						Args: []ast.Expr{
 							ast.NewIdent("w"),
 							&ast.BasicLit{
 								Kind:  token.STRING,
 								Value: `"Unsupported Content-Type"`,
 							},
-							&ast.SelectorExpr{
-								X:   ast.NewIdent("http"),
-								Sel: ast.NewIdent("StatusUnsupportedMediaType"),
-							},
+							Sel(ast.NewIdent("http"), "StatusUnsupportedMediaType"),
 						},
 					},
 				},
@@ -442,10 +394,7 @@ func (h *HandlersFile) AddContentTypeHandler(baseName string, rawContentType str
 		stmts := []ast.Stmt{
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("handle" + baseName + "Request"),
-					},
+					Fun: Sel(ast.NewIdent("h"), "handle"+baseName+"Request"),
 					Args: []ast.Expr{
 						ast.NewIdent("w"),
 						ast.NewIdent("r"),
@@ -498,10 +447,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 				Tok: token.DEFINE,
 				Rhs: []ast.Expr{
 					&ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("h"),
-							Sel: ast.NewIdent("parse" + baseName + "Request"),
-						},
+						Fun: Sel(ast.NewIdent("h"), "parse"+baseName+"Request"),
 						Args: []ast.Expr{
 							ast.NewIdent("r"),
 						},
@@ -518,23 +464,14 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 					List: []ast.Stmt{
 						&ast.ExprStmt{
 							X: &ast.CallExpr{
-								Fun: &ast.SelectorExpr{
-									X:   ast.NewIdent("http"),
-									Sel: ast.NewIdent("Error"),
-								},
+								Fun: Sel(ast.NewIdent("http"), "Error"),
 								Args: []ast.Expr{
 									ast.NewIdent("w"),
 									&ast.CallExpr{
-										Fun: &ast.SelectorExpr{
-											X:   ast.NewIdent("err"),
-											Sel: ast.NewIdent("Error"),
-										},
+										Fun:  Sel(ast.NewIdent("err"), "Error"),
 										Args: []ast.Expr{},
 									},
-									&ast.SelectorExpr{
-										X:   ast.NewIdent("http"),
-										Sel: ast.NewIdent("StatusBadRequest"),
-									},
+									Sel(ast.NewIdent("http"), "StatusBadRequest"),
 								},
 							},
 						},
@@ -549,10 +486,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 				Tok: token.DEFINE,
 				Rhs: []ast.Expr{
 					&ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("r"),
-							Sel: ast.NewIdent("Context"),
-						},
+						Fun:  Sel(ast.NewIdent("r"), "Context"),
 						Args: []ast.Expr{},
 					},
 				},
@@ -565,13 +499,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 				Tok: token.DEFINE,
 				Rhs: []ast.Expr{
 					&ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X: &ast.SelectorExpr{
-								X:   ast.NewIdent("h"),
-								Sel: ast.NewIdent(GoIdentLowercase(baseName)),
-							},
-							Sel: ast.NewIdent("Handle" + baseName),
-						},
+						Fun: Sel(Sel(ast.NewIdent("h"), GoIdentLowercase(baseName)), "Handle"+baseName),
 						Args: []ast.Expr{
 							ast.NewIdent("ctx"),
 							ast.NewIdent("request"),
@@ -597,20 +525,14 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 					List: []ast.Stmt{
 						&ast.ExprStmt{
 							X: &ast.CallExpr{
-								Fun: &ast.SelectorExpr{
-									X:   ast.NewIdent("http"),
-									Sel: ast.NewIdent("Error"),
-								},
+								Fun: Sel(ast.NewIdent("http"), "Error"),
 								Args: []ast.Expr{
 									ast.NewIdent("w"),
 									&ast.BasicLit{
 										Kind:  token.STRING,
 										Value: `"InternalServerError"`,
 									},
-									&ast.SelectorExpr{
-										X:   ast.NewIdent("http"),
-										Sel: ast.NewIdent("StatusInternalServerError"),
-									},
+									Sel(ast.NewIdent("http"), "StatusInternalServerError"),
 								},
 							},
 						},
@@ -620,10 +542,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 			},
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("write" + baseName + "Response"),
-					},
+					Fun: Sel(ast.NewIdent("h"), "write"+baseName+"Response"),
 					Args: []ast.Expr{
 						ast.NewIdent("w"),
 						ast.NewIdent("response"),
@@ -650,10 +569,7 @@ func (h *HandlersFile) AddWriteResponseMethod(baseName string, codes []string) {
 			Body: []ast.Stmt{
 				&ast.IfStmt{
 					Cond: &ast.BinaryExpr{
-						X: &ast.SelectorExpr{
-							X:   ast.NewIdent("response"),
-							Sel: ast.NewIdent("Response" + code),
-						},
+						X:  Sel(ast.NewIdent("response"), "Response"+code),
 						Op: token.EQL,
 						Y:  ast.NewIdent("nil"),
 					},
@@ -661,20 +577,14 @@ func (h *HandlersFile) AddWriteResponseMethod(baseName string, codes []string) {
 						List: []ast.Stmt{
 							&ast.ExprStmt{
 								X: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X:   ast.NewIdent("http"),
-										Sel: ast.NewIdent("Error"),
-									},
+									Fun: Sel(ast.NewIdent("http"), "Error"),
 									Args: []ast.Expr{
 										ast.NewIdent("w"),
 										&ast.BasicLit{
 											Kind:  token.STRING,
 											Value: `"InternalServerError"`,
 										},
-										&ast.SelectorExpr{
-											X:   ast.NewIdent("http"),
-											Sel: ast.NewIdent("StatusInternalServerError"),
-										},
+										Sel(ast.NewIdent("http"), "StatusInternalServerError"),
 									},
 								},
 							},
@@ -684,16 +594,10 @@ func (h *HandlersFile) AddWriteResponseMethod(baseName string, codes []string) {
 				},
 				&ast.ExprStmt{
 					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("h"),
-							Sel: ast.NewIdent("write" + baseName + code + "Response"),
-						},
+						Fun: Sel(ast.NewIdent("h"), "write"+baseName+code+"Response"),
 						Args: []ast.Expr{
 							ast.NewIdent("w"),
-							&ast.SelectorExpr{
-								X:   ast.NewIdent("response"),
-								Sel: ast.NewIdent("Response" + code),
-							},
+							Sel(ast.NewIdent("response"), "Response"+code),
 						},
 					},
 				},
@@ -711,24 +615,13 @@ func (h *HandlersFile) AddWriteResponseMethod(baseName string, codes []string) {
 		nil,
 		[]ast.Stmt{
 			&ast.SwitchStmt{
-				Tag: &ast.SelectorExpr{
-					X:   ast.NewIdent("response"),
-					Sel: ast.NewIdent("StatusCode"),
-				},
+				Tag:  Sel(ast.NewIdent("response"), "StatusCode"),
 				Body: switchBody,
 			},
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("w"),
-						Sel: ast.NewIdent("WriteHeader"),
-					},
-					Args: []ast.Expr{
-						&ast.SelectorExpr{
-							X:   ast.NewIdent("response"),
-							Sel: ast.NewIdent("StatusCode"),
-						},
-					},
+					Fun:  Sel(ast.NewIdent("w"), "WriteHeader"),
+					Args: []ast.Expr{Sel(ast.NewIdent("response"), "StatusCode")},
 				},
 			},
 		},
@@ -750,16 +643,8 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("json"),
-						Sel: ast.NewIdent("Marshal"),
-					},
-					Args: []ast.Expr{
-						&ast.SelectorExpr{
-							X:   ast.NewIdent("r"),
-							Sel: ast.NewIdent("Headers"),
-						},
-					},
+					Fun:  Sel(ast.NewIdent("json"), "Marshal"),
+					Args: []ast.Expr{Sel(ast.NewIdent("r"), "Headers")},
 				},
 			},
 		})
@@ -773,20 +658,14 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 				List: []ast.Stmt{
 					&ast.ExprStmt{
 						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X:   ast.NewIdent("http"),
-								Sel: ast.NewIdent("Error"),
-							},
+							Fun: Sel(ast.NewIdent("http"), "Error"),
 							Args: []ast.Expr{
 								ast.NewIdent("w"),
 								&ast.BasicLit{
 									Kind:  token.STRING,
 									Value: `"InternalServerError"`,
 								},
-								&ast.SelectorExpr{
-									X:   ast.NewIdent("http"),
-									Sel: ast.NewIdent("StatusInternalServerError"),
-								},
+								Sel(ast.NewIdent("http"), "StatusInternalServerError"),
 							},
 						},
 					},
@@ -813,16 +692,10 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 			Tok: token.ASSIGN,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("json"),
-						Sel: ast.NewIdent("Unmarshal"),
-					},
+					Fun: Sel(ast.NewIdent("json"), "Unmarshal"),
 					Args: []ast.Expr{
 						ast.NewIdent("headersJSON"),
-						&ast.UnaryExpr{
-							Op: token.AND,
-							X:  ast.NewIdent("headers"),
-						},
+						Amp(ast.NewIdent("headers")),
 					},
 				},
 			},
@@ -837,20 +710,14 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 				List: []ast.Stmt{
 					&ast.ExprStmt{
 						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X:   ast.NewIdent("http"),
-								Sel: ast.NewIdent("Error"),
-							},
+							Fun: Sel(ast.NewIdent("http"), "Error"),
 							Args: []ast.Expr{
 								ast.NewIdent("w"),
 								&ast.BasicLit{
 									Kind:  token.STRING,
 									Value: `"InternalServerError"`,
 								},
-								&ast.SelectorExpr{
-									X:   ast.NewIdent("http"),
-									Sel: ast.NewIdent("StatusInternalServerError"),
-								},
+								Sel(ast.NewIdent("http"), "StatusInternalServerError"),
 							},
 						},
 					},
@@ -867,16 +734,10 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 				List: []ast.Stmt{
 					&ast.ExprStmt{
 						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X:   ast.NewIdent("w"),
-										Sel: ast.NewIdent("Header"),
-									},
-									Args: []ast.Expr{},
-								},
-								Sel: ast.NewIdent("Set"),
-							},
+							Fun: Sel(&ast.CallExpr{
+								Fun:  Sel(ast.NewIdent("w"), "Header"),
+								Args: []ast.Expr{},
+							}, "Set"),
 							Args: []ast.Expr{
 								ast.NewIdent("key"),
 								ast.NewIdent("value"),
@@ -902,22 +763,12 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 				Tok: token.ASSIGN,
 				Rhs: []ast.Expr{
 					&ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X: &ast.CallExpr{
-								Fun: &ast.SelectorExpr{
-									X:   ast.NewIdent("json"),
-									Sel: ast.NewIdent("NewEncoder"),
-								},
-								Args: []ast.Expr{ast.NewIdent("w")},
-							},
-							Sel: ast.NewIdent("Encode"),
-						},
-						Args: []ast.Expr{
-							&ast.SelectorExpr{
-								X:   ast.NewIdent("r"),
-								Sel: ast.NewIdent("Body"),
-							},
-						},
+						Fun: Sel(&ast.CallExpr{
+							Fun:  Sel(ast.NewIdent("json"), "NewEncoder"),
+							Args: []ast.Expr{ast.NewIdent("w")},
+						}, "Encode"),
+
+						Args: []ast.Expr{Sel(ast.NewIdent("r"), "Body")},
 					},
 				},
 			})
@@ -931,20 +782,14 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 					List: []ast.Stmt{
 						&ast.ExprStmt{
 							X: &ast.CallExpr{
-								Fun: &ast.SelectorExpr{
-									X:   ast.NewIdent("http"),
-									Sel: ast.NewIdent("Error"),
-								},
+								Fun: Sel(ast.NewIdent("http"), "Error"),
 								Args: []ast.Expr{
 									ast.NewIdent("w"),
 									&ast.BasicLit{
 										Kind:  token.STRING,
 										Value: `"InternalServerError"`,
 									},
-									&ast.SelectorExpr{
-										X:   ast.NewIdent("http"),
-										Sel: ast.NewIdent("StatusInternalServerError"),
-									},
+									Sel(ast.NewIdent("http"), "StatusInternalServerError"),
 								},
 							},
 						},
@@ -993,10 +838,7 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 				Specs: []ast.Spec{
 					&ast.ValueSpec{
 						Names: []*ast.Ident{ast.NewIdent("pathParams")},
-						Type: &ast.SelectorExpr{
-							X:   ast.NewIdent("models"),
-							Sel: ast.NewIdent(baseName + "PathParams"),
-						},
+						Type:  Sel(ast.NewIdent("models"), baseName+"PathParams"),
 					},
 				},
 			},
@@ -1014,10 +856,7 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("chi"),
-						Sel: ast.NewIdent("URLParam"),
-					},
+					Fun: Sel(ast.NewIdent("chi"), "URLParam"),
 					Args: []ast.Expr{
 						ast.NewIdent("r"),
 						&ast.BasicLit{
@@ -1040,7 +879,7 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 						Results: []ast.Expr{
 							ast.NewIdent("nil"),
 							&ast.CallExpr{
-								Fun: ast.NewIdent("errors.New"),
+								Fun: Sel(ast.NewIdent("errors"), "New"),
 								Args: []ast.Expr{
 									&ast.BasicLit{
 										Kind:  token.STRING,
@@ -1057,12 +896,7 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 		switch {
 		case param.Value.Schema.Value.Type.Permits("string"):
 			bodyList = append(bodyList, &ast.AssignStmt{
-				Lhs: []ast.Expr{
-					&ast.SelectorExpr{
-						X:   ast.NewIdent("pathParams"),
-						Sel: ast.NewIdent(FormatGoLikeIdentifier(param.Value.Name)),
-					},
-				},
+				Lhs: []ast.Expr{Sel(ast.NewIdent("pathParams"), FormatGoLikeIdentifier(param.Value.Name))},
 				Tok: token.ASSIGN,
 				Rhs: []ast.Expr{
 					ast.NewIdent(varName),
@@ -1078,13 +912,7 @@ func (h *HandlersFile) AddParsePathParamsMethod(baseName string, params openapi3
 		Tok: token.DEFINE,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X: &ast.SelectorExpr{
-						X:   ast.NewIdent("h"),
-						Sel: ast.NewIdent("validator"),
-					},
-					Sel: ast.NewIdent("Struct"),
-				},
+				Fun: Sel(Sel(ast.NewIdent("h"), "validator"), "Struct"),
 				Args: []ast.Expr{
 					ast.NewIdent("pathParams"),
 				},
