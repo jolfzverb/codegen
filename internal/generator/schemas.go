@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"fmt"
 	"go/ast"
 	"go/format"
 	"go/token"
@@ -56,23 +55,13 @@ func (m *SchemasFile) GenerateImportsSpecs(imp []string) ([]*ast.ImportSpec, []a
 
 	specs := make([]*ast.ImportSpec, 0, len(imp))
 	for _, path := range systemImports {
-		specs = append(specs, &ast.ImportSpec{
-			Path: &ast.BasicLit{
-				Kind:  token.STRING,
-				Value: fmt.Sprintf("%q", path),
-			},
-		})
+		specs = append(specs, &ast.ImportSpec{Path: Str(path)})
 	}
 
 	// Add a space to separate system and library imports
 	// but go/ast is too great for that
 	for _, path := range libImports {
-		specs = append(specs, &ast.ImportSpec{
-			Path: &ast.BasicLit{
-				Kind:  token.STRING,
-				Value: fmt.Sprintf("%q", path),
-			},
-		})
+		specs = append(specs, &ast.ImportSpec{Path: Str(path)})
 	}
 
 	declSpecs := make([]ast.Spec, 0, len(specs))
@@ -141,10 +130,7 @@ func (m *SchemasFile) AddSchema(model SchemaStruct) {
 		if field.Required {
 			typeExpr = ast.NewIdent(field.Type)
 		} else {
-			typeExpr = &ast.StarExpr{
-				Star: token.NoPos,
-				X:    ast.NewIdent(field.Type),
-			}
+			typeExpr = Star(ast.NewIdent(field.Type))
 		}
 		var tag *ast.BasicLit
 		if len(tags) > 0 {

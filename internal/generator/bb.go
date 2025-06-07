@@ -56,3 +56,48 @@ func Amp(field ast.Expr) ast.Expr {
 		X:  field,
 	}
 }
+
+func I(name string) *ast.Ident {
+	return ast.NewIdent(name)
+}
+
+func Str(value string) *ast.BasicLit {
+	return &ast.BasicLit{
+		Kind:  token.STRING,
+		Value: "\"" + value + "\"",
+	}
+}
+
+func Ne(left, right ast.Expr) *ast.BinaryExpr {
+	return &ast.BinaryExpr{
+		X:  left,
+		Op: token.NEQ,
+		Y:  right,
+	}
+}
+
+func Eq(left, right ast.Expr) *ast.BinaryExpr {
+	return &ast.BinaryExpr{
+		X:  left,
+		Op: token.EQL,
+		Y:  right,
+	}
+}
+
+func Ret() *ast.ReturnStmt {
+	return &ast.ReturnStmt{
+		Results: []ast.Expr{},
+	}
+}
+
+func Ret1(expr ast.Expr) *ast.ReturnStmt {
+	return &ast.ReturnStmt{
+		Results: []ast.Expr{expr},
+	}
+}
+
+func Ret2(expr1, expr2 ast.Expr) *ast.ReturnStmt {
+	return &ast.ReturnStmt{
+		Results: []ast.Expr{expr1, expr2},
+	}
+}
