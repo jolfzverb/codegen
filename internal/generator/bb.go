@@ -23,8 +23,10 @@ func Func(name string, receiver *ast.Field, params []*ast.Field, result []*ast.F
 
 func Field(name string, fieldType ast.Expr, tags string) *ast.Field {
 	ret := &ast.Field{
-		Names: []*ast.Ident{ast.NewIdent(name)},
-		Type:  fieldType,
+		Type: fieldType,
+	}
+	if name != "" {
+		ret.Names = []*ast.Ident{ast.NewIdent(name)}
 	}
 	if tags != "" {
 		ret.Tag = &ast.BasicLit{Kind: token.STRING, Value: tags}
