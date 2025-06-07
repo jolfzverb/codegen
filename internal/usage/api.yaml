@@ -31,6 +31,19 @@ paths:
           schema:
             type: string
           required: true
+        - name: cookie-param
+          in: cookie
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 15
+        - name: required-cookie-param
+          in: cookie
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 15
+          required: true
       requestBody:
         required: true
         content:

@@ -267,6 +267,129 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 	return nil
 }
 
+func (h *HandlersFile) AddParseCookiesMethod(baseName string, params openapi3.Parameters) error {
+	bodyList := []ast.Stmt{
+		&ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{I("cookies")},
+						Type:  Sel(I("models"), baseName+"Cookies"),
+					},
+				},
+			},
+		},
+	}
+	for _, param := range params {
+		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
+			continue
+		}
+
+		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
+		bodyList = append(bodyList, &ast.AssignStmt{
+			Lhs: []ast.Expr{I(varName), I("err")},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.CallExpr{
+					Fun:  Sel(I("r"), "Cookie"),
+					Args: []ast.Expr{Str(param.Value.Name)},
+				},
+			},
+		})
+
+		if param.Value.Required {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: Ne(I("err"), I("nil")),
+				Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
+			})
+		} else {
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  Ne(I("err"), I("nil")),
+					Op: token.LAND,
+					Y: &ast.UnaryExpr{
+						Op: token.NOT,
+						X: &ast.CallExpr{
+							Fun: Sel(I("errors"), "Is"),
+							Args: []ast.Expr{
+								I("err"),
+								Sel(I("http"), "ErrNoCookie"),
+							},
+						},
+					},
+				},
+				Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
+			})
+			h.AddImport("github.com/go-faster/errors")
+		}
+
+		if param.Value.Required {
+			bodyList = append(bodyList, &ast.AssignStmt{
+				Lhs: []ast.Expr{I(varName + "Value")},
+				Tok: token.DEFINE,
+				Rhs: []ast.Expr{Sel(I(varName), "Value")},
+			})
+
+			switch {
+			case param.Value.Schema.Value.Type.Permits("string"):
+				bodyList = append(bodyList,
+					h.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name),
+						param.Value.Schema, param.Value.Required,
+					)...,
+				)
+			default:
+				return errors.New("unsupported path parameter type: " + fmt.Sprint(param.Value.Schema.Value.Type))
+			}
+		} else {
+			ifBody := []ast.Stmt{&ast.AssignStmt{
+				Lhs: []ast.Expr{I(varName + "Value")},
+				Tok: token.DEFINE,
+				Rhs: []ast.Expr{Sel(I(varName), "Value")},
+			}}
+			ifBody = append(ifBody,
+				h.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name),
+					param.Value.Schema, param.Value.Required,
+				)...,
+			)
+			bodyList = append(bodyList, &ast.IfStmt{
+				Cond: Eq(I("err"), I("nil")),
+				Body: &ast.BlockStmt{
+					List: ifBody,
+				},
+			})
+		}
+	}
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{I("err")},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun:  Sel(Sel(I("h"), "validator"), "Struct"),
+				Args: []ast.Expr{I("cookies")},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: Ne(I("err"), I("nil")),
+		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
+	})
+	bodyList = append(bodyList, Ret2(Amp(I("cookies")), I("nil")))
+	h.restDecls = append(h.restDecls, Func("parse"+baseName+"Cookies",
+		Field("h", Star(I("Handler")), ""),
+		[]*ast.Field{
+			Field("r", Star(Sel(I("http"), "Request")), ""),
+		},
+		[]*ast.Field{
+			Field("", Star(Sel(I("models"), baseName+"Cookies")), ""),
+			Field("", I("error"), ""),
+		},
+		bodyList,
+	))
+
+	return nil
+}
+
 func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType string, body *openapi3.RequestBodyRef) error {
 	bodyList := []ast.Stmt{}
 	if !body.Value.Required {
@@ -449,7 +572,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
-					Fun: Sel(I("h"), "parse"+baseName+"CookieParams"),
+					Fun: Sel(I("h"), "parse"+baseName+"Cookies"),
 					Args: []ast.Expr{
 						I("r"),
 					},

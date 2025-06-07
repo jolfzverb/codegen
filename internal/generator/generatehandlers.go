@@ -184,8 +184,14 @@ func (g *Generator) AddParseParamsMethods(baseName string, contentType string, o
 	}
 	cookieParams := g.GetOperationParamsByType(operation, openapi3.ParameterInCookie)
 	if len(cookieParams) > 0 {
-		return errors.New("cookie parameters are not supported yet")
-		// g.HandlersFile.AddParseCookieParamsMethod(baseName, cookieParams)
+		err = g.SchemasFile.AddParamsModel(baseName, "Cookies", cookieParams)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		err = g.HandlersFile.AddParseCookiesMethod(baseName, cookieParams)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
 	}
 	if operation.RequestBody != nil && operation.RequestBody.Value != nil {
 		content, ok := operation.RequestBody.Value.Content[contentType]
