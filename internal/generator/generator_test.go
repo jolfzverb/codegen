@@ -829,10 +829,10 @@ import (
 )
 
 type GetExample2Handler interface {
-	HandleGetExample2(ctx context.Context, r *models.GetExample2Request) (*models.GetExample2Response, error)
+	HandleGetExample2(ctx context.Context, r models.GetExample2Request) (*models.GetExample2Response, error)
 }
 type PostExampleParamNameHandler interface {
-	HandlePostExampleParamName(ctx context.Context, r *models.PostExampleParamNameRequest) (*models.PostExampleParamNameResponse, error)
+	HandlePostExampleParamName(ctx context.Context, r models.PostExampleParamNameRequest) (*models.PostExampleParamNameResponse, error)
 }
 type Handler struct {
 	validator            *validator.Validate
@@ -873,7 +873,7 @@ func (h *Handler) handleGetExample2Request(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	ctx := r.Context()
-	response, err := h.getExample2.HandleGetExample2(ctx, request)
+	response, err := h.getExample2.HandleGetExample2(ctx, *request)
 	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
@@ -1002,7 +1002,7 @@ func (h *Handler) handlePostExampleParamNameRequest(w http.ResponseWriter, r *ht
 		return
 	}
 	ctx := r.Context()
-	response, err := h.postExampleParamName.HandlePostExampleParamName(ctx, request)
+	response, err := h.postExampleParamName.HandlePostExampleParamName(ctx, *request)
 	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
@@ -1104,7 +1104,7 @@ import (
 )
 
 type PostExampleHandler interface {
-	HandlePostExample(ctx context.Context, r *models.PostExampleRequest) (*models.PostExampleResponse, error)
+	HandlePostExample(ctx context.Context, r models.PostExampleRequest) (*models.PostExampleResponse, error)
 }
 type Handler struct {
 	validator   *validator.Validate
@@ -1159,7 +1159,7 @@ func (h *Handler) handlePostExampleRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	ctx := r.Context()
-	response, err := h.postExample.HandlePostExample(ctx, request)
+	response, err := h.postExample.HandlePostExample(ctx, *request)
 	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
@@ -1262,7 +1262,7 @@ import (
 )
 
 type OpHandler interface {
-	HandleOp(ctx context.Context, r *models.OpRequest) (*models.OpResponse, error)
+	HandleOp(ctx context.Context, r models.OpRequest) (*models.OpResponse, error)
 }
 type Handler struct {
 	validator *validator.Validate
@@ -1317,7 +1317,7 @@ func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	response, err := h.op.HandleOp(ctx, request)
+	response, err := h.op.HandleOp(ctx, *request)
 	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
@@ -1413,7 +1413,7 @@ import (
 )
 
 type OpHandler interface {
-	HandleOp(ctx context.Context, r *models.OpRequest) (*models.OpResponse, error)
+	HandleOp(ctx context.Context, r models.OpRequest) (*models.OpResponse, error)
 }
 type Handler struct {
 	validator *validator.Validate
@@ -1472,7 +1472,7 @@ func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	response, err := h.op.HandleOp(ctx, request)
+	response, err := h.op.HandleOp(ctx, *request)
 	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return

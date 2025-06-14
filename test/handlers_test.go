@@ -17,7 +17,7 @@ import (
 
 type mockHandler struct{}
 
-func (m *mockHandler) HandleCreate(ctx context.Context, r *models.CreateRequest) (*models.CreateResponse, error) {
+func (m *mockHandler) HandleCreate(ctx context.Context, r models.CreateRequest) (*models.CreateResponse, error) {
 	if r.Body.CodeForResponse != nil {
 		switch *r.Body.CodeForResponse {
 		case 400:
@@ -66,6 +66,7 @@ func TestHandler(t *testing.T) {
 	t.Run("200 Success", func(t *testing.T) {
 		requestBody := `{"name": "value", "description": "descr", "date": "2023-10-01T00:00:00+03:00", "code_for_response": 200, "enum-val": "value1"}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
 		request.Header.Set("Optional-Header", "2023-10-01T00:00:00+03:00")
@@ -88,6 +89,7 @@ func TestHandler(t *testing.T) {
 	t.Run("404", func(t *testing.T) {
 		requestBody := `{"name": "value", "description": "descr", "code_for_response": 404}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
 		request.Header.Set("Cookie", "required-cookie-param=required-value")
@@ -98,6 +100,7 @@ func TestHandler(t *testing.T) {
 	t.Run("400 No name", func(t *testing.T) {
 		requestBody := `{}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
 		request.Header.Set("Cookie", "required-cookie-param=required-value")
@@ -108,6 +111,7 @@ func TestHandler(t *testing.T) {
 	t.Run("400 number enum", func(t *testing.T) {
 		requestBody := `{"name": "value", "enum-int": 15}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
 		request.Header.Set("Cookie", "required-cookie-param=required-value")
@@ -118,6 +122,7 @@ func TestHandler(t *testing.T) {
 	t.Run("400 required cookie", func(t *testing.T) {
 		requestBody := `{"name": "value"}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
 		resp, err := http.DefaultClient.Do(request)
@@ -127,6 +132,7 @@ func TestHandler(t *testing.T) {
 	t.Run("400 cookie validation 1", func(t *testing.T) {
 		requestBody := `{"name": "value"}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
 		request.Header.Set("Cookie", "required-cookie-param=required-value; cookie-param=short")
@@ -137,6 +143,7 @@ func TestHandler(t *testing.T) {
 	t.Run("400 cookie validation 2", func(t *testing.T) {
 		requestBody := `{"name": "value"}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
 		request.Header.Set("Cookie", "required-cookie-param=required-value-too-long")
