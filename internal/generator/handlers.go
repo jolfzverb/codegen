@@ -142,7 +142,7 @@ func (h *HandlersFile) WriteToOutput(output io.Writer) error {
 func (h *HandlersFile) AddInterface(name string, methodName string, requestName string, responseName string) {
 	var methodParams []*ast.Field
 	methodParams = append(methodParams, Field("ctx", Sel(I("context"), "Context"), ""))
-	methodParams = append(methodParams, Field("r", Star(Sel(I("models"), requestName)), ""))
+	methodParams = append(methodParams, Field("r", Sel(I("models"), requestName), ""))
 	var methodResults []*ast.Field
 	methodResults = append(methodResults, Field("", Star(Sel(I("models"), responseName)), ""))
 	methodResults = append(methodResults, Field("", I("error"), ""))
@@ -453,7 +453,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 						Fun: Sel(Sel(I("h"), GoIdentLowercase(baseName)), "Handle"+baseName),
 						Args: []ast.Expr{
 							I("ctx"),
-							I("request"),
+							Star(I("request")),
 						},
 					},
 				},

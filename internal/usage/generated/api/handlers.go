@@ -14,7 +14,7 @@ import (
 )
 
 type CreateHandler interface {
-	HandleCreate(ctx context.Context, r *models.CreateRequest) (*models.CreateResponse, error)
+	HandleCreate(ctx context.Context, r models.CreateRequest) (*models.CreateResponse, error)
 }
 type Handler struct {
 	validator *validator.Validate
@@ -196,7 +196,7 @@ func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	response, err := h.create.HandleCreate(ctx, request)
+	response, err := h.create.HandleCreate(ctx, *request)
 	if err != nil || response == nil {
 		http.Error(w, "InternalServerError", http.StatusInternalServerError)
 		return
