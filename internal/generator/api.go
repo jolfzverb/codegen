@@ -23,6 +23,8 @@ func GetModelName(yamlFilePath string) string {
 	fileName := parts[len(parts)-1]
 	fileName = strings.TrimSuffix(fileName, ".yaml")
 	fileName = strings.TrimSuffix(fileName, ".yml")
+	fileName = strings.ReplaceAll(fileName, "_", "")
+	fileName = strings.ReplaceAll(fileName, "-", "")
 
 	lowerCaser := cases.Lower(language.Und)
 
