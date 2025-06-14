@@ -47,6 +47,8 @@ func GetSchemaValidators(schema *openapi3.SchemaRef) []string {
 			validateTags = append(validateTags, "ipv4")
 		case "ipv6":
 			validateTags = append(validateTags, "ipv6")
+		case "email":
+			validateTags = append(validateTags, "email")
 		}
 
 	case schema.Value.Type.Permits(openapi3.TypeInteger):
