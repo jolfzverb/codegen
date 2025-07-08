@@ -138,13 +138,13 @@ func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *models.Create
 	var err error
 	headersJSON, err := json.Marshal(r.Headers)
 	if err != nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	var headers map[string]string
 	err = json.Unmarshal(headersJSON, &headers)
 	if err != nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	for key, value := range headers {
@@ -152,7 +152,7 @@ func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *models.Create
 	}
 	err = json.NewEncoder(w).Encode(r.Body)
 	if err != nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 }
@@ -170,19 +170,19 @@ func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *models.Cr
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
-			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
 		h.writeCreate200Response(w, response.Response200)
 	case 400:
 		if response.Response400 == nil {
-			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
 		h.writeCreate400Response(w, response.Response400)
 	case 404:
 		if response.Response404 == nil {
-			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
 		h.writeCreate404Response(w, response.Response404)
@@ -198,7 +198,7 @@ func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	response, err := h.create.HandleCreate(ctx, *request)
 	if err != nil || response == nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	h.writeCreateResponse(w, response)
