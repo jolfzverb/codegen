@@ -3,6 +3,7 @@ package generator
 import (
 	"go/ast"
 	"go/token"
+	"strconv"
 )
 
 func Func(name string, receiver *ast.Field, params []*ast.Field, result []*ast.Field, body []ast.Stmt) *ast.FuncDecl {
@@ -64,7 +65,7 @@ func I(name string) *ast.Ident {
 func Str(value string) *ast.BasicLit {
 	return &ast.BasicLit{
 		Kind:  token.STRING,
-		Value: "\"" + value + "\"",
+		Value: strconv.Quote(value),
 	}
 }
 

@@ -860,7 +860,7 @@ func (h *Handler) writeGetExample2Response(w http.ResponseWriter, response *mode
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
-			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
 		h.writeGetExample2200Response(w, response.Response200)
@@ -876,7 +876,7 @@ func (h *Handler) handleGetExample2Request(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	response, err := h.getExample2.HandleGetExample2(ctx, *request)
 	if err != nil || response == nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	h.writeGetExample2Response(w, response)
@@ -972,13 +972,13 @@ func (h *Handler) writePostExampleParamName200Response(w http.ResponseWriter, r 
 	var err error
 	headersJSON, err := json.Marshal(r.Headers)
 	if err != nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	var headers map[string]string
 	err = json.Unmarshal(headersJSON, &headers)
 	if err != nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	for key, value := range headers {
@@ -989,7 +989,7 @@ func (h *Handler) writePostExampleParamNameResponse(w http.ResponseWriter, respo
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
-			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
 		h.writePostExampleParamName200Response(w, response.Response200)
@@ -1005,7 +1005,7 @@ func (h *Handler) handlePostExampleParamNameRequest(w http.ResponseWriter, r *ht
 	ctx := r.Context()
 	response, err := h.postExampleParamName.HandlePostExampleParamName(ctx, *request)
 	if err != nil || response == nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	h.writePostExampleParamNameResponse(w, response)
@@ -1146,7 +1146,7 @@ func (h *Handler) writePostExampleResponse(w http.ResponseWriter, response *mode
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
-			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
 		h.writePostExample200Response(w, response.Response200)
@@ -1162,7 +1162,7 @@ func (h *Handler) handlePostExampleRequest(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	response, err := h.postExample.HandlePostExample(ctx, *request)
 	if err != nil || response == nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	h.writePostExampleResponse(w, response)
@@ -1304,7 +1304,7 @@ func (h *Handler) writeOpResponse(w http.ResponseWriter, response *models.OpResp
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
-			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
 		h.writeOp200Response(w, response.Response200)
@@ -1320,7 +1320,7 @@ func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	response, err := h.op.HandleOp(ctx, *request)
 	if err != nil || response == nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	h.writeOpResponse(w, response)
@@ -1459,7 +1459,7 @@ func (h *Handler) writeOpResponse(w http.ResponseWriter, response *models.OpResp
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
-			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
 		h.writeOp200Response(w, response.Response200)
@@ -1475,7 +1475,7 @@ func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	response, err := h.op.HandleOp(ctx, *request)
 	if err != nil || response == nil {
-		http.Error(w, "InternalServerError", http.StatusInternalServerError)
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 		return
 	}
 	h.writeOpResponse(w, response)

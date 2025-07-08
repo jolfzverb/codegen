@@ -471,7 +471,7 @@ func (h *HandlersFile) AddHandleOperationMethod(baseName string) {
 								Fun: Sel(I("http"), "Error"),
 								Args: []ast.Expr{
 									I("w"),
-									Str("InternalServerError"),
+									Str("{\"error\":\"InternalServerError\"}"),
 									Sel(I("http"), "StatusInternalServerError"),
 								},
 							},
@@ -516,7 +516,7 @@ func (h *HandlersFile) AddWriteResponseMethod(baseName string, codes []string) {
 									Fun: Sel(I("http"), "Error"),
 									Args: []ast.Expr{
 										I("w"),
-										Str("InternalServerError"),
+										Str("{\"error\":\"InternalServerError\"}"),
 										Sel(I("http"), "StatusInternalServerError"),
 									},
 								},
@@ -590,7 +590,7 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 							Fun: Sel(I("http"), "Error"),
 							Args: []ast.Expr{
 								I("w"),
-								Str("InternalServerError"),
+								Str("{\"error\":\"InternalServerError\"}"),
 								Sel(I("http"), "StatusInternalServerError"),
 							},
 						},
@@ -635,7 +635,7 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 							Fun: Sel(I("http"), "Error"),
 							Args: []ast.Expr{
 								I("w"),
-								Str("InternalServerError"),
+								Str("{\"error\":\"InternalServerError\"}"),
 								Sel(I("http"), "StatusInternalServerError"),
 							},
 						},
@@ -700,7 +700,7 @@ func (h *HandlersFile) AddWriteResponseCode(baseName string, code string, respon
 								Fun: Sel(I("http"), "Error"),
 								Args: []ast.Expr{
 									I("w"),
-									Str("InternalServerError"),
+									Str("{\"error\":\"InternalServerError\"}"),
 									Sel(I("http"), "StatusInternalServerError"),
 								},
 							},

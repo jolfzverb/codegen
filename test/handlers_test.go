@@ -75,6 +75,7 @@ func TestHandler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
+		defer resp.Body.Close()
 		var responseBody map[string]any
 		err = json.NewDecoder(resp.Body).Decode(&responseBody)
 		assert.NoError(t, err)
@@ -150,5 +151,48 @@ func TestHandler(t *testing.T) {
 		resp, err := http.DefaultClient.Do(request)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+}
+
+type mockHandler500 struct{}
+
+func (m *mockHandler500) HandleCreate(ctx context.Context, r models.CreateRequest) (*models.CreateResponse, error) {
+	return &models.CreateResponse{
+		StatusCode:  http.StatusOK,
+		Response200: nil,
+		Response400: nil,
+		Response404: nil,
+	}, nil
+
+}
+
+func Test500(t *testing.T) {
+	router := chi.NewRouter()
+	handler := api.NewHandler(
+		&mockHandler500{},
+	)
+	handler.AddRoutes(router)
+
+	// Create a test server using the chi router
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	t.Run("500 Internal Server Error", func(t *testing.T) {
+		requestBody := `{"name": "value", "description": "descr", "date": "2023-10-01T00:00:00+03:00", "code_for_response": 200, "enum-val": "value1"}`
+		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
+		request.Header.Set("Optional-Header", "2023-10-01T00:00:00+03:00")
+		request.Header.Set("Cookie", "required-cookie-param=required-value")
+		resp, err := http.DefaultClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+		defer resp.Body.Close()
+		var responseBody map[string]string
+		err = json.NewDecoder(resp.Body).Decode(&responseBody)
+		assert.NoError(t, err)
+		assert.Equal(t, "InternalServerError", responseBody["error"])
 	})
 }
