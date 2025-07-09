@@ -17,7 +17,7 @@ func (g *Generator) ProcessSchemas(schemas map[string]*openapi3.SchemaRef) error
 
 	for _, modelName := range modelKeys {
 		schema := schemas[modelName]
-		err := g.SchemasFile.ProcessSchema(modelName, schema)
+		err := g.ProcessSchema(modelName, schema)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
