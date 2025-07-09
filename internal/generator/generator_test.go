@@ -80,8 +80,9 @@ type StringModel string
 	input := strings.NewReader(mockInput)
 	outputModels := &bytes.Buffer{}
 	outputHandlers := &bytes.Buffer{}
+	gen := generator.NewGenerator(&options.Options{})
 
-	err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
+	err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 	assert.NoError(t, err)
 
@@ -705,8 +706,9 @@ type ObjectModel struct {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
+			gen := generator.NewGenerator(&options.Options{})
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
+			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, outputModels.String())
@@ -1031,8 +1033,9 @@ func (h *Handler) handlePostExampleParamName(w http.ResponseWriter, r *http.Requ
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
+			gen := generator.NewGenerator(&options.Options{})
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
+			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedModels, outputModels.String())
@@ -1188,8 +1191,9 @@ func (h *Handler) handlePostExample(w http.ResponseWriter, r *http.Request) {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
+			gen := generator.NewGenerator(&options.Options{})
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
+			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedModels, outputModels.String())
@@ -1346,8 +1350,9 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
+			gen := generator.NewGenerator(&options.Options{})
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
+			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedModels, outputModels.String())
@@ -1501,8 +1506,9 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
+			gen := generator.NewGenerator(&options.Options{})
 
-			err := generator.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
+			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedModels, outputModels.String())

@@ -14,26 +14,26 @@ func (g *Generator) AddInterface(baseName string) {
 	methodName := "Handle" + baseName
 	requestName := baseName + "Request"
 	responseName := baseName + "Response"
-	g.HandlersFile.AddInterface(interfaceName, methodName, requestName, responseName)
+	g.AddHandlersInterface(interfaceName, methodName, requestName, responseName)
 }
 
 func (g *Generator) AddDependencyToHandler(baseName string) {
-	g.HandlersFile.AddDependencyToHandler(baseName)
+	g.AddDependencyToHandlers(baseName)
 }
 
 func (g *Generator) AddRoute(baseName string, method string, pathName string) {
-	g.HandlersFile.AddRouteToRouter(baseName, method, pathName)
+	g.AddRouteToRouter(baseName, method, pathName)
 }
 
 func (g *Generator) AddContentTypeToHandler(baseName string, rawContentType string) {
-	if g.HandlersFile.GetHandler(baseName) == nil {
-		g.HandlersFile.CreateHandler(baseName)
+	if g.GetHandler(baseName) == nil {
+		g.CreateHandler(baseName)
 	}
-	g.HandlersFile.AddContentTypeHandler(baseName, rawContentType)
+	g.AddContentTypeHandler(baseName, rawContentType)
 }
 
 func (g *Generator) AddHandleOperationMethod(baseName string) {
-	g.HandlersFile.AddHandleOperationMethod(baseName)
+	g.AddHandleOperationMethodHandlers(baseName)
 }
 
 func (g *Generator) AddResponseCodeModels(baseName string, code string, response *openapi3.ResponseRef) error {
@@ -48,7 +48,7 @@ func (g *Generator) AddResponseCodeModels(baseName string, code string, response
 	for _, content := range response.Value.Content {
 		if content.Schema != nil {
 			if content.Schema.Ref == "" {
-				err := g.SchemasFile.ProcessObjectSchema(baseName+"Response"+code+"Body", content.Schema)
+				err := g.ProcessObjectSchema(baseName+"Response"+code+"Body", content.Schema)
 				if err != nil {
 					return errors.Wrap(err, op)
 				}
@@ -67,7 +67,7 @@ func (g *Generator) AddResponseCodeModels(baseName string, code string, response
 		}
 	}
 	if len(response.Value.Headers) > 0 {
-		err := g.SchemasFile.AddHeadersModel(baseName+"Response"+code, response.Value.Headers)
+		err := g.AddHeadersModel(baseName+"Response"+code, response.Value.Headers)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
@@ -77,8 +77,8 @@ func (g *Generator) AddResponseCodeModels(baseName string, code string, response
 			Required: true,
 		})
 	}
-	g.SchemasFile.AddSchema(model)
-	err := g.HandlersFile.AddCreateResponseModel(baseName, code, response)
+	g.AddSchema(model)
+	err := g.AddCreateResponseModel(baseName, code, response)
 	if err != nil {
 		return errors.Wrapf(err, op)
 	}
@@ -104,7 +104,7 @@ func (g *Generator) AddResponseModel(baseName string, responseCodes []string) {
 		}
 		model.Fields = append(model.Fields, field)
 	}
-	g.SchemasFile.AddSchema(model)
+	g.AddSchema(model)
 }
 
 func (g *Generator) AddWriteResponseMethod(baseName string, operation *openapi3.Operation) error {
@@ -122,13 +122,13 @@ func (g *Generator) AddWriteResponseMethod(baseName string, operation *openapi3.
 		if err != nil {
 			return errors.Wrapf(err, op)
 		}
-		err = g.HandlersFile.AddWriteResponseCode(baseName, code, response)
+		err = g.AddWriteResponseCode(baseName, code, response)
 		if err != nil {
 			return errors.Wrapf(err, op)
 		}
 		codes = append(codes, code)
 	}
-	g.HandlersFile.AddWriteResponseMethod(baseName, codes)
+	g.AddWriteResponseMethodHandlers(baseName, codes)
 	g.AddResponseModel(baseName, keys)
 
 	return nil
@@ -151,44 +151,44 @@ func (g *Generator) AddParseParamsMethods(baseName string, contentType string, o
 
 	pathParams := g.GetOperationParamsByType(operation, openapi3.ParameterInPath)
 	if len(pathParams) > 0 {
-		err = g.SchemasFile.AddParamsModel(baseName, "PathParams", pathParams)
+		err = g.AddParamsModel(baseName, "PathParams", pathParams)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
-		err = g.HandlersFile.AddParsePathParamsMethod(baseName, pathParams)
+		err = g.AddParsePathParamsMethod(baseName, pathParams)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
 	}
 	queryParams := g.GetOperationParamsByType(operation, openapi3.ParameterInQuery)
 	if len(queryParams) > 0 {
-		err = g.SchemasFile.AddParamsModel(baseName, "QueryParams", queryParams)
+		err = g.AddParamsModel(baseName, "QueryParams", queryParams)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
-		err = g.HandlersFile.AddParseQueryParamsMethod(baseName, queryParams)
+		err = g.AddParseQueryParamsMethod(baseName, queryParams)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
 	}
 	headerParams := g.GetOperationParamsByType(operation, openapi3.ParameterInHeader)
 	if len(headerParams) > 0 {
-		err = g.SchemasFile.AddParamsModel(baseName, "Headers", headerParams)
+		err = g.AddParamsModel(baseName, "Headers", headerParams)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
-		err = g.HandlersFile.AddParseHeadersMethod(baseName, headerParams)
+		err = g.AddParseHeadersMethod(baseName, headerParams)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
 	}
 	cookieParams := g.GetOperationParamsByType(operation, openapi3.ParameterInCookie)
 	if len(cookieParams) > 0 {
-		err = g.SchemasFile.AddParamsModel(baseName, "Cookies", cookieParams)
+		err = g.AddParamsModel(baseName, "Cookies", cookieParams)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
-		err = g.HandlersFile.AddParseCookiesMethod(baseName, cookieParams)
+		err = g.AddParseCookiesMethod(baseName, cookieParams)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
@@ -197,21 +197,21 @@ func (g *Generator) AddParseParamsMethods(baseName string, contentType string, o
 		content, ok := operation.RequestBody.Value.Content[contentType]
 		if ok && content.Schema != nil {
 			if content.Schema.Ref == "" {
-				err = g.SchemasFile.ProcessObjectSchema(baseName+"RequestBody", content.Schema)
+				err = g.ProcessObjectSchema(baseName+"RequestBody", content.Schema)
 				if err != nil {
 					return errors.Wrap(err, op)
 				}
 			}
-			err = g.HandlersFile.AddParseRequestBodyMethod(baseName, contentType, operation.RequestBody)
+			err = g.AddParseRequestBodyMethod(baseName, contentType, operation.RequestBody)
 			if err != nil {
 				return errors.Wrap(err, op)
 			}
 		}
 	}
-	g.HandlersFile.AddParseRequestMethod(baseName, contentType,
+	g.AddParseRequestMethod(baseName, contentType,
 		pathParams, queryParams, headerParams, cookieParams, operation.RequestBody,
 	)
-	g.SchemasFile.GenerateRequestModel(baseName, contentType,
+	g.GenerateRequestModel(baseName, contentType,
 		pathParams, queryParams, headerParams, cookieParams, operation.RequestBody,
 	)
 

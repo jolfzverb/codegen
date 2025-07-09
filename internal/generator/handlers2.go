@@ -9,7 +9,7 @@ import (
 	"github.com/go-faster/errors"
 )
 
-func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi3.Parameters) error {
+func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.Parameters) error {
 	bodyList := []ast.Stmt{
 		&ast.DeclStmt{
 			Decl: &ast.GenDecl{
@@ -56,11 +56,11 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 					)},
 				},
 			})
-			h.AddImport("github.com/go-faster/errors")
+			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
 				bodyList = append(bodyList,
-					h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)...,
+					g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)...,
 				)
 			default:
 				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
@@ -69,7 +69,7 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 			bodyList = append(bodyList, &ast.IfStmt{
 				Cond: Ne(I(varName), Str("")),
 				Body: &ast.BlockStmt{
-					List: h.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required),
+					List: g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required),
 				},
 			})
 		}
@@ -93,7 +93,7 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 
 	bodyList = append(bodyList, Ret2(Amp(I("queryParams")), I("nil")))
 
-	h.restDecls = append(h.restDecls, Func("parse"+baseName+"QueryParams",
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("parse"+baseName+"QueryParams",
 		Field("h", Star(I("Handler")), ""),
 		[]*ast.Field{
 			Field("r", Star(Sel(I("http"), "Request")), ""),
@@ -108,9 +108,9 @@ func (h *HandlersFile) AddParseQueryParamsMethod(baseName string, params openapi
 	return nil
 }
 
-func (h *HandlersFile) AssignStringField(paramsName string, varName string, fieldName string, param *openapi3.SchemaRef, required bool) []ast.Stmt {
+func (g *Generator) AssignStringField(paramsName string, varName string, fieldName string, param *openapi3.SchemaRef, required bool) []ast.Stmt {
 	if param.Value.Format == "date-time" {
-		h.AddImport("time")
+		g.AddHandlersImport("time")
 		var result []ast.Stmt
 		result = append(result, &ast.AssignStmt{
 			Lhs: []ast.Expr{
@@ -144,7 +144,7 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 			},
 		})
 		var rhs ast.Expr
-		if required && !h.requiredFieldsArePointers {
+		if required && !g.HandlersFile.requiredFieldsArePointers {
 			rhs = I("parsed" + fieldName)
 		} else {
 			rhs = Amp(I("parsed" + fieldName))
@@ -157,7 +157,7 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 		})
 	}
 	var rhs ast.Expr
-	if required && !h.requiredFieldsArePointers {
+	if required && !g.HandlersFile.requiredFieldsArePointers {
 		rhs = I(varName)
 	} else {
 		rhs = Amp(I(varName))
@@ -170,7 +170,7 @@ func (h *HandlersFile) AssignStringField(paramsName string, varName string, fiel
 	}}
 }
 
-func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Parameters) error {
+func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Parameters) error {
 	bodyList := []ast.Stmt{
 		&ast.DeclStmt{
 			Decl: &ast.GenDecl{
@@ -213,11 +213,11 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 					)},
 				},
 			})
-			h.AddImport("github.com/go-faster/errors")
+			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
 				bodyList = append(bodyList,
-					h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name),
+					g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name),
 						param.Value.Schema, param.Value.Required,
 					)...,
 				)
@@ -228,7 +228,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 			bodyList = append(bodyList, &ast.IfStmt{
 				Cond: Ne(I(varName), Str("")),
 				Body: &ast.BlockStmt{
-					List: h.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name),
+					List: g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name),
 						param.Value.Schema, param.Value.Required,
 					),
 				},
@@ -252,7 +252,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
 	})
 	bodyList = append(bodyList, Ret2(Amp(I("headers")), I("nil")))
-	h.restDecls = append(h.restDecls, Func("parse"+baseName+"Headers",
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("parse"+baseName+"Headers",
 		Field("h", Star(I("Handler")), ""),
 		[]*ast.Field{
 			Field("r", Star(Sel(I("http"), "Request")), ""),
@@ -267,7 +267,7 @@ func (h *HandlersFile) AddParseHeadersMethod(baseName string, params openapi3.Pa
 	return nil
 }
 
-func (h *HandlersFile) AddParseCookiesMethod(baseName string, params openapi3.Parameters) error {
+func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Parameters) error {
 	bodyList := []ast.Stmt{
 		&ast.DeclStmt{
 			Decl: &ast.GenDecl{
@@ -321,7 +321,7 @@ func (h *HandlersFile) AddParseCookiesMethod(baseName string, params openapi3.Pa
 				},
 				Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
 			})
-			h.AddImport("github.com/go-faster/errors")
+			g.AddHandlersImport("github.com/go-faster/errors")
 		}
 
 		if param.Value.Required {
@@ -334,7 +334,7 @@ func (h *HandlersFile) AddParseCookiesMethod(baseName string, params openapi3.Pa
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
 				bodyList = append(bodyList,
-					h.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name),
+					g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name),
 						param.Value.Schema, param.Value.Required,
 					)...,
 				)
@@ -348,7 +348,7 @@ func (h *HandlersFile) AddParseCookiesMethod(baseName string, params openapi3.Pa
 				Rhs: []ast.Expr{Sel(I(varName), "Value")},
 			}}
 			ifBody = append(ifBody,
-				h.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name),
+				g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name),
 					param.Value.Schema, param.Value.Required,
 				)...,
 			)
@@ -375,7 +375,7 @@ func (h *HandlersFile) AddParseCookiesMethod(baseName string, params openapi3.Pa
 		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
 	})
 	bodyList = append(bodyList, Ret2(Amp(I("cookies")), I("nil")))
-	h.restDecls = append(h.restDecls, Func("parse"+baseName+"Cookies",
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("parse"+baseName+"Cookies",
 		Field("h", Star(I("Handler")), ""),
 		[]*ast.Field{
 			Field("r", Star(Sel(I("http"), "Request")), ""),
@@ -390,7 +390,7 @@ func (h *HandlersFile) AddParseCookiesMethod(baseName string, params openapi3.Pa
 	return nil
 }
 
-func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType string, body *openapi3.RequestBodyRef) error {
+func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType string, body *openapi3.RequestBodyRef) error {
 	bodyList := []ast.Stmt{}
 	if !body.Value.Required {
 		bodyList = append(bodyList, &ast.IfStmt{
@@ -462,7 +462,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType st
 	})
 	bodyList = append(bodyList, Ret2(Amp(I("body")), I("nil")))
 
-	h.restDecls = append(h.restDecls, Func(
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func(
 		"parse"+baseName+"RequestBody",
 		Field("h", Star(I("Handler")), ""),
 		[]*ast.Field{
@@ -478,7 +478,7 @@ func (h *HandlersFile) AddParseRequestBodyMethod(baseName string, contentType st
 	return nil
 }
 
-func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string, pathParams openapi3.Parameters,
+func (g *Generator) AddParseRequestMethod(baseName string, contentType string, pathParams openapi3.Parameters,
 	queryParams openapi3.Parameters, headers openapi3.Parameters, cookieParams openapi3.Parameters,
 	body *openapi3.RequestBodyRef,
 ) {
@@ -629,7 +629,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 		),
 	)
 
-	h.restDecls = append(h.restDecls, Func(
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func(
 		"parse"+baseName+"Request",
 		Field("h", Star(I("Handler")), ""),
 		[]*ast.Field{
@@ -643,7 +643,7 @@ func (h *HandlersFile) AddParseRequestMethod(baseName string, contentType string
 	))
 }
 
-func (h *HandlersFile) AddCreateResponseModel(baseName string, code string, response *openapi3.ResponseRef) error {
+func (g *Generator) AddCreateResponseModel(baseName string, code string, response *openapi3.ResponseRef) error {
 	arglist := []*ast.Field{}
 	constructorArgs := []ast.Expr{}
 
@@ -680,7 +680,7 @@ func (h *HandlersFile) AddCreateResponseModel(baseName string, code string, resp
 		})
 	}
 
-	h.restDecls = append(h.restDecls, Func(baseName+code+"Response",
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func(baseName+code+"Response",
 		nil,
 		arglist,
 		[]*ast.Field{
