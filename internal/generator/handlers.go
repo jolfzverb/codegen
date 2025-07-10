@@ -112,10 +112,10 @@ func (g *Generator) InitHandlerFields(packageName string, modelsImportPath strin
 	g.InitRoutesFunc()
 }
 
-func (g *Generator) NewHandlersFile(packageName string, importPrefix string, modelsImportPath string, requiredFieldsArePointers bool) *HandlersFile {
+func (g *Generator) NewHandlersFile(packageName string, importPrefix string, modelsImportPath string) *HandlersFile {
 	h := &HandlersFile{
 		importPrefix:              importPrefix,
-		requiredFieldsArePointers: requiredFieldsArePointers,
+		requiredFieldsArePointers: g.Opts.RequiredFieldsArePointers,
 	}
 	g.HandlersFile = h
 	g.InitHandlerFields(packageName, modelsImportPath)

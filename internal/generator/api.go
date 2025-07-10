@@ -21,6 +21,7 @@ type Generator struct {
 
 	SchemasFile  *SchemasFile
 	HandlersFile *HandlersFile
+	yaml         *openapi3.T
 }
 
 func NewGenerator(opts *options.Options) *Generator {
@@ -59,32 +60,6 @@ func (g *Generator) Gen(yaml *openapi3.T) {
 	}
 }
 
-func (g *Generator) GenerateToIO(ctx context.Context, input io.Reader, schemasOutput io.Writer, handlersOutput io.Writer,
-	importPrefix string, packageName string, opts *options.Options,
-) error {
-	const op = "generator.GenerateToIO"
-	loader := &openapi3.Loader{Context: ctx, IsExternalRefsAllowed: true}
-	yaml, err := loader.LoadFromIoReader(input)
-	if err != nil {
-		return errors.Wrap(err, op)
-	}
-	err = yaml.Validate(ctx)
-	if err != nil {
-		return errors.Wrap(err, op)
-	}
-
-	g.SchemasFile = g.NewSchemasFile(opts.RequiredFieldsArePointers)
-	g.HandlersFile = g.NewHandlersFile(packageName, importPrefix, path.Join(importPrefix, "models"), opts.RequiredFieldsArePointers)
-	g.Gen(yaml)
-
-	err = g.WriteToOutput(schemasOutput, handlersOutput)
-	if err != nil {
-		return errors.Wrap(err, op)
-	}
-
-	return nil
-}
-
 func (g *Generator) GetModelName(yamlFilePath string) string {
 	parts := strings.Split(yamlFilePath, "/")
 	if len(parts) == 0 {
@@ -101,9 +76,29 @@ func (g *Generator) GetModelName(yamlFilePath string) string {
 	return lowerCaser.String(fileName)
 }
 
-func (g *Generator) Generate(ctx context.Context, opts *options.Options) error {
-	const op = "generator.Generate"
-	file, err := os.Open(opts.YAMLFileName)
+func (g *Generator) PrepareAndRead(reader io.Reader, importPrefix string, modelName string) error {
+	const op = "generator.PrepareAndRead"
+	ctx := context.Background()
+	loader := &openapi3.Loader{Context: ctx, IsExternalRefsAllowed: true}
+	var err error
+	g.yaml, err = loader.LoadFromIoReader(reader)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+	err = g.yaml.Validate(ctx)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+	packageName := modelName
+	g.SchemasFile = g.NewSchemasFile()
+	g.HandlersFile = g.NewHandlersFile(packageName, importPrefix, path.Join(importPrefix, "models"))
+	return nil
+}
+
+func (g *Generator) PrepareFiles() error {
+	const op = "generator.PrepareFiles"
+
+	file, err := os.Open(g.Opts.YAMLFileName)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
@@ -111,29 +106,65 @@ func (g *Generator) Generate(ctx context.Context, opts *options.Options) error {
 
 	reader := io.Reader(file)
 
-	modelName := g.GetModelName(opts.YAMLFileName)
+	modelName := g.GetModelName(g.Opts.YAMLFileName)
 
-	handlersPath := path.Join(opts.DirPrefix, "generated", modelName)
+	handlersPath := path.Join(g.Opts.DirPrefix, "generated", modelName)
 	schemasPath := path.Join(handlersPath, "models")
 	err = os.MkdirAll(schemasPath, directoryPermissions)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
 
+	importPrefix := path.Join(g.Opts.PackagePrefix, "generated", modelName)
+	err = g.PrepareAndRead(reader, importPrefix, modelName)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+
+	return nil
+}
+
+func (g *Generator) GenerateFiles() error {
+	g.Gen(g.yaml)
+	return nil
+}
+func (g *Generator) WriteOutFiles() error {
+	const op = "generator.WriteOutFiles"
+
+	modelName := g.GetModelName(g.Opts.YAMLFileName)
+	handlersPath := path.Join(g.Opts.DirPrefix, "generated", modelName)
+	schemasPath := path.Join(handlersPath, "models")
 	schemasOutput, err := os.Create(path.Join(schemasPath, "models.go"))
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
 	defer schemasOutput.Close()
 
-	handlerOutput, err := os.Create(path.Join(handlersPath, "handlers.go"))
+	handlersOutput, err := os.Create(path.Join(handlersPath, "handlers.go"))
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	defer handlerOutput.Close()
+	defer handlersOutput.Close()
 
-	err = g.GenerateToIO(ctx, reader, schemasOutput, handlerOutput,
-		path.Join(opts.PackagePrefix, "generated", modelName), modelName, opts)
+	err = g.WriteToOutput(schemasOutput, handlersOutput)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+	return nil
+}
+
+func (g *Generator) Generate(ctx context.Context) error {
+	const op = "generator.Generate"
+
+	err := g.PrepareFiles()
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+	err = g.GenerateFiles()
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+	err = g.WriteOutFiles()
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
