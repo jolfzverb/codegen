@@ -2,7 +2,6 @@ package generator_test
 
 import (
 	"bytes"
-	"context"
 	"strings"
 	"testing"
 
@@ -81,9 +80,13 @@ type StringModel string
 	outputModels := &bytes.Buffer{}
 	outputHandlers := &bytes.Buffer{}
 	gen := generator.NewGenerator(&options.Options{})
-
-	err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
-
+	modelName := "packagename"
+	importPrefix := "imports"
+	err := gen.PrepareAndRead(input, importPrefix, modelName)
+	assert.NoError(t, err)
+	err = gen.GenerateFiles()
+	assert.NoError(t, err)
+	err = gen.WriteToOutput(outputModels, outputHandlers)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedOutput, outputModels.String())
@@ -707,10 +710,15 @@ type ObjectModel struct {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-
-			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
-
+			modelName := "packagename"
+			importPrefix := "imports"
+			err := gen.PrepareAndRead(input, importPrefix, modelName)
 			assert.NoError(t, err)
+			err = gen.GenerateFiles()
+			assert.NoError(t, err)
+			err = gen.WriteToOutput(outputModels, outputHandlers)
+			assert.NoError(t, err)
+
 			assert.Equal(t, tc.expected, outputModels.String())
 		})
 	}
@@ -1034,10 +1042,15 @@ func (h *Handler) handlePostExampleParamName(w http.ResponseWriter, r *http.Requ
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-
-			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
-
+			modelName := "packagename"
+			importPrefix := "imports"
+			err := gen.PrepareAndRead(input, importPrefix, modelName)
 			assert.NoError(t, err)
+			err = gen.GenerateFiles()
+			assert.NoError(t, err)
+			err = gen.WriteToOutput(outputModels, outputHandlers)
+			assert.NoError(t, err)
+
 			assert.Equal(t, tc.expectedModels, outputModels.String())
 			assert.Equal(t, tc.expectedHandlers, outputHandlers.String())
 		})
@@ -1192,10 +1205,15 @@ func (h *Handler) handlePostExample(w http.ResponseWriter, r *http.Request) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-
-			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
-
+			modelName := "packagename"
+			importPrefix := "imports"
+			err := gen.PrepareAndRead(input, importPrefix, modelName)
 			assert.NoError(t, err)
+			err = gen.GenerateFiles()
+			assert.NoError(t, err)
+			err = gen.WriteToOutput(outputModels, outputHandlers)
+			assert.NoError(t, err)
+
 			assert.Equal(t, tc.expectedModels, outputModels.String())
 			assert.Equal(t, tc.expectedHandlers, outputHandlers.String())
 		})
@@ -1351,10 +1369,15 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-
-			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
-
+			modelName := "packagename"
+			importPrefix := "imports"
+			err := gen.PrepareAndRead(input, importPrefix, modelName)
 			assert.NoError(t, err)
+			err = gen.GenerateFiles()
+			assert.NoError(t, err)
+			err = gen.WriteToOutput(outputModels, outputHandlers)
+			assert.NoError(t, err)
+
 			assert.Equal(t, tc.expectedModels, outputModels.String())
 			assert.Equal(t, tc.expectedHandlers, outputHandlers.String())
 		})
@@ -1507,10 +1530,15 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-
-			err := gen.GenerateToIO(context.Background(), input, outputModels, outputHandlers, "imports", "packagename", &options.Options{})
-
+			modelName := "packagename"
+			importPrefix := "imports"
+			err := gen.PrepareAndRead(input, importPrefix, modelName)
 			assert.NoError(t, err)
+			err = gen.GenerateFiles()
+			assert.NoError(t, err)
+			err = gen.WriteToOutput(outputModels, outputHandlers)
+			assert.NoError(t, err)
+
 			assert.Equal(t, tc.expectedModels, outputModels.String())
 			assert.Equal(t, tc.expectedHandlers, outputHandlers.String())
 		})

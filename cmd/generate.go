@@ -15,7 +15,7 @@ func main() {
 
 	ctx := context.Background()
 	gen := generator.NewGenerator(opts)
-	err = gen.Generate(ctx, opts)
+	err = gen.Generate(ctx)
 	if err != nil {
 		panic(err)
 	}

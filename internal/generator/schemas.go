@@ -31,9 +31,9 @@ type SchemaField struct {
 	Required    bool
 }
 
-func (g *Generator) NewSchemasFile(requiredFieldsArePointers bool) *SchemasFile {
+func (g *Generator) NewSchemasFile() *SchemasFile {
 	return &SchemasFile{
-		requiredFieldsArePointers: requiredFieldsArePointers,
+		requiredFieldsArePointers: g.Opts.RequiredFieldsArePointers,
 	}
 }
 
