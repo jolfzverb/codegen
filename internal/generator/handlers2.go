@@ -1040,6 +1040,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 			},
 		})
 		g.AddContainsNullIfNeeded()
+		g.AddHandlersImport("github.com/go-faster/errors")
 	}
 
 	objectFieldsNames := make([]string, 0, len(objectFields))
@@ -1103,6 +1104,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 		})
 
 		g.AddContainsNullIfNeeded()
+		g.AddHandlersImport("github.com/go-faster/errors")
 	}
 
 	funcBody = append(funcBody, &ast.ReturnStmt{
@@ -1224,5 +1226,7 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 			},
 		},
 	))
+	g.AddHandlersImport("github.com/go-faster/errors")
+
 	return nil
 }
