@@ -50,7 +50,7 @@ type CreateRequestBody struct {
 	EnumVal         *string                       `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
 	ExternalRef     *ExternalRef                  `json:"external-ref,omitempty" validate:"omitempty"`
 	ExternalRef2    *ExternalObject               `json:"external-ref2,omitempty" validate:"omitempty"`
-	Name            string                        `json:"name" validate:"min=1,max=10"`
+	Name            string                        `json:"name"`
 	ObjectArray     *CreateRequestBodyObjectArray `json:"object-array,omitempty" validate:"omitempty"`
 	ObjectField     *CreateRequestBodyObjectField `json:"object-field,omitempty" validate:"omitempty"`
 }

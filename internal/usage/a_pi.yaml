@@ -53,8 +53,6 @@ paths:
               properties:
                 name:
                   type: string
-                  minLength: 1
-                  maxLength: 10
                 description:
                   type: string
                   minLength: 1
