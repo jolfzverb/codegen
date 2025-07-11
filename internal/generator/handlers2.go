@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"sort"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
@@ -407,6 +408,55 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 			typeName = ParseRefTypeName(content.Schema.Ref)
 		}
 	}
+	bodyList = append(bodyList, &ast.DeclStmt{
+		Decl: &ast.GenDecl{
+			Tok: token.VAR,
+			Specs: []ast.Spec{
+				&ast.ValueSpec{
+					Names: []*ast.Ident{I("bodyJSON")},
+					Type:  Sel(I("json"), "RawMessage"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{I("err")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: Sel(
+					&ast.CallExpr{
+						Fun:  Sel(I("json"), "NewDecoder"),
+						Args: []ast.Expr{Sel(I("r"), "Body")},
+					},
+					"Decode",
+				),
+				Args: []ast.Expr{
+					Amp(I("bodyJSON")),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: Ne(I("err"), I("nil")),
+		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
+	})
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{I("err")},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: I("validate" + typeName + "JSON"),
+				Args: []ast.Expr{
+					I("bodyJSON"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: Ne(I("err"), I("nil")),
+		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
+	})
 
 	bodyList = append(bodyList, &ast.DeclStmt{
 		Decl: &ast.GenDecl{
@@ -422,23 +472,14 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 
 	bodyList = append(bodyList, &ast.AssignStmt{
 		Lhs: []ast.Expr{I("err")},
-		Tok: token.DEFINE,
+		Tok: token.ASSIGN,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: Sel(
-					&ast.CallExpr{
-						Fun:  Sel(I("json"), "NewDecoder"),
-						Args: []ast.Expr{Sel(I("r"), "Body")},
-					},
-					"Decode",
-				),
-				Args: []ast.Expr{
-					Amp(I("body")),
-				},
+				Fun:  Sel(I("json"), "Unmarshal"),
+				Args: []ast.Expr{I("bodyJSON"), Amp(I("body"))},
 			},
 		},
 	})
-
 	bodyList = append(bodyList, &ast.IfStmt{
 		Cond: Ne(I("err"), I("nil")),
 		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
@@ -709,5 +750,479 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 		)},
 	))
 
+	return nil
+}
+
+func (g *Generator) AddContainsNullIfNeeded() {
+	if g.HandlersFile.hasContainsNullMethod {
+		return
+	}
+
+	g.HandlersFile.hasContainsNullMethod = true
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("containsNull",
+		nil,
+		[]*ast.Field{
+			Field("data", Sel(I("json"), "RawMessage"), ""),
+		},
+		[]*ast.Field{
+			Field("", I("bool"), ""),
+		},
+		[]ast.Stmt{
+			&ast.DeclStmt{
+				Decl: &ast.GenDecl{
+					Tok: token.VAR,
+					Specs: []ast.Spec{
+						&ast.ValueSpec{
+							Names: []*ast.Ident{I("temp")},
+							Type:  I("any"),
+						},
+					},
+				},
+			},
+			&ast.AssignStmt{
+				Lhs: []ast.Expr{I("err")},
+				Tok: token.DEFINE,
+				Rhs: []ast.Expr{
+					&ast.CallExpr{
+						Fun: Sel(I("json"), "Unmarshal"),
+						Args: []ast.Expr{
+							I("data"),
+							Amp(I("temp")),
+						},
+					},
+				},
+			},
+			&ast.IfStmt{
+				Cond: Ne(I("err"), I("nil")),
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						Ret1(I("false")),
+					},
+				},
+			},
+			&ast.ReturnStmt{
+				Results: []ast.Expr{
+					&ast.BinaryExpr{
+						X:  I("temp"),
+						Op: token.EQL,
+						Y:  I("nil"),
+					},
+				},
+			},
+		},
+	))
+	g.AddHandlersImport("encoding/json")
+}
+
+func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaRef) error {
+	const op = "generator.AddObjectValidate"
+	requiredFieldsMap := make(map[string]bool, 0)
+	nullableFields := make([]string, 0)
+	objectFields := make(map[string]string, 0)
+
+	for _, requiredField := range schema.Value.Required {
+		requiredFieldsMap[requiredField] = true
+	}
+
+	for fieldName, fieldSchema := range schema.Value.Properties {
+		if fieldSchema.Value == nil {
+			continue
+		}
+		if fieldSchema.Value.Nullable && requiredFieldsMap[fieldName] {
+			nullableFields = append(nullableFields, fieldName)
+		}
+		if fieldSchema.Value.Type.Permits(openapi3.TypeObject) {
+			fieldType, err := g.GetFieldTypeFromSchema(modelName, fieldName, fieldSchema)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
+			objectFields[fieldName] = fieldType
+		}
+		if fieldSchema.Value.Type.Permits(openapi3.TypeArray) {
+			if fieldSchema.Value.Items != nil &&
+				(fieldSchema.Value.Items.Value.Type.Permits(openapi3.TypeObject) ||
+					fieldSchema.Value.Items.Value.Type.Permits(openapi3.TypeArray)) {
+				fieldType, err := g.GetFieldTypeFromSchema(modelName, fieldName, fieldSchema)
+				if err != nil {
+					return errors.Wrap(err, op)
+				}
+				objectFields[fieldName] = fieldType
+			}
+		}
+	}
+	requiredFields := make([]string, 0, len(requiredFieldsMap))
+	for fieldName := range requiredFieldsMap {
+		requiredFields = append(requiredFields, fieldName)
+	}
+	sort.Strings(requiredFields)
+	sort.Strings(nullableFields)
+
+	funcBody := make([]ast.Stmt, 0, len(objectFields))
+
+	if len(requiredFields) > 0 {
+		requiredFieldsElts := make([]ast.Expr, 0, len(requiredFields))
+		for _, fieldName := range requiredFields {
+			requiredFieldsElts = append(requiredFieldsElts, &ast.KeyValueExpr{
+				Key:   Str(fieldName),
+				Value: I("true"),
+			})
+		}
+		funcBody = append(funcBody, &ast.AssignStmt{
+			Lhs: []ast.Expr{I("requiredFields")},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.CompositeLit{
+					Type: &ast.MapType{
+						Key:   I("string"),
+						Value: I("bool"),
+					},
+					Elts: requiredFieldsElts,
+				},
+			},
+		})
+
+		nullableFieldsElts := make([]ast.Expr, 0, len(nullableFields))
+		for _, fieldName := range nullableFields {
+			nullableFieldsElts = append(nullableFieldsElts, &ast.KeyValueExpr{
+				Key:   Str(fieldName),
+				Value: I("true"),
+			})
+		}
+		funcBody = append(funcBody, &ast.AssignStmt{
+			Lhs: []ast.Expr{I("nullableFields")},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.CompositeLit{
+					Type: &ast.MapType{
+						Key:   I("string"),
+						Value: I("bool"),
+					},
+					Elts: nullableFieldsElts,
+				},
+			},
+		})
+	}
+
+	if len(requiredFields) > 0 || len(objectFields) > 0 {
+		funcBody = append(funcBody, &ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{I("obj")},
+						Type:  &ast.MapType{Key: I("string"), Value: Sel(I("json"), "RawMessage")},
+					},
+				},
+			},
+		})
+		funcBody = append(funcBody, &ast.AssignStmt{
+			Lhs: []ast.Expr{I("err")},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.CallExpr{
+					Fun: Sel(I("json"), "Unmarshal"),
+					Args: []ast.Expr{
+						I("jsonData"),
+						Amp(I("obj")),
+					},
+				},
+			},
+		})
+		funcBody = append(funcBody, &ast.IfStmt{
+			Cond: Ne(I("err"), I("nil")),
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					Ret1(I("err")),
+				},
+			},
+		})
+	}
+	if len(requiredFields) > 0 || len(objectFields) > 0 {
+		funcBody = append(funcBody, &ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{I("val")},
+						Type:  Sel(I("json"), "RawMessage"),
+					},
+				},
+			},
+		})
+		funcBody = append(funcBody, &ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{I("exists")},
+						Type:  I("bool"),
+					},
+				},
+			},
+		})
+	}
+	if len(requiredFields) > 0 {
+		funcBody = append(funcBody, &ast.RangeStmt{
+			Key: I("field"),
+			Tok: token.DEFINE,
+			X:   I("requiredFields"),
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.AssignStmt{
+						Lhs: []ast.Expr{I("val"), I("exists")},
+						Tok: token.ASSIGN,
+						Rhs: []ast.Expr{
+							&ast.IndexExpr{
+								X:     I("obj"),
+								Index: I("field"),
+							},
+						},
+					},
+					&ast.IfStmt{
+						Cond: &ast.UnaryExpr{
+							Op: token.NOT,
+							X:  I("exists"),
+						},
+						Body: &ast.BlockStmt{
+							List: []ast.Stmt{
+								Ret1(&ast.CallExpr{
+									Fun: Sel(I("errors"), "New"),
+									Args: []ast.Expr{
+										&ast.BinaryExpr{
+											X: &ast.BinaryExpr{
+												X:  Str("field "),
+												Op: token.ADD,
+												Y:  I("field"),
+											},
+											Op: token.ADD,
+											Y:  Str(" is required"),
+										},
+									},
+								}),
+							},
+						},
+					},
+					&ast.IfStmt{
+						Cond: &ast.BinaryExpr{
+							X: &ast.UnaryExpr{
+								Op: token.NOT,
+								X: &ast.IndexExpr{
+									X:     I("nullableFields"),
+									Index: I("field"),
+								},
+							},
+							Op: token.LAND,
+							Y: &ast.CallExpr{
+								Fun:  I("containsNull"),
+								Args: []ast.Expr{I("val")},
+							},
+						},
+						Body: &ast.BlockStmt{
+							List: []ast.Stmt{
+								Ret1(&ast.CallExpr{
+									Fun: Sel(I("errors"), "New"),
+									Args: []ast.Expr{
+										&ast.BinaryExpr{
+											X: &ast.BinaryExpr{
+												X:  Str("field "),
+												Op: token.ADD,
+												Y:  I("field"),
+											},
+											Op: token.ADD,
+											Y:  Str(" cannot be null"),
+										},
+									},
+								}),
+							},
+						},
+					},
+				},
+			},
+		})
+		g.AddContainsNullIfNeeded()
+	}
+
+	objectFieldsNames := make([]string, 0, len(objectFields))
+	for fieldName := range objectFields {
+		objectFieldsNames = append(objectFieldsNames, fieldName)
+	}
+	sort.Strings(objectFieldsNames)
+
+	for _, fieldName := range objectFieldsNames {
+		fieldType := objectFields[fieldName]
+		funcBody = append(funcBody, &ast.AssignStmt{
+			Lhs: []ast.Expr{I("val"), I("exists")},
+			Tok: token.ASSIGN,
+			Rhs: []ast.Expr{
+				&ast.IndexExpr{
+					X:     I("obj"),
+					Index: Str(fieldName),
+				},
+			},
+		})
+		funcBody = append(funcBody, &ast.IfStmt{
+			Cond: &ast.BinaryExpr{
+				X:  I("exists"),
+				Op: token.LAND,
+				Y: &ast.UnaryExpr{
+					Op: token.NOT,
+					X: &ast.CallExpr{
+						Fun:  I("containsNull"),
+						Args: []ast.Expr{I("val")},
+					},
+				},
+			},
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.AssignStmt{
+						Lhs: []ast.Expr{I("err")},
+						Tok: token.ASSIGN,
+						Rhs: []ast.Expr{
+							&ast.CallExpr{
+								Fun:  I("validate" + fieldType + "JSON"),
+								Args: []ast.Expr{I("val")},
+							},
+						},
+					},
+					&ast.IfStmt{
+						Cond: Ne(I("err"), I("nil")),
+						Body: &ast.BlockStmt{
+							List: []ast.Stmt{
+								Ret1(&ast.CallExpr{
+									Fun: Sel(I("errors"), "Wrap"),
+									Args: []ast.Expr{
+										I("err"),
+										Str("field " + fieldName + " is not valid"),
+									},
+								}),
+							},
+						},
+					},
+				},
+			},
+		})
+
+		g.AddContainsNullIfNeeded()
+	}
+
+	funcBody = append(funcBody, &ast.ReturnStmt{
+		Results: []ast.Expr{I("nil")},
+	})
+
+	fieldName := "jsonData"
+	if len(requiredFields) == 0 && len(objectFields) == 0 {
+		fieldName = "_"
+	}
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("validate"+modelName+"JSON",
+		nil,
+		[]*ast.Field{
+			Field(fieldName, Sel(I("json"), "RawMessage"), ""),
+		},
+		[]*ast.Field{
+			Field("", I("error"), ""),
+		},
+		funcBody,
+	))
+	return nil
+}
+
+func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRef) error {
+	const op = "generator.AddArrayValidate"
+
+	elemType, err := g.GetFieldTypeFromSchema(modelName, "Item", schema.Value.Items)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("validate"+modelName+"JSON",
+		nil,
+		[]*ast.Field{
+			Field("jsonData", Sel(I("json"), "RawMessage"), ""),
+		},
+		[]*ast.Field{
+			Field("", I("error"), ""),
+		},
+		[]ast.Stmt{
+			&ast.DeclStmt{
+				Decl: &ast.GenDecl{
+					Tok: token.VAR,
+					Specs: []ast.Spec{
+						&ast.ValueSpec{
+							Names: []*ast.Ident{I("arr")},
+							Type:  &ast.ArrayType{Elt: Sel(I("json"), "RawMessage")},
+						},
+					},
+				},
+			},
+			&ast.AssignStmt{
+				Lhs: []ast.Expr{I("err")},
+				Tok: token.DEFINE,
+				Rhs: []ast.Expr{
+					&ast.CallExpr{
+						Fun: Sel(I("json"), "Unmarshal"),
+						Args: []ast.Expr{
+							I("jsonData"),
+							Amp(I("arr")),
+						},
+					},
+				},
+			},
+			&ast.IfStmt{
+				Cond: Ne(I("err"), I("nil")),
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{Ret1(I("err"))},
+				},
+			},
+			&ast.RangeStmt{
+				Key:   I("index"),
+				Value: I("obj"),
+				Tok:   token.DEFINE,
+				X:     I("arr"),
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.IfStmt{
+							Cond: &ast.UnaryExpr{
+								Op: token.NOT,
+								X: &ast.CallExpr{
+									Fun:  I("containsNull"),
+									Args: []ast.Expr{I("obj")},
+								},
+							},
+							Body: &ast.BlockStmt{
+								List: []ast.Stmt{
+									&ast.AssignStmt{
+										Lhs: []ast.Expr{I("err")},
+										Tok: token.ASSIGN,
+										Rhs: []ast.Expr{
+											&ast.CallExpr{
+												Fun:  I("validate" + elemType + "JSON"),
+												Args: []ast.Expr{I("obj")},
+											},
+										},
+									},
+									&ast.IfStmt{
+										Cond: Ne(I("err"), I("nil")),
+										Body: &ast.BlockStmt{
+											List: []ast.Stmt{Ret1(&ast.CallExpr{
+												Fun: Sel(I("errors"), "Wrapf"),
+												Args: []ast.Expr{
+													I("err"),
+													Str("error validating object at index %d"),
+													I("index"),
+												},
+											})},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			&ast.ReturnStmt{
+				Results: []ast.Expr{I("nil")},
+			},
+		},
+	))
 	return nil
 }

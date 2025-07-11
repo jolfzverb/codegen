@@ -4,15 +4,6 @@ package models
 
 import "time"
 
-type NewResourseResponse struct {
-	Count       string     `json:"count" validate:"required"`
-	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
-	Date2       *time.Time `json:"date2,omitempty" validate:"omitempty"`
-	Description *string    `json:"description,omitempty" validate:"omitempty"`
-	EnumVal     *string    `json:"enum-val,omitempty" validate:"omitempty"`
-	Name        string     `json:"name" validate:"required"`
-	Param       string     `json:"param" validate:"required"`
-}
 type CreatePathParams struct {
 	Param string `json:"param" validate:"required"`
 }
@@ -27,14 +18,41 @@ type CreateCookies struct {
 	CookieParam         *string `json:"cookie-param,omitempty" validate:"omitempty,min=10,max=15"`
 	RequiredCookieParam string  `json:"required-cookie-param" validate:"required,min=10,max=15"`
 }
+type CreateRequestBodyArrayField []string
+type ExternalRef string
+type ExternalRef2 struct {
+	Subfield1 *string `json:"subfield1,omitempty" validate:"omitempty"`
+}
+type ExternalObject struct {
+	Field1 *string       `json:"field1,omitempty" validate:"omitempty"`
+	Field2 *ExternalRef2 `json:"field2,omitempty" validate:"omitempty"`
+}
+type CreateRequestBodyObjectArrayItem struct {
+	Subfield1 *string `json:"subfield1,omitempty" validate:"omitempty"`
+	Subfield2 *int    `json:"subfield2,omitempty" validate:"omitempty"`
+}
+type CreateRequestBodyObjectArray []CreateRequestBodyObjectArrayItem
+type CreateRequestBodyObjectFieldField2 struct {
+	Subfield1 *string `json:"subfield1,omitempty" validate:"omitempty"`
+	Subfield2 *int    `json:"subfield2,omitempty" validate:"omitempty"`
+}
+type CreateRequestBodyObjectField struct {
+	Field1 *string                             `json:"field1,omitempty" validate:"omitempty"`
+	Field2 *CreateRequestBodyObjectFieldField2 `json:"field2,omitempty" validate:"omitempty"`
+}
 type CreateRequestBody struct {
-	CodeForResponse *int       `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
-	Date            *time.Time `json:"date,omitempty" validate:"omitempty"`
-	Description     *string    `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
-	EnumInt         *int       `json:"enum-int,omitempty" validate:"omitempty,oneof=1 2 3"`
-	EnumNumber      *float64   `json:"enum-number,omitempty" validate:"omitempty,oneof=1.1 2.2 3.3"`
-	EnumVal         *string    `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
-	Name            string     `json:"name" validate:"required,min=1,max=10"`
+	ArrayField      *CreateRequestBodyArrayField  `json:"array-field,omitempty" validate:"omitempty"`
+	CodeForResponse *int                          `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
+	Date            *time.Time                    `json:"date,omitempty" validate:"omitempty"`
+	Description     *string                       `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
+	EnumInt         *int                          `json:"enum-int,omitempty" validate:"omitempty,oneof=1 2 3"`
+	EnumNumber      *float64                      `json:"enum-number,omitempty" validate:"omitempty,oneof=1.1 2.2 3.3"`
+	EnumVal         *string                       `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
+	ExternalRef     *ExternalRef                  `json:"external-ref,omitempty" validate:"omitempty"`
+	ExternalRef2    *ExternalObject               `json:"external-ref2,omitempty" validate:"omitempty"`
+	Name            string                        `json:"name"`
+	ObjectArray     *CreateRequestBodyObjectArray `json:"object-array,omitempty" validate:"omitempty"`
+	ObjectField     *CreateRequestBodyObjectField `json:"object-field,omitempty" validate:"omitempty"`
 }
 type CreateRequest struct {
 	Path    CreatePathParams
@@ -59,4 +77,13 @@ type CreateResponse struct {
 	Response200 *CreateResponse200
 	Response400 *CreateResponse400
 	Response404 *CreateResponse404
+}
+type NewResourseResponse struct {
+	Count       string     `json:"count"`
+	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
+	Date2       *time.Time `json:"date2,omitempty" validate:"omitempty"`
+	Description *string    `json:"description,omitempty" validate:"omitempty"`
+	EnumVal     *string    `json:"enum-val,omitempty" validate:"omitempty"`
+	Name        string     `json:"name"`
+	Param       string     `json:"param"`
 }

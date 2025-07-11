@@ -108,6 +108,11 @@ func TestHandler(t *testing.T) {
 		resp, err := http.DefaultClient.Do(request)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+		defer resp.Body.Close()
+		var responseBody map[string]any
+		err = json.NewDecoder(resp.Body).Decode(&responseBody)
+		assert.NoError(t, err)
 	})
 	t.Run("400 number enum", func(t *testing.T) {
 		requestBody := `{"name": "value", "enum-int": 15}`

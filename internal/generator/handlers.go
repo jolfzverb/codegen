@@ -28,9 +28,10 @@ type HandlersFile struct {
 	handlerConstructorDeclQAArgs                 *ast.FieldList    // quick access to handler constructor args
 	handlerConstructorDeclQAConstructorComposite *ast.CompositeLit // quick access to handler struct initializer
 
-	addRoutesDecl        *ast.FuncDecl
-	handleDeclQASwitches map[string]*ast.BlockStmt
-	restDecls            []*ast.FuncDecl
+	addRoutesDecl         *ast.FuncDecl
+	handleDeclQASwitches  map[string]*ast.BlockStmt
+	restDecls             []*ast.FuncDecl
+	hasContainsNullMethod bool
 }
 
 func (g *Generator) InitHandlerImports(modelsImportPath string) {
@@ -112,15 +113,11 @@ func (g *Generator) InitHandlerFields(packageName string, modelsImportPath strin
 	g.InitRoutesFunc()
 }
 
-func (g *Generator) NewHandlersFile(packageName string, importPrefix string, modelsImportPath string) *HandlersFile {
-	h := &HandlersFile{
-		importPrefix:              importPrefix,
+func (g *Generator) NewHandlersFile() {
+	g.HandlersFile = &HandlersFile{
+		importPrefix:              g.ImportPrefix,
 		requiredFieldsArePointers: g.Opts.RequiredFieldsArePointers,
 	}
-	g.HandlersFile = h
-	g.InitHandlerFields(packageName, modelsImportPath)
-
-	return h
 }
 
 func (g *Generator) WriteHandlersToOutput(output io.Writer) error {
@@ -341,7 +338,7 @@ func (g *Generator) FinalizeHandlerSwitches() {
 						Fun: Sel(I("http"), "Error"),
 						Args: []ast.Expr{
 							I("w"),
-							Str("Unsupported Content-Type"),
+							Str("{\"error\":\"Unsupported Content-Type\"}"),
 							Sel(I("http"), "StatusUnsupportedMediaType"),
 						},
 					},
@@ -420,8 +417,18 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 								Args: []ast.Expr{
 									I("w"),
 									&ast.CallExpr{
-										Fun:  Sel(I("err"), "Error"),
-										Args: []ast.Expr{},
+										Fun: Sel(I("fmt"), "Sprintf"),
+										Args: []ast.Expr{
+											Str("{\"error\":%s}"),
+											&ast.CallExpr{
+												Fun: Sel(I("strconv"), "Quote"),
+												Args: []ast.Expr{
+													&ast.CallExpr{
+														Fun: Sel(I("err"), "Error"),
+													},
+												},
+											},
+										},
 									},
 									Sel(I("http"), "StatusBadRequest"),
 								},
@@ -493,6 +500,8 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 			Ret(),
 		},
 	))
+	g.AddHandlersImport("fmt")
+	g.AddHandlersImport("strconv")
 }
 
 func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []string) {

@@ -2,3 +2,15 @@ components:
   schemas:
     ExternalRef:
       type: string
+    ExternalObject:
+      type: object
+      properties:
+        field1:
+          type: string
+        field2:
+          $ref: '#/components/schemas/ExternalRef2'
+    ExternalRef2:
+      type: object
+      properties:
+        subfield1:
+          type: string

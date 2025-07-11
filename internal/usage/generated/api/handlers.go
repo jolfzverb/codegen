@@ -5,7 +5,9 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
@@ -96,9 +98,127 @@ func (h *Handler) parseCreateCookies(r *http.Request) (*models.CreateCookies, er
 	}
 	return &cookies, nil
 }
+func validateExternalRef2JSON(_ json.RawMessage) error {
+	return nil
+}
+func containsNull(data json.RawMessage) bool {
+	var temp any
+	err := json.Unmarshal(data, &temp)
+	if err != nil {
+		return false
+	}
+	return temp == nil
+}
+func validateExternalObjectJSON(jsonData json.RawMessage) error {
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	val, exists = obj["field2"]
+	if exists && !containsNull(val) {
+		err = validateExternalRef2JSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field field2 is not valid")
+		}
+	}
+	return nil
+}
+func validateCreateRequestBodyObjectArrayItemJSON(_ json.RawMessage) error {
+	return nil
+}
+func validateCreateRequestBodyObjectArrayJSON(jsonData json.RawMessage) error {
+	var arr []json.RawMessage
+	err := json.Unmarshal(jsonData, &arr)
+	if err != nil {
+		return err
+	}
+	for index, obj := range arr {
+		if !containsNull(obj) {
+			err = validateCreateRequestBodyObjectArrayItemJSON(obj)
+			if err != nil {
+				return errors.Wrapf(err, "error validating object at index %d", index)
+			}
+		}
+	}
+	return nil
+}
+func validateCreateRequestBodyObjectFieldField2JSON(_ json.RawMessage) error {
+	return nil
+}
+func validateCreateRequestBodyObjectFieldJSON(jsonData json.RawMessage) error {
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	val, exists = obj["field2"]
+	if exists && !containsNull(val) {
+		err = validateCreateRequestBodyObjectFieldField2JSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field field2 is not valid")
+		}
+	}
+	return nil
+}
+func validateCreateRequestBodyJSON(jsonData json.RawMessage) error {
+	requiredFields := map[string]bool{"name": true}
+	nullableFields := map[string]bool{}
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	for field := range requiredFields {
+		val, exists = obj[field]
+		if !exists {
+			return errors.New("field " + field + " is required")
+		}
+		if !nullableFields[field] && containsNull(val) {
+			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	val, exists = obj["external-ref2"]
+	if exists && !containsNull(val) {
+		err = validateExternalObjectJSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field external-ref2 is not valid")
+		}
+	}
+	val, exists = obj["object-array"]
+	if exists && !containsNull(val) {
+		err = validateCreateRequestBodyObjectArrayJSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field object-array is not valid")
+		}
+	}
+	val, exists = obj["object-field"]
+	if exists && !containsNull(val) {
+		err = validateCreateRequestBodyObjectFieldJSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field object-field is not valid")
+		}
+	}
+	return nil
+}
 func (h *Handler) parseCreateRequestBody(r *http.Request) (*models.CreateRequestBody, error) {
+	var bodyJSON json.RawMessage
+	err := json.NewDecoder(r.Body).Decode(&bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	err = validateCreateRequestBodyJSON(bodyJSON)
+	if err != nil {
+		return nil, err
+	}
 	var body models.CreateRequestBody
-	err := json.NewDecoder(r.Body).Decode(&body)
+	err = json.Unmarshal(bodyJSON, &body)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +312,7 @@ func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *models.Cr
 func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseCreateRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("{\"error\":%s}", strconv.Quote(err.Error())), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
@@ -213,7 +333,28 @@ func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		h.handleCreateRequest(w, r)
 		return
 	default:
-		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
 		return
 	}
+}
+func validateNewResourseResponseJSON(jsonData json.RawMessage) error {
+	requiredFields := map[string]bool{"count": true, "name": true, "param": true}
+	nullableFields := map[string]bool{}
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	for field := range requiredFields {
+		val, exists = obj[field]
+		if !exists {
+			return errors.New("field " + field + " is required")
+		}
+		if !nullableFields[field] && containsNull(val) {
+			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	return nil
 }
