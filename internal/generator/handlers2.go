@@ -408,6 +408,55 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 			typeName = ParseRefTypeName(content.Schema.Ref)
 		}
 	}
+	bodyList = append(bodyList, &ast.DeclStmt{
+		Decl: &ast.GenDecl{
+			Tok: token.VAR,
+			Specs: []ast.Spec{
+				&ast.ValueSpec{
+					Names: []*ast.Ident{I("bodyJSON")},
+					Type:  Sel(I("json"), "RawMessage"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{I("err")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: Sel(
+					&ast.CallExpr{
+						Fun:  Sel(I("json"), "NewDecoder"),
+						Args: []ast.Expr{Sel(I("r"), "Body")},
+					},
+					"Decode",
+				),
+				Args: []ast.Expr{
+					Amp(I("bodyJSON")),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: Ne(I("err"), I("nil")),
+		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
+	})
+	bodyList = append(bodyList, &ast.AssignStmt{
+		Lhs: []ast.Expr{I("err")},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: I("validate" + typeName + "JSON"),
+				Args: []ast.Expr{
+					I("bodyJSON"),
+				},
+			},
+		},
+	})
+	bodyList = append(bodyList, &ast.IfStmt{
+		Cond: Ne(I("err"), I("nil")),
+		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
+	})
 
 	bodyList = append(bodyList, &ast.DeclStmt{
 		Decl: &ast.GenDecl{
@@ -423,23 +472,14 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 
 	bodyList = append(bodyList, &ast.AssignStmt{
 		Lhs: []ast.Expr{I("err")},
-		Tok: token.DEFINE,
+		Tok: token.ASSIGN,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: Sel(
-					&ast.CallExpr{
-						Fun:  Sel(I("json"), "NewDecoder"),
-						Args: []ast.Expr{Sel(I("r"), "Body")},
-					},
-					"Decode",
-				),
-				Args: []ast.Expr{
-					Amp(I("body")),
-				},
+				Fun:  Sel(I("json"), "Unmarshal"),
+				Args: []ast.Expr{I("bodyJSON"), Amp(I("body"))},
 			},
 		},
 	})
-
 	bodyList = append(bodyList, &ast.IfStmt{
 		Cond: Ne(I("err"), I("nil")),
 		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},

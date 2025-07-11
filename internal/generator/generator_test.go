@@ -978,8 +978,17 @@ func validatePostExampleParamNameRequestBodyJSON(jsonData json.RawMessage) error
 	return nil
 }
 func (h *Handler) parsePostExampleParamNameRequestBody(r *http.Request) (*models.PostExampleParamNameRequestBody, error) {
+	var bodyJSON json.RawMessage
+	err := json.NewDecoder(r.Body).Decode(&bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	err = validatePostExampleParamNameRequestBodyJSON(bodyJSON)
+	if err != nil {
+		return nil, err
+	}
 	var body models.PostExampleParamNameRequestBody
-	err := json.NewDecoder(r.Body).Decode(&body)
+	err = json.Unmarshal(bodyJSON, &body)
 	if err != nil {
 		return nil, err
 	}
@@ -1171,8 +1180,17 @@ func (h *Handler) AddRoutes(router chi.Router) {
 	router.Post("/example", h.handlePostExample)
 }
 func (h *Handler) parsePostExampleRequestBody(r *http.Request) (*models.Body, error) {
+	var bodyJSON json.RawMessage
+	err := json.NewDecoder(r.Body).Decode(&bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	err = validateBodyJSON(bodyJSON)
+	if err != nil {
+		return nil, err
+	}
 	var body models.Body
-	err := json.NewDecoder(r.Body).Decode(&body)
+	err = json.Unmarshal(bodyJSON, &body)
 	if err != nil {
 		return nil, err
 	}
@@ -1341,8 +1359,17 @@ func (h *Handler) AddRoutes(router chi.Router) {
 	router.Post("/example", h.handleOp)
 }
 func (h *Handler) parseOpRequestBody(r *http.Request) (*models.Body, error) {
+	var bodyJSON json.RawMessage
+	err := json.NewDecoder(r.Body).Decode(&bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	err = validateBodyJSON(bodyJSON)
+	if err != nil {
+		return nil, err
+	}
 	var body models.Body
-	err := json.NewDecoder(r.Body).Decode(&body)
+	err = json.Unmarshal(bodyJSON, &body)
 	if err != nil {
 		return nil, err
 	}
@@ -1675,8 +1702,17 @@ func validateOpRequestBodyJSON(_ json.RawMessage) error {
 	return nil
 }
 func (h *Handler) parseOpRequestBody(r *http.Request) (*models.OpRequestBody, error) {
+	var bodyJSON json.RawMessage
+	err := json.NewDecoder(r.Body).Decode(&bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	err = validateOpRequestBodyJSON(bodyJSON)
+	if err != nil {
+		return nil, err
+	}
 	var body models.OpRequestBody
-	err := json.NewDecoder(r.Body).Decode(&body)
+	err = json.Unmarshal(bodyJSON, &body)
 	if err != nil {
 		return nil, err
 	}

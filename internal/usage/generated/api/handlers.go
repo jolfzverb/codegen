@@ -208,8 +208,17 @@ func validateCreateRequestBodyJSON(jsonData json.RawMessage) error {
 	return nil
 }
 func (h *Handler) parseCreateRequestBody(r *http.Request) (*models.CreateRequestBody, error) {
+	var bodyJSON json.RawMessage
+	err := json.NewDecoder(r.Body).Decode(&bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	err = validateCreateRequestBodyJSON(bodyJSON)
+	if err != nil {
+		return nil, err
+	}
 	var body models.CreateRequestBody
-	err := json.NewDecoder(r.Body).Decode(&body)
+	err = json.Unmarshal(bodyJSON, &body)
 	if err != nil {
 		return nil, err
 	}
