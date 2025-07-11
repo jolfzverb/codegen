@@ -75,8 +75,35 @@ paths:
                 enum-number:
                   type: number
                   enum: [1.1, 2.2, 3.3]
-                #external-ref:
-                #  $ref: '../internal/usage/def.yml#/components/schemas/ExternalRef'
+                array-field:
+                  type: array
+                  items:
+                    type: string
+                object-field:
+                  type: object
+                  properties:
+                    field1:
+                      type: string
+                    field2:
+                      type: object
+                      properties:
+                        subfield1:
+                          type: string
+                        subfield2:
+                          type: integer
+                object-array:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      subfield1:
+                        type: string
+                      subfield2:
+                        type: integer
+                external-ref:
+                  $ref: 'def.yml#/components/schemas/ExternalRef'
+                external-ref2:
+                  $ref: 'def.yml#/components/schemas/ExternalObject'
               required:
                 - name
       responses:

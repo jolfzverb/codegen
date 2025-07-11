@@ -16,6 +16,7 @@ type SchemasFile struct {
 	requiredFieldsArePointers bool
 	packageImports            []string
 	decls                     []*ast.GenDecl
+	generatedModels           map[string]bool
 }
 
 type SchemaStruct struct {
@@ -31,9 +32,10 @@ type SchemaField struct {
 	Required    bool
 }
 
-func (g *Generator) NewSchemasFile() *SchemasFile {
-	return &SchemasFile{
+func (g *Generator) NewSchemasFile() {
+	g.SchemasFile = &SchemasFile{
 		requiredFieldsArePointers: g.Opts.RequiredFieldsArePointers,
+		generatedModels:           make(map[string]bool),
 	}
 }
 
@@ -310,13 +312,9 @@ func (g *Generator) GetStringType(format string) string {
 	return "string"
 }
 
-func (g *Generator) GetFieldTypeFromSchema(modelName string, fieldName string,
+func (g *Generator) GetDerefFieldTypeFromSchema(modelName string, fieldName string,
 	fieldSchema *openapi3.SchemaRef,
 ) (string, error) {
-	if fieldSchema.Ref != "" {
-		return ParseRefTypeName(fieldSchema.Ref), nil
-	}
-
 	var fieldType string
 	switch {
 	case fieldSchema.Value.Type.Permits(openapi3.TypeString):
@@ -342,6 +340,19 @@ func (g *Generator) GetFieldTypeFromSchema(modelName string, fieldName string,
 	return fieldType, nil
 }
 
+func (g *Generator) GetFieldTypeFromSchema(modelName string, fieldName string,
+	fieldSchema *openapi3.SchemaRef,
+) (string, error) {
+	if fieldSchema.Ref != "" {
+		return ParseRefTypeName(fieldSchema.Ref), nil
+	}
+	fieldType, err := g.GetDerefFieldTypeFromSchema(modelName, fieldName, fieldSchema)
+	if err != nil {
+		return "", errors.Wrapf(err, "GetFieldTypeFromSchema for field %s", fieldName)
+	}
+	return fieldType, nil
+}
+
 func (g *Generator) ProcessObjectSchema(modelName string, schema *openapi3.SchemaRef) error {
 	const op = "generator.ProcessObjectSchema"
 	model := SchemaStruct{
@@ -364,28 +375,29 @@ func (g *Generator) ProcessObjectSchema(modelName string, schema *openapi3.Schem
 		var jsonTags []string
 		var validateTags []string
 		jsonTags = append(jsonTags, fieldName)
-		if requiredFields[fieldName] {
-			validateTags = append(validateTags, "required")
-		} else {
+		if !requiredFields[fieldName] {
 			jsonTags = append(jsonTags, "omitempty")
 			validateTags = append(validateTags, "omitempty")
 		}
 
-		switch {
-		case fieldSchema.Value.Type.Permits(openapi3.TypeObject):
-			if fieldSchema.Ref == "" {
-				err := g.ProcessObjectSchema(modelName+FormatGoLikeIdentifier(fieldName), fieldSchema)
+		if fieldSchema.Ref == "" {
+			switch {
+			case fieldSchema.Value.Type.Permits(openapi3.TypeObject):
+				err := g.ProcessSchema(modelName+FormatGoLikeIdentifier(fieldName), fieldSchema)
+				if err != nil {
+					return errors.Wrap(err, op)
+				}
+			case fieldSchema.Value.Type.Permits(openapi3.TypeArray):
+				err := g.ProcessSchema(modelName+FormatGoLikeIdentifier(fieldName), fieldSchema)
 				if err != nil {
 					return errors.Wrap(err, op)
 				}
 			}
-		case fieldSchema.Value.Type.Permits(openapi3.TypeArray):
-			if fieldSchema.Ref == "" {
-				err := g.ProcessArraySchema(modelName+FormatGoLikeIdentifier(fieldName), fieldSchema)
-				if err != nil {
-					return errors.Wrap(err, op)
-				}
-			}
+		}
+
+		if fieldSchema.Ref != "" {
+			elemModelName := ParseRefTypeName(fieldSchema.Ref)
+			g.ProcessSchema(elemModelName, fieldSchema)
 		}
 
 		validateTags = append(validateTags, GetSchemaValidators(fieldSchema)...)
@@ -414,13 +426,17 @@ func (g *Generator) ProcessObjectSchema(modelName string, schema *openapi3.Schem
 
 func (g *Generator) ProcessTypeAlias(modelName string, schema *openapi3.SchemaRef) error {
 	const op = "generator.ProcessTypeAlias"
-	typeName, err := g.GetFieldTypeFromSchema(modelName, "", schema)
+	typeName, err := g.GetDerefFieldTypeFromSchema(modelName, "", schema)
 	if err != nil {
 		return errors.Wrapf(err, op)
 	}
 	g.AddTypeAlias(modelName, typeName)
 
 	return nil
+}
+
+func refIsExternal(ref string) bool {
+	return !strings.HasPrefix(ref, "#")
 }
 
 func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.SchemaRef,
@@ -432,16 +448,21 @@ func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.Schema
 		itemsSchema := schema.Value.Items
 		switch {
 		case itemsSchema.Value.Type.Permits(openapi3.TypeObject):
-			err := g.ProcessObjectSchema(modelName+"Item", itemsSchema)
+			err := g.ProcessSchema(modelName+"Item", itemsSchema)
 			if err != nil {
 				return errors.Wrap(err, op)
 			}
 		case itemsSchema.Value.Type.Permits(openapi3.TypeArray):
-			err := g.ProcessArraySchema(modelName+"Item", itemsSchema)
+			err := g.ProcessSchema(modelName+"Item", itemsSchema)
 			if err != nil {
 				return errors.Wrap(err, op)
 			}
 		}
+	}
+
+	if schema.Value.Items.Ref != "" {
+		elemModelName := ParseRefTypeName(schema.Value.Items.Ref)
+		g.ProcessSchema(elemModelName, schema.Value.Items)
 	}
 
 	elemType, err := g.GetFieldTypeFromSchema(modelName, "Item", schema.Value.Items)
@@ -455,10 +476,18 @@ func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.Schema
 }
 
 func (g *Generator) ProcessSchema(modelName string, schema *openapi3.SchemaRef) error {
+	if g.SchemasFile.generatedModels[modelName] {
+		return nil
+	}
+	g.SchemasFile.generatedModels[modelName] = true
 	const op = "generator.ProcessSchema"
 	switch {
 	case schema.Value.Type.Permits(openapi3.TypeObject):
 		err := g.ProcessObjectSchema(modelName, schema)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		err = g.AddObjectValidate(modelName, schema)
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
@@ -468,6 +497,14 @@ func (g *Generator) ProcessSchema(modelName string, schema *openapi3.SchemaRef) 
 		err := g.ProcessArraySchema(modelName, schema)
 		if err != nil {
 			return errors.Wrap(err, op)
+		}
+		if schema.Value.Items != nil &&
+			(schema.Value.Items.Value.Type.Permits(openapi3.TypeObject) ||
+				schema.Value.Items.Value.Type.Permits(openapi3.TypeArray)) {
+			err = g.AddArrayValidate(modelName, schema)
+			if err != nil {
+				return errors.Wrap(err, op)
+			}
 		}
 
 		return nil

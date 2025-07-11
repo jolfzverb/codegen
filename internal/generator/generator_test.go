@@ -61,28 +61,29 @@ package models
 type ExampleModelField4 struct {
 	Field1 *string ` + "`json:\"field1,omitempty\" validate:\"omitempty\"`" + `
 }
-type ExampleModel struct {
-	Field4     *ExampleModelField4 ` + "`json:\"field4,omitempty\" validate:\"omitempty\"`" + `
-	Field5     *ObjectModel        ` + "`json:\"field5,omitempty\" validate:\"omitempty\"`" + `
-	Field6     float64             ` + "`json:\"field6\" validate:\"required,min=1.5,max=10.5\"`" + `
-	FieldOne   string              ` + "`json:\"field_one\" validate:\"required,min=3,max=10\"`" + `
-	FieldThree *StringModel        ` + "`json:\"field_three,omitempty\" validate:\"omitempty\"`" + `
-	FieldTwo   *int                ` + "`json:\"field_two,omitempty\" validate:\"omitempty\"`" + `
-}
-type IntModel int
 type ObjectModel struct {
 	Field1 *string ` + "`json:\"field1,omitempty\" validate:\"omitempty\"`" + `
 }
 type StringModel string
+type ExampleModel struct {
+	Field4     *ExampleModelField4 ` + "`json:\"field4,omitempty\" validate:\"omitempty\"`" + `
+	Field5     *ObjectModel        ` + "`json:\"field5,omitempty\" validate:\"omitempty\"`" + `
+	Field6     float64             ` + "`json:\"field6\" validate:\"min=1.5,max=10.5\"`" + `
+	FieldOne   string              ` + "`json:\"field_one\" validate:\"min=3,max=10\"`" + `
+	FieldThree *StringModel        ` + "`json:\"field_three,omitempty\" validate:\"omitempty\"`" + `
+	FieldTwo   *int                ` + "`json:\"field_two,omitempty\" validate:\"omitempty\"`" + `
+}
+type IntModel int
 `
 
 	input := strings.NewReader(mockInput)
 	outputModels := &bytes.Buffer{}
 	outputHandlers := &bytes.Buffer{}
 	gen := generator.NewGenerator(&options.Options{})
-	modelName := "packagename"
-	importPrefix := "imports"
-	err := gen.PrepareAndRead(input, importPrefix, modelName)
+	gen.PackageName = "packagename"
+	gen.ImportPrefix = "imports"
+	gen.ModelsImportPath = "imports/models"
+	err := gen.PrepareAndRead(input)
 	assert.NoError(t, err)
 	err = gen.GenerateFiles()
 	assert.NoError(t, err)
@@ -268,10 +269,10 @@ components:
 
 package models
 
+type StringModel string
 type ObjectModel struct {
 	StringField *StringModel ` + "`json:\"string_field,omitempty\" validate:\"omitempty,min=3,max=10\"`" + `
 }
-type StringModel string
 `,
 		},
 		{
@@ -389,8 +390,8 @@ components:
 
 package models
 
-type ArrayModel []StringModel
 type StringModel string
+type ArrayModel []StringModel
 `,
 		},
 		{
@@ -416,10 +417,10 @@ components:
 
 package models
 
-type ArrayModel []ObjectModel
 type ObjectModel struct {
 	StringField *string ` + "`json:\"string_field,omitempty\" validate:\"omitempty\"`" + `
 }
+type ArrayModel []ObjectModel
 `,
 		},
 		{
@@ -710,9 +711,10 @@ type ObjectModel struct {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-			modelName := "packagename"
-			importPrefix := "imports"
-			err := gen.PrepareAndRead(input, importPrefix, modelName)
+			gen.PackageName = "packagename"
+			gen.ImportPrefix = "imports"
+			gen.ModelsImportPath = "imports/models"
+			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
 			assert.NoError(t, err)
@@ -806,7 +808,7 @@ type PostExampleParamNameHeaders struct {
 	XHeader string ` + "`json:\"X-Header\" validate:\"required\"`" + `
 }
 type PostExampleParamNameRequestBody struct {
-	Code string ` + "`json:\"code\" validate:\"required\"`" + `
+	Code string ` + "`json:\"code\"`" + `
 }
 type PostExampleParamNameRequest struct {
 	Path    PostExampleParamNamePathParams
@@ -832,7 +834,9 @@ package packagename
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
@@ -880,7 +884,7 @@ func (h *Handler) writeGetExample2Response(w http.ResponseWriter, response *mode
 func (h *Handler) handleGetExample2Request(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseGetExample2Request(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("{\"error\":%s}", strconv.Quote(err.Error())), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
@@ -901,7 +905,7 @@ func (h *Handler) handleGetExample2(w http.ResponseWriter, r *http.Request) {
 		h.handleGetExample2Request(w, r)
 		return
 	default:
-		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
 		return
 	}
 }
@@ -943,6 +947,35 @@ func (h *Handler) parsePostExampleParamNameHeaders(r *http.Request) (*models.Pos
 		return nil, err
 	}
 	return &headers, nil
+}
+func containsNull(data json.RawMessage) bool {
+	var temp any
+	err := json.Unmarshal(data, &temp)
+	if err != nil {
+		return false
+	}
+	return temp == nil
+}
+func validatePostExampleParamNameRequestBodyJSON(jsonData json.RawMessage) error {
+	requiredFields := map[string]bool{"code": true}
+	nullableFields := map[string]bool{}
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	for field := range requiredFields {
+		val, exists = obj[field]
+		if !exists {
+			return errors.New("field " + field + " is required")
+		}
+		if !nullableFields[field] && containsNull(val) {
+			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	return nil
 }
 func (h *Handler) parsePostExampleParamNameRequestBody(r *http.Request) (*models.PostExampleParamNameRequestBody, error) {
 	var body models.PostExampleParamNameRequestBody
@@ -1009,7 +1042,7 @@ func (h *Handler) writePostExampleParamNameResponse(w http.ResponseWriter, respo
 func (h *Handler) handlePostExampleParamNameRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parsePostExampleParamNameRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("{\"error\":%s}", strconv.Quote(err.Error())), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
@@ -1030,7 +1063,7 @@ func (h *Handler) handlePostExampleParamName(w http.ResponseWriter, r *http.Requ
 		h.handlePostExampleParamNameRequest(w, r)
 		return
 	default:
-		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
 		return
 	}
 }
@@ -1042,9 +1075,10 @@ func (h *Handler) handlePostExampleParamName(w http.ResponseWriter, r *http.Requ
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-			modelName := "packagename"
-			importPrefix := "imports"
-			err := gen.PrepareAndRead(input, importPrefix, modelName)
+			gen.PackageName = "packagename"
+			gen.ImportPrefix = "imports"
+			gen.ModelsImportPath = "imports/models"
+			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
 			assert.NoError(t, err)
@@ -1095,9 +1129,6 @@ components:
 
 package models
 
-type Body struct {
-	Message *string ` + "`json:\"message,omitempty\" validate:\"omitempty\"`" + `
-}
 type PostExampleRequest struct {
 	Body Body
 }
@@ -1107,6 +1138,9 @@ type PostExampleResponse struct {
 	StatusCode  int
 	Response200 *PostExampleResponse200
 }
+type Body struct {
+	Message *string ` + "`json:\"message,omitempty\" validate:\"omitempty\"`" + `
+}
 `,
 			expectedHandlers: `// Code generated by github.com/jolfzverb/codegen; DO NOT EDIT.
 
@@ -1114,7 +1148,9 @@ package packagename
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strconv"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"imports/models"
@@ -1172,7 +1208,7 @@ func (h *Handler) writePostExampleResponse(w http.ResponseWriter, response *mode
 func (h *Handler) handlePostExampleRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parsePostExampleRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("{\"error\":%s}", strconv.Quote(err.Error())), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
@@ -1193,9 +1229,12 @@ func (h *Handler) handlePostExample(w http.ResponseWriter, r *http.Request) {
 		h.handlePostExampleRequest(w, r)
 		return
 	default:
-		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
 		return
 	}
+}
+func validateBodyJSON(_ json.RawMessage) error {
+	return nil
 }
 `,
 		},
@@ -1205,9 +1244,10 @@ func (h *Handler) handlePostExample(w http.ResponseWriter, r *http.Request) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-			modelName := "packagename"
-			importPrefix := "imports"
-			err := gen.PrepareAndRead(input, importPrefix, modelName)
+			gen.PackageName = "packagename"
+			gen.ImportPrefix = "imports"
+			gen.ModelsImportPath = "imports/models"
+			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
 			assert.NoError(t, err)
@@ -1259,9 +1299,6 @@ components:
 
 package models
 
-type Body struct {
-	Message *string ` + "`json:\"message,omitempty\" validate:\"omitempty\"`" + `
-}
 type OpRequest struct {
 	Body Body
 }
@@ -1271,6 +1308,9 @@ type OpResponse struct {
 	StatusCode  int
 	Response200 *OpResponse200
 }
+type Body struct {
+	Message *string ` + "`json:\"message,omitempty\" validate:\"omitempty\"`" + `
+}
 `,
 			expectedHandlers: `// Code generated by github.com/jolfzverb/codegen; DO NOT EDIT.
 
@@ -1278,7 +1318,9 @@ package packagename
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strconv"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"imports/models"
@@ -1336,7 +1378,7 @@ func (h *Handler) writeOpResponse(w http.ResponseWriter, response *models.OpResp
 func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseOpRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("{\"error\":%s}", strconv.Quote(err.Error())), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
@@ -1357,9 +1399,12 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 		h.handleOpRequest(w, r)
 		return
 	default:
-		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
 		return
 	}
+}
+func validateBodyJSON(_ json.RawMessage) error {
+	return nil
 }
 `,
 		},
@@ -1369,9 +1414,10 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-			modelName := "packagename"
-			importPrefix := "imports"
-			err := gen.PrepareAndRead(input, importPrefix, modelName)
+			gen.PackageName = "packagename"
+			gen.ImportPrefix = "imports"
+			gen.ModelsImportPath = "imports/models"
+			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
 			assert.NoError(t, err)
@@ -1434,7 +1480,9 @@ package packagename
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strconv"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
@@ -1497,7 +1545,7 @@ func (h *Handler) writeOpResponse(w http.ResponseWriter, response *models.OpResp
 func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseOpRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("{\"error\":%s}", strconv.Quote(err.Error())), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
@@ -1518,7 +1566,7 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 		h.handleOpRequest(w, r)
 		return
 	default:
-		http.Error(w, "Unsupported Content-Type", http.StatusUnsupportedMediaType)
+		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
 		return
 	}
 }
@@ -1530,9 +1578,177 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
 			gen := generator.NewGenerator(&options.Options{})
-			modelName := "packagename"
-			importPrefix := "imports"
-			err := gen.PrepareAndRead(input, importPrefix, modelName)
+			gen.PackageName = "packagename"
+			gen.ImportPrefix = "imports"
+			gen.ModelsImportPath = "imports/models"
+			err := gen.PrepareAndRead(input)
+			assert.NoError(t, err)
+			err = gen.GenerateFiles()
+			assert.NoError(t, err)
+			err = gen.WriteToOutput(outputModels, outputHandlers)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tc.expectedModels, outputModels.String())
+			assert.Equal(t, tc.expectedHandlers, outputHandlers.String())
+		})
+	}
+}
+
+func TestGenerateExternal(t *testing.T) {
+	for _, tc := range []struct {
+		name             string
+		input            string
+		expectedModels   string
+		expectedHandlers string
+	}{
+		{
+			name: "operation id",
+			input: `openapi: 3.0.0
+info:
+  title: API
+  version: 1.0.0
+paths:
+  /example:
+    post:
+      operationId: op
+      summary: Example
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                external-ref:
+                  $ref: 'testdata/def.yml#/components/schemas/ExternalRef'
+      responses:
+        '200':
+          description: OK
+`,
+			expectedModels: `// Code generated by github.com/jolfzverb/codegen; DO NOT EDIT.
+
+package models
+
+type ExternalRef string
+type OpRequestBody struct {
+	ExternalRef *ExternalRef ` + "`json:\"external-ref,omitempty\" validate:\"omitempty\"`" + `
+}
+type OpRequest struct {
+	Body OpRequestBody
+}
+type OpResponse200 struct {
+}
+type OpResponse struct {
+	StatusCode  int
+	Response200 *OpResponse200
+}
+`,
+			expectedHandlers: `// Code generated by github.com/jolfzverb/codegen; DO NOT EDIT.
+
+package packagename
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strconv"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
+	"imports/models"
+)
+
+type OpHandler interface {
+	HandleOp(ctx context.Context, r models.OpRequest) (*models.OpResponse, error)
+}
+type Handler struct {
+	validator *validator.Validate
+	op        OpHandler
+}
+
+func NewHandler(op OpHandler) *Handler {
+	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), op: op}
+}
+func (h *Handler) AddRoutes(router chi.Router) {
+	router.Post("/example", h.handleOp)
+}
+func validateOpRequestBodyJSON(_ json.RawMessage) error {
+	return nil
+}
+func (h *Handler) parseOpRequestBody(r *http.Request) (*models.OpRequestBody, error) {
+	var body models.OpRequestBody
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, err
+	}
+	err = h.validator.Struct(body)
+	if err != nil {
+		return nil, err
+	}
+	return &body, nil
+}
+func (h *Handler) parseOpRequest(r *http.Request) (*models.OpRequest, error) {
+	body, err := h.parseOpRequestBody(r)
+	if err != nil {
+		return nil, err
+	}
+	return &models.OpRequest{Body: *body}, nil
+}
+func Op200Response() *models.OpResponse {
+	return &models.OpResponse{StatusCode: 200, Response200: &models.OpResponse200{}}
+}
+func (h *Handler) writeOp200Response(w http.ResponseWriter, r *models.OpResponse200) {
+}
+func (h *Handler) writeOpResponse(w http.ResponseWriter, response *models.OpResponse) {
+	switch response.StatusCode {
+	case 200:
+		if response.Response200 == nil {
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
+			return
+		}
+		h.writeOp200Response(w, response.Response200)
+	}
+	w.WriteHeader(response.StatusCode)
+}
+func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
+	request, err := h.parseOpRequest(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{\"error\":%s}", strconv.Quote(err.Error())), http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	response, err := h.op.HandleOp(ctx, *request)
+	if err != nil || response == nil {
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
+		return
+	}
+	h.writeOpResponse(w, response)
+	return
+}
+func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
+	switch r.Header.Get("Content-Type") {
+	case "application/json":
+		h.handleOpRequest(w, r)
+		return
+	case "":
+		h.handleOpRequest(w, r)
+		return
+	default:
+		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
+		return
+	}
+}
+`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := strings.NewReader(tc.input)
+			outputModels := &bytes.Buffer{}
+			outputHandlers := &bytes.Buffer{}
+			gen := generator.NewGenerator(&options.Options{})
+			gen.PackageName = "packagename"
+			gen.ImportPrefix = "imports"
+			gen.ModelsImportPath = "imports/models"
+			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
 			assert.NoError(t, err)

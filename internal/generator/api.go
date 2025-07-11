@@ -22,6 +22,11 @@ type Generator struct {
 	SchemasFile  *SchemasFile
 	HandlersFile *HandlersFile
 	yaml         *openapi3.T
+
+	// strings
+	PackageName      string
+	ImportPrefix     string
+	ModelsImportPath string
 }
 
 func NewGenerator(opts *options.Options) *Generator {
@@ -44,20 +49,26 @@ func (g *Generator) WriteToOutput(modelsOutput io.Writer, handlersOutput io.Writ
 	return nil
 }
 
-func (g *Generator) Gen(yaml *openapi3.T) {
+func (g *Generator) Gen() {
 	const op = "generator.Generate"
-	if yaml.Components != nil && yaml.Components.Schemas != nil {
-		err := g.ProcessSchemas(yaml.Components.Schemas)
+
+	// one time
+	g.InitHandlerFields(g.PackageName, g.ModelsImportPath)
+
+	if g.yaml.Paths != nil && len(g.yaml.Paths.Map()) > 0 {
+		err := g.ProcessPaths(g.yaml.Paths)
 		if err != nil {
 			panic(errors.Wrap(err, op))
 		}
 	}
-	if yaml.Paths != nil && len(yaml.Paths.Map()) > 0 {
-		err := g.ProcessPaths(yaml.Paths)
+
+	if g.yaml.Components != nil && g.yaml.Components.Schemas != nil {
+		err := g.ProcessSchemas(g.yaml.Components.Schemas)
 		if err != nil {
 			panic(errors.Wrap(err, op))
 		}
 	}
+
 }
 
 func (g *Generator) GetModelName(yamlFilePath string) string {
@@ -76,7 +87,7 @@ func (g *Generator) GetModelName(yamlFilePath string) string {
 	return lowerCaser.String(fileName)
 }
 
-func (g *Generator) PrepareAndRead(reader io.Reader, importPrefix string, modelName string) error {
+func (g *Generator) PrepareAndRead(reader io.Reader) error {
 	const op = "generator.PrepareAndRead"
 	ctx := context.Background()
 	loader := &openapi3.Loader{Context: ctx, IsExternalRefsAllowed: true}
@@ -89,9 +100,10 @@ func (g *Generator) PrepareAndRead(reader io.Reader, importPrefix string, modelN
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	packageName := modelName
-	g.SchemasFile = g.NewSchemasFile()
-	g.HandlersFile = g.NewHandlersFile(packageName, importPrefix, path.Join(importPrefix, "models"))
+
+	g.NewSchemasFile()
+	g.NewHandlersFile()
+
 	return nil
 }
 
@@ -106,17 +118,18 @@ func (g *Generator) PrepareFiles() error {
 
 	reader := io.Reader(file)
 
-	modelName := g.GetModelName(g.Opts.YAMLFileName)
+	g.PackageName = g.GetModelName(g.Opts.YAMLFileName)
 
-	handlersPath := path.Join(g.Opts.DirPrefix, "generated", modelName)
+	handlersPath := path.Join(g.Opts.DirPrefix, "generated", g.PackageName)
 	schemasPath := path.Join(handlersPath, "models")
 	err = os.MkdirAll(schemasPath, directoryPermissions)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
 
-	importPrefix := path.Join(g.Opts.PackagePrefix, "generated", modelName)
-	err = g.PrepareAndRead(reader, importPrefix, modelName)
+	g.ImportPrefix = path.Join(g.Opts.PackagePrefix, "generated", g.PackageName)
+	g.ModelsImportPath = path.Join(g.ImportPrefix, "models")
+	err = g.PrepareAndRead(reader)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
@@ -125,7 +138,7 @@ func (g *Generator) PrepareFiles() error {
 }
 
 func (g *Generator) GenerateFiles() error {
-	g.Gen(g.yaml)
+	g.Gen()
 	return nil
 }
 func (g *Generator) WriteOutFiles() error {

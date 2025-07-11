@@ -1,0 +1,4 @@
+components:
+  schemas:
+    ExternalRef:
+      type: string
