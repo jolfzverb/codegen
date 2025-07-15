@@ -11,13 +11,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jolfzverb/codegen/internal/usage/generated/api"
-	"github.com/jolfzverb/codegen/internal/usage/generated/api/models"
+	"github.com/jolfzverb/codegen/internal/usage/generated/api/apimodels"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockHandler struct{}
 
-func (m *mockHandler) HandleCreate(ctx context.Context, r models.CreateRequest) (*models.CreateResponse, error) {
+func (m *mockHandler) HandleCreate(ctx context.Context, r apimodels.CreateRequest) (*apimodels.CreateResponse, error) {
 	if r.Body.CodeForResponse != nil {
 		switch *r.Body.CodeForResponse {
 		case 400:
@@ -37,7 +37,7 @@ func (m *mockHandler) HandleCreate(ctx context.Context, r models.CreateRequest) 
 		*date2 = r.Headers.OptionalHeader.UTC()
 	}
 	return api.Create200Response(
-		models.NewResourseResponse{
+		apimodels.NewResourseResponse{
 			Count:       r.Query.Count,
 			Description: r.Body.Description,
 			Name:        r.Body.Name,
@@ -46,7 +46,7 @@ func (m *mockHandler) HandleCreate(ctx context.Context, r models.CreateRequest) 
 			Date2:       date2,
 			EnumVal:     r.Body.EnumVal,
 		},
-		models.CreateResponse200Headers{
+		apimodels.CreateResponse200Headers{
 			IdempotencyKey: &r.Headers.IdempotencyKey,
 		},
 	), nil
@@ -161,8 +161,8 @@ func TestHandler(t *testing.T) {
 
 type mockHandler500 struct{}
 
-func (m *mockHandler500) HandleCreate(ctx context.Context, r models.CreateRequest) (*models.CreateResponse, error) {
-	return &models.CreateResponse{
+func (m *mockHandler500) HandleCreate(ctx context.Context, r apimodels.CreateRequest) (*apimodels.CreateResponse, error) {
+	return &apimodels.CreateResponse{
 		StatusCode:  http.StatusOK,
 		Response200: nil,
 		Response400: nil,

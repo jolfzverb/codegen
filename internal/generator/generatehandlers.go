@@ -55,7 +55,11 @@ func (g *Generator) AddResponseCodeModels(baseName string, code string, response
 			}
 			typeName := baseName + "Response" + code + "Body"
 			if content.Schema.Ref != "" {
-				typeName = ParseRefTypeName(content.Schema.Ref)
+				var importPath string
+				typeName, importPath = g.ParseRefTypeName(content.Schema.Ref)
+				if importPath != "" {
+					g.AddHandlersImport(importPath)
+				}
 			}
 			model.Fields = append(model.Fields, SchemaField{
 				Name:        "Body",
@@ -279,6 +283,9 @@ func (g *Generator) ProcessOperation(pathName string, method string, operation *
 
 func (g *Generator) ProcessPaths(paths *openapi3.Paths) error {
 	const op = "generator.ProcessPaths"
+	g.AddHandlersImport(g.ModelsImportPath)
+	g.AddHandlersImport("context")
+	g.AddHandlersImport("net/http")
 	for _, pathName := range paths.InMatchingOrder() {
 		pathItem := paths.Value(pathName)
 		if pathItem.Get != nil {

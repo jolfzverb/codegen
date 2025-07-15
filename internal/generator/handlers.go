@@ -34,12 +34,9 @@ type HandlersFile struct {
 	hasContainsNullMethod bool
 }
 
-func (g *Generator) InitHandlerImports(modelsImportPath string) {
+func (g *Generator) InitHandlerImports() {
 	g.AddHandlersImport("github.com/go-playground/validator/v10")
-	g.AddHandlersImport(modelsImportPath)
-	g.AddHandlersImport("context")
 	g.AddHandlersImport("github.com/go-chi/chi/v5")
-	g.AddHandlersImport("net/http")
 }
 
 func (g *Generator) InitHandlerStruct() {
@@ -101,10 +98,10 @@ func (g *Generator) InitRoutesFunc() {
 	)
 }
 
-func (g *Generator) InitHandlerFields(packageName string, modelsImportPath string) {
+func (g *Generator) InitHandlerFields(packageName string) {
 	g.HandlersFile.packageName = I(packageName)
 
-	g.InitHandlerImports(modelsImportPath)
+	g.InitHandlerImports()
 
 	g.InitHandlerStruct()
 
@@ -140,9 +137,9 @@ func (g *Generator) WriteHandlersToOutput(output io.Writer) error {
 func (g *Generator) AddHandlersInterface(name string, methodName string, requestName string, responseName string) {
 	var methodParams []*ast.Field
 	methodParams = append(methodParams, Field("ctx", Sel(I("context"), "Context"), ""))
-	methodParams = append(methodParams, Field("r", Sel(I("models"), requestName), ""))
+	methodParams = append(methodParams, Field("r", Sel(I(g.GetCurrentModelsPackage()), requestName), ""))
 	var methodResults []*ast.Field
-	methodResults = append(methodResults, Field("", Star(Sel(I("models"), responseName)), ""))
+	methodResults = append(methodResults, Field("", Star(Sel(I(g.GetCurrentModelsPackage()), responseName)), ""))
 	methodResults = append(methodResults, Field("", I("error"), ""))
 	g.HandlersFile.interfaceDecls = append(g.HandlersFile.interfaceDecls, &ast.GenDecl{
 		Tok: token.TYPE,
@@ -553,7 +550,7 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 		Field("h", Star(I("Handler")), ""),
 		[]*ast.Field{
 			Field("w", Sel(I("http"), "ResponseWriter"), ""),
-			Field("response", Star(Sel(I("models"), baseName+"Response")), ""),
+			Field("response", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response")), ""),
 		},
 		nil,
 		[]ast.Stmt{
@@ -741,7 +738,7 @@ func (g *Generator) AddWriteResponseCode(baseName string, code string, response 
 		Field("h", Star(I("Handler")), ""),
 		[]*ast.Field{
 			Field("w", Sel(I("http"), "ResponseWriter"), ""),
-			Field("r", Star(Sel(I("models"), baseName+"Response"+code)), ""),
+			Field("r", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code)), ""),
 		},
 		nil,
 		body,
@@ -760,7 +757,7 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 				Specs: []ast.Spec{
 					&ast.ValueSpec{
 						Names: []*ast.Ident{I("pathParams")},
-						Type:  Sel(I("models"), baseName+"PathParams"),
+						Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"PathParams"),
 					},
 				},
 			},
@@ -834,7 +831,7 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 			Field("r", Star(Sel(I("http"), "Request")), ""),
 		},
 		[]*ast.Field{
-			Field("", Star(Sel(I("models"), baseName+"PathParams")), ""),
+			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"PathParams")), ""),
 			Field("", I("error"), ""),
 		},
 		bodyList,

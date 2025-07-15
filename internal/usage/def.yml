@@ -1,3 +1,9 @@
+openapi: 3.0.0
+info:
+  title: Sample API definitions
+  version: 1.0.0
+
+paths: {}
 components:
   schemas:
     ExternalRef:
