@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"sort"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
@@ -18,7 +19,7 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 				Specs: []ast.Spec{
 					&ast.ValueSpec{
 						Names: []*ast.Ident{I("queryParams")},
-						Type:  Sel(I("models"), baseName+"QueryParams"),
+						Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"QueryParams"),
 					},
 				},
 			},
@@ -100,7 +101,7 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 			Field("r", Star(Sel(I("http"), "Request")), ""),
 		},
 		[]*ast.Field{
-			Field("", Star(Sel(I("models"), baseName+"QueryParams")), ""),
+			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"QueryParams")), ""),
 			Field("", I("error"), ""),
 		},
 		bodyList,
@@ -179,7 +180,7 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 				Specs: []ast.Spec{
 					&ast.ValueSpec{
 						Names: []*ast.Ident{I("headers")},
-						Type:  Sel(I("models"), baseName+"Headers"),
+						Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"Headers"),
 					},
 				},
 			},
@@ -259,7 +260,7 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 			Field("r", Star(Sel(I("http"), "Request")), ""),
 		},
 		[]*ast.Field{
-			Field("", Star(Sel(I("models"), baseName+"Headers")), ""),
+			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Headers")), ""),
 			Field("", I("error"), ""),
 		},
 		bodyList,
@@ -276,7 +277,7 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 				Specs: []ast.Spec{
 					&ast.ValueSpec{
 						Names: []*ast.Ident{I("cookies")},
-						Type:  Sel(I("models"), baseName+"Cookies"),
+						Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"Cookies"),
 					},
 				},
 			},
@@ -382,13 +383,38 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 			Field("r", Star(Sel(I("http"), "Request")), ""),
 		},
 		[]*ast.Field{
-			Field("", Star(Sel(I("models"), baseName+"Cookies")), ""),
+			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Cookies")), ""),
 			Field("", I("error"), ""),
 		},
 		bodyList,
 	))
 
 	return nil
+}
+
+func (g *Generator) GetValidateFuncStmt(typeName string, ref string) ast.Expr {
+	validateFuncName := "Validate" + typeName + "JSON"
+
+	if ref == "" || !refIsExternal(ref) {
+		return I(validateFuncName)
+	}
+
+	filename := parseFilenameFromRef(ref)
+	if filename == "" {
+		return I(validateFuncName)
+	}
+
+	parts := strings.Split(ref, "/")
+	if len(parts) == 0 {
+		return I(validateFuncName)
+	}
+
+	validateFuncName = "Validate" + parts[len(parts)-1] + "JSON"
+
+	g.YAMLFilesToProcess = append(g.YAMLFilesToProcess, filename)
+	g.AddHandlersImport(g.GetHandlersImportForFile(filename))
+	modelName := g.GetModelName(filename)
+	return Sel(I(modelName), validateFuncName)
 }
 
 func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType string, body *openapi3.RequestBodyRef) error {
@@ -405,7 +431,11 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 	content, ok := body.Value.Content[contentType]
 	if ok && content.Schema != nil {
 		if content.Schema.Ref != "" {
-			typeName = ParseRefTypeName(content.Schema.Ref)
+			var importPath string
+			typeName, importPath = g.ParseRefTypeName(content.Schema.Ref)
+			if importPath != "" {
+				g.AddHandlersImport(importPath)
+			}
 		}
 	}
 	bodyList = append(bodyList, &ast.DeclStmt{
@@ -446,7 +476,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		Tok: token.ASSIGN,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: I("validate" + typeName + "JSON"),
+				Fun: g.GetValidateFuncStmt(typeName, body.Ref),
 				Args: []ast.Expr{
 					I("bodyJSON"),
 				},
@@ -464,7 +494,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 			Specs: []ast.Spec{
 				&ast.ValueSpec{
 					Names: []*ast.Ident{I("body")},
-					Type:  Sel(I("models"), typeName),
+					Type:  Sel(I(g.GetCurrentModelsPackage()), typeName),
 				},
 			},
 		},
@@ -510,7 +540,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 			Field("r", Star(Sel(I("http"), "Request")), ""),
 		},
 		[]*ast.Field{
-			Field("", Star(Sel(I("models"), typeName)), ""),
+			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), typeName)), ""),
 			Field("", I("error"), ""),
 		},
 		bodyList,
@@ -663,7 +693,7 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 
 	bodyList = append(bodyList,
 		Ret2(Amp(&ast.CompositeLit{
-			Type: Sel(I("models"), baseName+"Request"),
+			Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Request"),
 			Elts: elts,
 		}),
 			I("nil"),
@@ -677,7 +707,7 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 			Field("r", Star(Sel(I("http"), "Request")), ""),
 		},
 		[]*ast.Field{
-			Field("", Star(Sel(I("models"), baseName+"Request")), ""),
+			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Request")), ""),
 			Field("", I("error"), ""),
 		},
 		bodyList,
@@ -697,11 +727,15 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 		if json.Schema != nil {
 			typeName := baseName + "Response" + code + "Body"
 			if json.Schema.Ref != "" {
-				typeName = ParseRefTypeName(json.Schema.Ref)
+				var importPath string
+				typeName, importPath = g.ParseRefTypeName(json.Schema.Ref)
+				if importPath != "" {
+					g.AddHandlersImport(importPath)
+				}
 			}
 			arglist = append(arglist, &ast.Field{
 				Names: []*ast.Ident{I("body")},
-				Type:  Sel(I("models"), typeName),
+				Type:  Sel(I(g.GetCurrentModelsPackage()), typeName),
 			})
 			constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
 				Key:   I("Body"),
@@ -713,7 +747,7 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 	if len(response.Value.Headers) > 0 {
 		arglist = append(arglist, &ast.Field{
 			Names: []*ast.Ident{I("headers")},
-			Type:  Sel(I("models"), baseName+"Response"+code+"Headers"),
+			Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code+"Headers"),
 		})
 		constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
 			Key:   I("Headers"),
@@ -725,11 +759,11 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 		nil,
 		arglist,
 		[]*ast.Field{
-			Field("", Star(Sel(I("models"), baseName+"Response")), ""),
+			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response")), ""),
 		},
 		[]ast.Stmt{Ret1(
 			Amp(&ast.CompositeLit{
-				Type: Sel(I("models"), baseName+"Response"),
+				Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"),
 				Elts: []ast.Expr{
 					&ast.KeyValueExpr{
 						Key: I("StatusCode"),
@@ -741,7 +775,7 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 					&ast.KeyValueExpr{
 						Key: I("Response" + code),
 						Value: Amp(&ast.CompositeLit{
-							Type: Sel(I("models"), baseName+"Response"+code),
+							Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code),
 							Elts: constructorArgs,
 						}),
 					},
@@ -818,7 +852,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	const op = "generator.AddObjectValidate"
 	requiredFieldsMap := make(map[string]bool, 0)
 	nullableFields := make([]string, 0)
-	objectFields := make(map[string]string, 0)
+	objectFields := make(map[string]ast.Expr, 0)
 
 	for _, requiredField := range schema.Value.Required {
 		requiredFieldsMap[requiredField] = true
@@ -836,7 +870,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 			if err != nil {
 				return errors.Wrap(err, op)
 			}
-			objectFields[fieldName] = fieldType
+			objectFields[fieldName] = g.GetValidateFuncStmt(fieldType, fieldSchema.Ref)
 		}
 		if fieldSchema.Value.Type.Permits(openapi3.TypeArray) {
 			if fieldSchema.Value.Items != nil &&
@@ -846,7 +880,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 				if err != nil {
 					return errors.Wrap(err, op)
 				}
-				objectFields[fieldName] = fieldType
+				objectFields[fieldName] = g.GetValidateFuncStmt(fieldType, fieldSchema.Ref)
 			}
 		}
 	}
@@ -1050,7 +1084,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	sort.Strings(objectFieldsNames)
 
 	for _, fieldName := range objectFieldsNames {
-		fieldType := objectFields[fieldName]
+		fieldValidationFunc := objectFields[fieldName]
 		funcBody = append(funcBody, &ast.AssignStmt{
 			Lhs: []ast.Expr{I("val"), I("exists")},
 			Tok: token.ASSIGN,
@@ -1080,7 +1114,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 						Tok: token.ASSIGN,
 						Rhs: []ast.Expr{
 							&ast.CallExpr{
-								Fun:  I("validate" + fieldType + "JSON"),
+								Fun:  fieldValidationFunc,
 								Args: []ast.Expr{I("val")},
 							},
 						},
@@ -1116,7 +1150,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 		fieldName = "_"
 	}
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("validate"+modelName+"JSON",
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("Validate"+modelName+"JSON",
 		nil,
 		[]*ast.Field{
 			Field(fieldName, Sel(I("json"), "RawMessage"), ""),
@@ -1136,7 +1170,8 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("validate"+modelName+"JSON",
+	validateFunc := g.GetValidateFuncStmt(elemType, schema.Value.Items.Ref)
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("Validate"+modelName+"JSON",
 		nil,
 		[]*ast.Field{
 			Field("jsonData", Sel(I("json"), "RawMessage"), ""),
@@ -1197,7 +1232,7 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 										Tok: token.ASSIGN,
 										Rhs: []ast.Expr{
 											&ast.CallExpr{
-												Fun:  I("validate" + elemType + "JSON"),
+												Fun:  validateFunc,
 												Args: []ast.Expr{I("obj")},
 											},
 										},

@@ -92,12 +92,3 @@ func FormatGoLikeIdentifier(name string) string {
 
 	return strings.Join(result, "")
 }
-
-func ParseRefTypeName(ref string) string {
-	parts := strings.Split(ref, "/")
-	if len(parts) == 0 {
-		return ""
-	}
-
-	return parts[len(parts)-1]
-}

@@ -85,7 +85,7 @@ func (g *Generator) WriteSchemasToOutput(output io.Writer) error {
 	importSpecs, declSpecs := g.GenerateImportsSpecs(g.SchemasFile.packageImports)
 
 	file := &ast.File{
-		Name:    ast.NewIdent("models"),
+		Name:    ast.NewIdent(g.PackageName + "models"),
 		Imports: importSpecs,
 		Decls:   []ast.Decl{},
 	}
@@ -344,7 +344,11 @@ func (g *Generator) GetFieldTypeFromSchema(modelName string, fieldName string,
 	fieldSchema *openapi3.SchemaRef,
 ) (string, error) {
 	if fieldSchema.Ref != "" {
-		return ParseRefTypeName(fieldSchema.Ref), nil
+		typeName, importPath := g.ParseRefTypeName(fieldSchema.Ref)
+		if importPath != "" {
+			g.AddSchemasImport(importPath)
+		}
+		return typeName, nil
 	}
 	fieldType, err := g.GetDerefFieldTypeFromSchema(modelName, fieldName, fieldSchema)
 	if err != nil {
@@ -396,8 +400,10 @@ func (g *Generator) ProcessObjectSchema(modelName string, schema *openapi3.Schem
 		}
 
 		if fieldSchema.Ref != "" {
-			elemModelName := ParseRefTypeName(fieldSchema.Ref)
-			g.ProcessSchema(elemModelName, fieldSchema)
+			_, importPath := g.ParseRefTypeName(fieldSchema.Ref)
+			if importPath != "" {
+				g.AddSchemasImport(importPath)
+			}
 		}
 
 		validateTags = append(validateTags, GetSchemaValidators(fieldSchema)...)
@@ -435,10 +441,6 @@ func (g *Generator) ProcessTypeAlias(modelName string, schema *openapi3.SchemaRe
 	return nil
 }
 
-func refIsExternal(ref string) bool {
-	return !strings.HasPrefix(ref, "#")
-}
-
 func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.SchemaRef,
 ) error {
 	const op = "generator.ProcessArraySchema"
@@ -461,8 +463,10 @@ func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.Schema
 	}
 
 	if schema.Value.Items.Ref != "" {
-		elemModelName := ParseRefTypeName(schema.Value.Items.Ref)
-		g.ProcessSchema(elemModelName, schema.Value.Items)
+		_, importPath := g.ParseRefTypeName(schema.Value.Items.Ref)
+		if importPath != "" {
+			g.AddSchemasImport(importPath)
+		}
 	}
 
 	elemType, err := g.GetFieldTypeFromSchema(modelName, "Item", schema.Value.Items)
@@ -476,6 +480,11 @@ func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.Schema
 }
 
 func (g *Generator) ProcessSchema(modelName string, schema *openapi3.SchemaRef) error {
+	if schema.Ref != "" && refIsExternal(schema.Ref) {
+		// external references will be generated from added YAML file
+		return nil
+	}
+
 	if g.SchemasFile.generatedModels[modelName] {
 		return nil
 	}
@@ -591,7 +600,11 @@ func (g *Generator) GenerateRequestModel(baseName string, contentType string, pa
 			typeName := baseName + "RequestBody"
 
 			if content.Schema.Ref != "" {
-				typeName = ParseRefTypeName(content.Schema.Ref)
+				var importPath string
+				typeName, importPath = g.ParseRefTypeName(content.Schema.Ref)
+				if importPath != "" {
+					g.AddSchemasImport(importPath)
+				}
 			}
 
 			model.Fields = append(model.Fields, SchemaField{

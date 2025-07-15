@@ -9,22 +9,22 @@ import (
 type Options struct {
 	PackagePrefix             string
 	DirPrefix                 string
-	YAMLFileName              string
+	YAMLFiles                 []string
 	RequiredFieldsArePointers bool
 }
 
 func GetOptions() (*Options, error) {
 	opts := Options{}
 
-	flag.StringVar(&opts.YAMLFileName, "f", "", "Path to the OpenAPI YAML file")
 	flag.StringVar(&opts.DirPrefix, "d", "internal", "Directory prefix for generated files")
 	flag.StringVar(&opts.PackagePrefix, "p", "internal", "Package prefix for imports")
 	flag.BoolVar(&opts.RequiredFieldsArePointers, "pointers", false, "Generate required fields as pointers")
 
 	flag.Parse()
+	opts.YAMLFiles = flag.Args()
 
-	if opts.YAMLFileName == "" {
-		return nil, errors.New("-f flag is required")
+	if len(opts.YAMLFiles) == 0 {
+		return nil, errors.New("at least one file must be provided")
 	}
 
 	return &opts, nil

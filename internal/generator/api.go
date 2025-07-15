@@ -3,6 +3,7 @@ package generator
 import (
 	"context"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
@@ -27,11 +28,16 @@ type Generator struct {
 	PackageName      string
 	ImportPrefix     string
 	ModelsImportPath string
+
+	YAMLFilesToProcess []string
+	YAMLFilesProcessed map[string]bool
 }
 
 func NewGenerator(opts *options.Options) *Generator {
 	return &Generator{
-		Opts: opts,
+		Opts:               opts,
+		YAMLFilesToProcess: opts.YAMLFiles,
+		YAMLFilesProcessed: make(map[string]bool),
 	}
 }
 
@@ -53,7 +59,7 @@ func (g *Generator) Gen() {
 	const op = "generator.Generate"
 
 	// one time
-	g.InitHandlerFields(g.PackageName, g.ModelsImportPath)
+	g.InitHandlerFields(g.PackageName)
 
 	if g.yaml.Paths != nil && len(g.yaml.Paths.Map()) > 0 {
 		err := g.ProcessPaths(g.yaml.Paths)
@@ -107,10 +113,10 @@ func (g *Generator) PrepareAndRead(reader io.Reader) error {
 	return nil
 }
 
-func (g *Generator) PrepareFiles() error {
+func (g *Generator) PrepareFiles(filename string) error {
 	const op = "generator.PrepareFiles"
 
-	file, err := os.Open(g.Opts.YAMLFileName)
+	file, err := os.Open(filename)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
@@ -118,17 +124,17 @@ func (g *Generator) PrepareFiles() error {
 
 	reader := io.Reader(file)
 
-	g.PackageName = g.GetModelName(g.Opts.YAMLFileName)
+	g.PackageName = g.GetModelName(filename)
 
 	handlersPath := path.Join(g.Opts.DirPrefix, "generated", g.PackageName)
-	schemasPath := path.Join(handlersPath, "models")
+	schemasPath := path.Join(handlersPath, g.GetCurrentModelsPackage())
 	err = os.MkdirAll(schemasPath, directoryPermissions)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
 
 	g.ImportPrefix = path.Join(g.Opts.PackagePrefix, "generated", g.PackageName)
-	g.ModelsImportPath = path.Join(g.ImportPrefix, "models")
+	g.ModelsImportPath = path.Join(g.ImportPrefix, g.GetCurrentModelsPackage())
 	err = g.PrepareAndRead(reader)
 	if err != nil {
 		return errors.Wrap(err, op)
@@ -144,9 +150,8 @@ func (g *Generator) GenerateFiles() error {
 func (g *Generator) WriteOutFiles() error {
 	const op = "generator.WriteOutFiles"
 
-	modelName := g.GetModelName(g.Opts.YAMLFileName)
-	handlersPath := path.Join(g.Opts.DirPrefix, "generated", modelName)
-	schemasPath := path.Join(handlersPath, "models")
+	handlersPath := path.Join(g.Opts.DirPrefix, "generated", g.PackageName)
+	schemasPath := path.Join(handlersPath, g.GetCurrentModelsPackage())
 	schemasOutput, err := os.Create(path.Join(schemasPath, "models.go"))
 	if err != nil {
 		return errors.Wrap(err, op)
@@ -169,17 +174,29 @@ func (g *Generator) WriteOutFiles() error {
 func (g *Generator) Generate(ctx context.Context) error {
 	const op = "generator.Generate"
 
-	err := g.PrepareFiles()
-	if err != nil {
-		return errors.Wrap(err, op)
-	}
-	err = g.GenerateFiles()
-	if err != nil {
-		return errors.Wrap(err, op)
-	}
-	err = g.WriteOutFiles()
-	if err != nil {
-		return errors.Wrap(err, op)
+	for len(g.YAMLFilesToProcess) > 0 {
+		fileName := g.YAMLFilesToProcess[0]
+
+		if g.YAMLFilesProcessed[fileName] {
+			g.YAMLFilesToProcess = g.YAMLFilesToProcess[1:]
+			continue
+		}
+		slog.Info("Processing file", "file", fileName)
+
+		err := g.PrepareFiles(fileName)
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		err = g.GenerateFiles()
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		err = g.WriteOutFiles()
+		if err != nil {
+			return errors.Wrap(err, op)
+		}
+		g.YAMLFilesProcessed[fileName] = true
+		g.YAMLFilesToProcess = g.YAMLFilesToProcess[1:]
 	}
 
 	return nil

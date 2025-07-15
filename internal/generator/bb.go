@@ -40,18 +40,18 @@ func FieldA(field *ast.Field) []*ast.Field {
 	return []*ast.Field{field}
 }
 
-func Star(field ast.Expr) ast.Expr {
+func Star(field ast.Expr) *ast.StarExpr {
 	return &ast.StarExpr{X: field}
 }
 
-func Sel(field ast.Expr, sel string) ast.Expr {
+func Sel(field ast.Expr, sel string) *ast.SelectorExpr {
 	return &ast.SelectorExpr{
 		X:   field,
 		Sel: ast.NewIdent(sel),
 	}
 }
 
-func Amp(field ast.Expr) ast.Expr {
+func Amp(field ast.Expr) *ast.UnaryExpr {
 	return &ast.UnaryExpr{
 		Op: token.AND,
 		X:  field,

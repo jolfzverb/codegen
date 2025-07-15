@@ -12,11 +12,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
-	"github.com/jolfzverb/codegen/internal/usage/generated/api/models"
+	"github.com/jolfzverb/codegen/internal/usage/generated/def"
+	"github.com/jolfzverb/codegen/internal/usage/generated/api/apimodels"
 )
 
 type CreateHandler interface {
-	HandleCreate(ctx context.Context, r models.CreateRequest) (*models.CreateResponse, error)
+	HandleCreate(ctx context.Context, r apimodels.CreateRequest) (*apimodels.CreateResponse, error)
 }
 type Handler struct {
 	validator *validator.Validate
@@ -29,8 +30,8 @@ func NewHandler(create CreateHandler) *Handler {
 func (h *Handler) AddRoutes(router chi.Router) {
 	router.Post("/path/to/{param}/resourse", h.handleCreate)
 }
-func (h *Handler) parseCreatePathParams(r *http.Request) (*models.CreatePathParams, error) {
-	var pathParams models.CreatePathParams
+func (h *Handler) parseCreatePathParams(r *http.Request) (*apimodels.CreatePathParams, error) {
+	var pathParams apimodels.CreatePathParams
 	param := chi.URLParam(r, "param")
 	if param == "" {
 		return nil, errors.New("param path param is required")
@@ -42,8 +43,8 @@ func (h *Handler) parseCreatePathParams(r *http.Request) (*models.CreatePathPara
 	}
 	return &pathParams, nil
 }
-func (h *Handler) parseCreateQueryParams(r *http.Request) (*models.CreateQueryParams, error) {
-	var queryParams models.CreateQueryParams
+func (h *Handler) parseCreateQueryParams(r *http.Request) (*apimodels.CreateQueryParams, error) {
+	var queryParams apimodels.CreateQueryParams
 	count := r.URL.Query().Get("count")
 	if count == "" {
 		return nil, errors.New("count query param is required")
@@ -55,8 +56,8 @@ func (h *Handler) parseCreateQueryParams(r *http.Request) (*models.CreateQueryPa
 	}
 	return &queryParams, nil
 }
-func (h *Handler) parseCreateHeaders(r *http.Request) (*models.CreateHeaders, error) {
-	var headers models.CreateHeaders
+func (h *Handler) parseCreateHeaders(r *http.Request) (*apimodels.CreateHeaders, error) {
+	var headers apimodels.CreateHeaders
 	idempotencyKey := r.Header.Get("Idempotency-Key")
 	if idempotencyKey == "" {
 		return nil, errors.New("Idempotency-Key header is required")
@@ -76,8 +77,8 @@ func (h *Handler) parseCreateHeaders(r *http.Request) (*models.CreateHeaders, er
 	}
 	return &headers, nil
 }
-func (h *Handler) parseCreateCookies(r *http.Request) (*models.CreateCookies, error) {
-	var cookies models.CreateCookies
+func (h *Handler) parseCreateCookies(r *http.Request) (*apimodels.CreateCookies, error) {
+	var cookies apimodels.CreateCookies
 	cookieParam, err := r.Cookie("cookie-param")
 	if err != nil && !errors.Is(err, http.ErrNoCookie) {
 		return nil, err
@@ -98,7 +99,26 @@ func (h *Handler) parseCreateCookies(r *http.Request) (*models.CreateCookies, er
 	}
 	return &cookies, nil
 }
-func validateExternalRef2JSON(_ json.RawMessage) error {
+func ValidateCreateRequestBodyObjectArrayItemJSON(_ json.RawMessage) error {
+	return nil
+}
+func ValidateCreateRequestBodyObjectArrayJSON(jsonData json.RawMessage) error {
+	var arr []json.RawMessage
+	err := json.Unmarshal(jsonData, &arr)
+	if err != nil {
+		return err
+	}
+	for index, obj := range arr {
+		if !containsNull(obj) {
+			err = ValidateCreateRequestBodyObjectArrayItemJSON(obj)
+			if err != nil {
+				return errors.Wrapf(err, "error validating object at index %d", index)
+			}
+		}
+	}
+	return nil
+}
+func ValidateCreateRequestBodyObjectFieldField2JSON(_ json.RawMessage) error {
 	return nil
 }
 func containsNull(data json.RawMessage) bool {
@@ -109,7 +129,7 @@ func containsNull(data json.RawMessage) bool {
 	}
 	return temp == nil
 }
-func validateExternalObjectJSON(jsonData json.RawMessage) error {
+func ValidateCreateRequestBodyObjectFieldJSON(jsonData json.RawMessage) error {
 	var obj map[string]json.RawMessage
 	err := json.Unmarshal(jsonData, &obj)
 	if err != nil {
@@ -119,53 +139,14 @@ func validateExternalObjectJSON(jsonData json.RawMessage) error {
 	var exists bool
 	val, exists = obj["field2"]
 	if exists && !containsNull(val) {
-		err = validateExternalRef2JSON(val)
+		err = ValidateCreateRequestBodyObjectFieldField2JSON(val)
 		if err != nil {
 			return errors.Wrap(err, "field field2 is not valid")
 		}
 	}
 	return nil
 }
-func validateCreateRequestBodyObjectArrayItemJSON(_ json.RawMessage) error {
-	return nil
-}
-func validateCreateRequestBodyObjectArrayJSON(jsonData json.RawMessage) error {
-	var arr []json.RawMessage
-	err := json.Unmarshal(jsonData, &arr)
-	if err != nil {
-		return err
-	}
-	for index, obj := range arr {
-		if !containsNull(obj) {
-			err = validateCreateRequestBodyObjectArrayItemJSON(obj)
-			if err != nil {
-				return errors.Wrapf(err, "error validating object at index %d", index)
-			}
-		}
-	}
-	return nil
-}
-func validateCreateRequestBodyObjectFieldField2JSON(_ json.RawMessage) error {
-	return nil
-}
-func validateCreateRequestBodyObjectFieldJSON(jsonData json.RawMessage) error {
-	var obj map[string]json.RawMessage
-	err := json.Unmarshal(jsonData, &obj)
-	if err != nil {
-		return err
-	}
-	var val json.RawMessage
-	var exists bool
-	val, exists = obj["field2"]
-	if exists && !containsNull(val) {
-		err = validateCreateRequestBodyObjectFieldField2JSON(val)
-		if err != nil {
-			return errors.Wrap(err, "field field2 is not valid")
-		}
-	}
-	return nil
-}
-func validateCreateRequestBodyJSON(jsonData json.RawMessage) error {
+func ValidateCreateRequestBodyJSON(jsonData json.RawMessage) error {
 	requiredFields := map[string]bool{"name": true}
 	nullableFields := map[string]bool{}
 	var obj map[string]json.RawMessage
@@ -186,38 +167,38 @@ func validateCreateRequestBodyJSON(jsonData json.RawMessage) error {
 	}
 	val, exists = obj["external-ref2"]
 	if exists && !containsNull(val) {
-		err = validateExternalObjectJSON(val)
+		err = def.ValidateExternalObjectJSON(val)
 		if err != nil {
 			return errors.Wrap(err, "field external-ref2 is not valid")
 		}
 	}
 	val, exists = obj["object-array"]
 	if exists && !containsNull(val) {
-		err = validateCreateRequestBodyObjectArrayJSON(val)
+		err = ValidateCreateRequestBodyObjectArrayJSON(val)
 		if err != nil {
 			return errors.Wrap(err, "field object-array is not valid")
 		}
 	}
 	val, exists = obj["object-field"]
 	if exists && !containsNull(val) {
-		err = validateCreateRequestBodyObjectFieldJSON(val)
+		err = ValidateCreateRequestBodyObjectFieldJSON(val)
 		if err != nil {
 			return errors.Wrap(err, "field object-field is not valid")
 		}
 	}
 	return nil
 }
-func (h *Handler) parseCreateRequestBody(r *http.Request) (*models.CreateRequestBody, error) {
+func (h *Handler) parseCreateRequestBody(r *http.Request) (*apimodels.CreateRequestBody, error) {
 	var bodyJSON json.RawMessage
 	err := json.NewDecoder(r.Body).Decode(&bodyJSON)
 	if err != nil {
 		return nil, err
 	}
-	err = validateCreateRequestBodyJSON(bodyJSON)
+	err = ValidateCreateRequestBodyJSON(bodyJSON)
 	if err != nil {
 		return nil, err
 	}
-	var body models.CreateRequestBody
+	var body apimodels.CreateRequestBody
 	err = json.Unmarshal(bodyJSON, &body)
 	if err != nil {
 		return nil, err
@@ -228,7 +209,7 @@ func (h *Handler) parseCreateRequestBody(r *http.Request) (*models.CreateRequest
 	}
 	return &body, nil
 }
-func (h *Handler) parseCreateRequest(r *http.Request) (*models.CreateRequest, error) {
+func (h *Handler) parseCreateRequest(r *http.Request) (*apimodels.CreateRequest, error) {
 	pathParams, err := h.parseCreatePathParams(r)
 	if err != nil {
 		return nil, err
@@ -249,12 +230,12 @@ func (h *Handler) parseCreateRequest(r *http.Request) (*models.CreateRequest, er
 	if err != nil {
 		return nil, err
 	}
-	return &models.CreateRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Cookies: *cookieParams, Body: *body}, nil
+	return &apimodels.CreateRequest{Path: *pathParams, Query: *queryParams, Headers: *headers, Cookies: *cookieParams, Body: *body}, nil
 }
-func Create200Response(body models.NewResourseResponse, headers models.CreateResponse200Headers) *models.CreateResponse {
-	return &models.CreateResponse{StatusCode: 200, Response200: &models.CreateResponse200{Body: body, Headers: headers}}
+func Create200Response(body apimodels.NewResourseResponse, headers apimodels.CreateResponse200Headers) *apimodels.CreateResponse {
+	return &apimodels.CreateResponse{StatusCode: 200, Response200: &apimodels.CreateResponse200{Body: body, Headers: headers}}
 }
-func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *models.CreateResponse200) {
+func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *apimodels.CreateResponse200) {
 	var err error
 	headersJSON, err := json.Marshal(r.Headers)
 	if err != nil {
@@ -276,17 +257,17 @@ func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *models.Create
 		return
 	}
 }
-func Create400Response() *models.CreateResponse {
-	return &models.CreateResponse{StatusCode: 400, Response400: &models.CreateResponse400{}}
+func Create400Response() *apimodels.CreateResponse {
+	return &apimodels.CreateResponse{StatusCode: 400, Response400: &apimodels.CreateResponse400{}}
 }
-func (h *Handler) writeCreate400Response(w http.ResponseWriter, r *models.CreateResponse400) {
+func (h *Handler) writeCreate400Response(w http.ResponseWriter, r *apimodels.CreateResponse400) {
 }
-func Create404Response() *models.CreateResponse {
-	return &models.CreateResponse{StatusCode: 404, Response404: &models.CreateResponse404{}}
+func Create404Response() *apimodels.CreateResponse {
+	return &apimodels.CreateResponse{StatusCode: 404, Response404: &apimodels.CreateResponse404{}}
 }
-func (h *Handler) writeCreate404Response(w http.ResponseWriter, r *models.CreateResponse404) {
+func (h *Handler) writeCreate404Response(w http.ResponseWriter, r *apimodels.CreateResponse404) {
 }
-func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *models.CreateResponse) {
+func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *apimodels.CreateResponse) {
 	switch response.StatusCode {
 	case 200:
 		if response.Response200 == nil {
@@ -337,7 +318,7 @@ func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func validateNewResourseResponseJSON(jsonData json.RawMessage) error {
+func ValidateNewResourseResponseJSON(jsonData json.RawMessage) error {
 	requiredFields := map[string]bool{"count": true, "name": true, "param": true}
 	nullableFields := map[string]bool{}
 	var obj map[string]json.RawMessage
