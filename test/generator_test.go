@@ -17,7 +17,7 @@ func TestGeneratorCreatesFiles(t *testing.T) {
 
 	opts := &options.Options{
 		DirPrefix:     tmpDir,
-		PackagePrefix: "github.com/jolfzverb/codegen/internal/generated",
+		PackagePrefix: "github.com/jolfzverb/codegen/test/testdata",
 		YAMLFiles: []string{
 			"yamls/api.yaml",
 			"yamls/api2.yaml",

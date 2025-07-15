@@ -12,7 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
-	"github.com/jolfzverb/codegen/internal/generated/generated/api/apimodels"
+	"github.com/jolfzverb/codegen/test/testdata/generated/api/apimodels"
 )
 
 type CreateHandler interface {
