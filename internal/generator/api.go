@@ -36,7 +36,7 @@ type Generator struct {
 func NewGenerator(opts *options.Options) *Generator {
 	return &Generator{
 		Opts:               opts,
-		YAMLFilesToProcess: []string{opts.YAMLFileName},
+		YAMLFilesToProcess: opts.YAMLFiles,
 		YAMLFilesProcessed: make(map[string]bool),
 	}
 }
