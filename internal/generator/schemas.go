@@ -404,7 +404,6 @@ func (g *Generator) ProcessObjectSchema(modelName string, schema *openapi3.Schem
 			if importPath != "" {
 				g.AddSchemasImport(importPath)
 			}
-			//g.ProcessSchema(elemModelName, fieldSchema)
 		}
 
 		validateTags = append(validateTags, GetSchemaValidators(fieldSchema)...)
@@ -468,7 +467,6 @@ func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.Schema
 		if importPath != "" {
 			g.AddSchemasImport(importPath)
 		}
-		//g.ProcessSchema(elemModelName, schema.Value.Items)
 	}
 
 	elemType, err := g.GetFieldTypeFromSchema(modelName, "Item", schema.Value.Items)
@@ -483,7 +481,7 @@ func (g *Generator) ProcessArraySchema(modelName string, schema *openapi3.Schema
 
 func (g *Generator) ProcessSchema(modelName string, schema *openapi3.SchemaRef) error {
 	if schema.Ref != "" && refIsExternal(schema.Ref) {
-		// External references are not processed here, they should be handled separately.
+		// external references will be generated from added YAML file
 		return nil
 	}
 
