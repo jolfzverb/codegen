@@ -411,7 +411,7 @@ func (g *Generator) GetValidateFuncStmt(typeName string, ref string) ast.Expr {
 
 	validateFuncName = "Validate" + parts[len(parts)-1] + "JSON"
 
-	g.YAMLFilesToProcess = append(g.YAMLFilesToProcess, filename)
+	g.YAMLFilesToProcess = append(g.YAMLFilesToProcess, g.GetYAMLFilePath(filename))
 	g.AddHandlersImport(g.GetHandlersImportForFile(filename))
 	modelName := g.GetModelName(filename)
 	return Sel(I(modelName), validateFuncName)

@@ -1,0 +1,144 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+
+paths:
+  /path/to/{param}/resourse:
+    post:
+      operationId: create
+      summary: Create new resource
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          required: true
+        - name: Optional-Header
+          in: header
+          schema:
+            type: string
+            format: date-time
+        - name: param
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: count
+          in: query
+          schema:
+            type: string
+          required: true
+        - name: cookie-param
+          in: cookie
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 15
+        - name: required-cookie-param
+          in: cookie
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 15
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 10
+                code_for_response:
+                  type: integer
+                  minimum: 100
+                  maximum: 999
+                date:
+                  type: string
+                  format: date-time
+                enum-val:
+                  type: string
+                  enum: [value1, value2, value3]
+                enum-int:
+                  type: integer
+                  enum: [1, 2, 3]
+                enum-number:
+                  type: number
+                  enum: [1.1, 2.2, 3.3]
+                array-field:
+                  type: array
+                  items:
+                    type: string
+                object-field:
+                  type: object
+                  properties:
+                    field1:
+                      type: string
+                    field2:
+                      type: object
+                      properties:
+                        subfield1:
+                          type: string
+                        subfield2:
+                          type: integer
+                object-array:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      subfield1:
+                        type: string
+                      subfield2:
+                        type: integer
+              required:
+                - name
+      responses:
+        '200':
+          description: Resource created successfully
+          headers:
+            Idempotency-Key:
+              description: Idempotency key from request
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewResourseResponse'       
+        '400':
+          description: Bad request
+        '404':
+          description: Not found
+components:
+  schemas:
+    NewResourseResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        param:
+          type: string
+        count:
+          type: string
+        date:
+          type: string
+          format: date-time
+        date2:
+          type: string
+          format: date-time
+        enum-val:
+          type: string
+      required:
+        - name
+        - param
+        - count
+        

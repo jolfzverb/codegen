@@ -1,0 +1,99 @@
+package api2
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strconv"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
+	"github.com/jolfzverb/codegen/internal/generated/generated/def/defmodels"
+	"github.com/jolfzverb/codegen/internal/generated/generated/api2/api2models"
+)
+
+type CreateHandler interface {
+	HandleCreate(ctx context.Context, r api2models.CreateRequest) (*api2models.CreateResponse, error)
+}
+type Handler struct {
+	validator *validator.Validate
+	create    CreateHandler
+}
+
+func NewHandler(create CreateHandler) *Handler {
+	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), create: create}
+}
+func (h *Handler) AddRoutes(router chi.Router) {
+	router.Post("/path/to/resourse", h.handleCreate)
+}
+func (h *Handler) parseCreateRequestBody(r *http.Request) (*api2models.defmodels.NewResourseResponse, error) {
+	var bodyJSON json.RawMessage
+	err := json.NewDecoder(r.Body).Decode(&bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	err = def.ValidateNewResourseResponseJSON(bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	var body defmodels.NewResourseResponse
+	err = json.Unmarshal(bodyJSON, &body)
+	if err != nil {
+		return nil, err
+	}
+	err = h.validator.Struct(body)
+	if err != nil {
+		return nil, err
+	}
+	return &body, nil
+}
+func (h *Handler) parseCreateRequest(r *http.Request) (*api2models.CreateRequest, error) {
+	body, err := h.parseCreateRequestBody(r)
+	if err != nil {
+		return nil, err
+	}
+	return &api2models.CreateRequest{Body: *body}, nil
+}
+func Create200Response() *api2models.CreateResponse {
+	return &api2models.CreateResponse{StatusCode: 200, Response200: &api2models.CreateResponse200{}}
+}
+func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *api2models.CreateResponse200) {
+}
+func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *api2models.CreateResponse) {
+	switch response.StatusCode {
+	case 200:
+		if response.Response200 == nil {
+			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
+			return
+		}
+		h.writeCreate200Response(w, response.Response200)
+	}
+	w.WriteHeader(response.StatusCode)
+}
+func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
+	request, err := h.parseCreateRequest(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{\"error\":%s}", strconv.Quote(err.Error())), http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	response, err := h.create.HandleCreate(ctx, *request)
+	if err != nil || response == nil {
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
+		return
+	}
+	h.writeCreateResponse(w, response)
+	return
+}
+func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
+	switch r.Header.Get("Content-Type") {
+	case "application/json":
+		h.handleCreateRequest(w, r)
+		return
+	case "":
+		h.handleCreateRequest(w, r)
+		return
+	default:
+		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
+		return
+	}
+}
