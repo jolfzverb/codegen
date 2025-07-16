@@ -732,16 +732,23 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 		}
 		if json.Schema != nil {
 			typeName := baseName + "Response" + code + "Body"
+			var astType ast.Expr
+			astType = Sel(I(g.GetCurrentModelsPackage()), typeName)
 			if json.Schema.Ref != "" {
 				var importPath string
 				typeName, importPath = g.ParseRefTypeName(json.Schema.Ref)
+				if refIsExternal(json.Schema.Ref) {
+					astType = I(typeName)
+				} else {
+					astType = Sel(I(g.GetCurrentModelsPackage()), typeName)
+				}
 				if importPath != "" {
 					g.AddHandlersImport(importPath)
 				}
 			}
 			arglist = append(arglist, &ast.Field{
 				Names: []*ast.Ident{I("body")},
-				Type:  Sel(I(g.GetCurrentModelsPackage()), typeName),
+				Type:  astType,
 			})
 			constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
 				Key:   I("Body"),
