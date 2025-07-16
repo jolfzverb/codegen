@@ -58,7 +58,7 @@ func (g *Generator) AddResponseCodeModels(baseName string, code string, response
 				var importPath string
 				typeName, importPath = g.ParseRefTypeName(content.Schema.Ref)
 				if importPath != "" {
-					g.AddHandlersImport(importPath)
+					g.AddSchemasImport(importPath)
 				}
 			}
 			model.Fields = append(model.Fields, SchemaField{

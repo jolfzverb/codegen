@@ -21,6 +21,7 @@ func TestGeneratorCreatesFiles(t *testing.T) {
 		YAMLFiles: []string{
 			"yamls/api.yaml",
 			"yamls/api2.yaml",
+			"yamls/api3.yaml",
 			"yamls/def.yaml",
 		},
 		RequiredFieldsArePointers: false,
@@ -38,6 +39,8 @@ func TestGeneratorCreatesFiles(t *testing.T) {
 		"generated/api/apimodels/models.go",
 		"generated/api2/handlers.go",
 		"generated/api2/api2models/models.go",
+		"generated/api3/handlers.go",
+		"generated/api3/api3models/models.go",
 		"generated/def/handlers.go",
 		"generated/def/defmodels/models.go",
 	}

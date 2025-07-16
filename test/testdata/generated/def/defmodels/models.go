@@ -4,6 +4,10 @@ package defmodels
 
 import "time"
 
+type NewResourseRequest struct {
+	Description *string `json:"description,omitempty" validate:"omitempty"`
+	Name        string  `json:"name"`
+}
 type NewResourseResponse struct {
 	Count       string     `json:"count"`
 	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`

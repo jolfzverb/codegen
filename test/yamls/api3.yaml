@@ -5,15 +5,9 @@ info:
 
 paths:
   /path/to/resourse:
-    post:
+    get:
       operationId: create
       summary: Create new resource
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: 'def.yaml#/components/schemas/NewResourseRequest'
       responses:
         '200':
           description: Resource created successfully
