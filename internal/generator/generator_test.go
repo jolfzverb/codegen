@@ -1157,6 +1157,7 @@ package packagename
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -1336,6 +1337,7 @@ package packagename
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -1656,7 +1658,7 @@ paths:
 
 package packagenamemodels
 
-import "/generated/def/defmodels"
+import "generated/def/defmodels"
 
 type OpRequestBody struct {
 	ExternalRef *defmodels.ExternalRef ` + "`json:\"external-ref,omitempty\" validate:\"omitempty\"`" + `
@@ -1677,6 +1679,7 @@ package packagename
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"

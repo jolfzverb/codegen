@@ -427,14 +427,19 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 	}
 
 	typeName := baseName + "RequestBody"
-
+	var bodyType ast.Expr
 	content, ok := body.Value.Content[contentType]
+	bodyType = Sel(I(g.GetCurrentModelsPackage()), typeName)
 	if ok && content.Schema != nil {
 		if content.Schema.Ref != "" {
 			var importPath string
 			typeName, importPath = g.ParseRefTypeName(content.Schema.Ref)
+			bodyType = Sel(I(g.GetCurrentModelsPackage()), typeName)
 			if importPath != "" {
 				g.AddHandlersImport(importPath)
+			}
+			if refIsExternal(content.Schema.Ref) {
+				bodyType = I(typeName)
 			}
 		}
 	}
@@ -449,6 +454,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 			},
 		},
 	})
+	g.AddHandlersImport("encoding/json")
 	bodyList = append(bodyList, &ast.AssignStmt{
 		Lhs: []ast.Expr{I("err")},
 		Tok: token.DEFINE,
@@ -476,7 +482,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		Tok: token.ASSIGN,
 		Rhs: []ast.Expr{
 			&ast.CallExpr{
-				Fun: g.GetValidateFuncStmt(typeName, body.Ref),
+				Fun: g.GetValidateFuncStmt(typeName, content.Schema.Ref),
 				Args: []ast.Expr{
 					I("bodyJSON"),
 				},
@@ -494,7 +500,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 			Specs: []ast.Spec{
 				&ast.ValueSpec{
 					Names: []*ast.Ident{I("body")},
-					Type:  Sel(I(g.GetCurrentModelsPackage()), typeName),
+					Type:  bodyType,
 				},
 			},
 		},
@@ -540,7 +546,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 			Field("r", Star(Sel(I("http"), "Request")), ""),
 		},
 		[]*ast.Field{
-			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), typeName)), ""),
+			Field("", Star(bodyType), ""),
 			Field("", I("error"), ""),
 		},
 		bodyList,
