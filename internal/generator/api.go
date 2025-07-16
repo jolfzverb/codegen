@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -28,6 +29,7 @@ type Generator struct {
 	PackageName      string
 	ImportPrefix     string
 	ModelsImportPath string
+	CurrentYAMLFile  string
 
 	YAMLFilesToProcess []string
 	YAMLFilesProcessed map[string]bool
@@ -98,7 +100,15 @@ func (g *Generator) PrepareAndRead(reader io.Reader) error {
 	ctx := context.Background()
 	loader := &openapi3.Loader{Context: ctx, IsExternalRefsAllowed: true}
 	var err error
-	g.yaml, err = loader.LoadFromIoReader(reader)
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+	url, err := url.Parse(g.CurrentYAMLFile)
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+	g.yaml, err = loader.LoadFromDataWithPath(data, url)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
@@ -113,10 +123,10 @@ func (g *Generator) PrepareAndRead(reader io.Reader) error {
 	return nil
 }
 
-func (g *Generator) PrepareFiles(filename string) error {
+func (g *Generator) PrepareFiles() error {
 	const op = "generator.PrepareFiles"
 
-	file, err := os.Open(filename)
+	file, err := os.Open(g.CurrentYAMLFile)
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
@@ -124,7 +134,7 @@ func (g *Generator) PrepareFiles(filename string) error {
 
 	reader := io.Reader(file)
 
-	g.PackageName = g.GetModelName(filename)
+	g.PackageName = g.GetModelName(g.CurrentYAMLFile)
 
 	handlersPath := path.Join(g.Opts.DirPrefix, "generated", g.PackageName)
 	schemasPath := path.Join(handlersPath, g.GetCurrentModelsPackage())
@@ -175,15 +185,15 @@ func (g *Generator) Generate(ctx context.Context) error {
 	const op = "generator.Generate"
 
 	for len(g.YAMLFilesToProcess) > 0 {
-		fileName := g.YAMLFilesToProcess[0]
+		g.CurrentYAMLFile = g.YAMLFilesToProcess[0]
 
-		if g.YAMLFilesProcessed[fileName] {
+		if g.YAMLFilesProcessed[g.CurrentYAMLFile] {
 			g.YAMLFilesToProcess = g.YAMLFilesToProcess[1:]
 			continue
 		}
-		slog.Info("Processing file", "file", fileName)
+		slog.Info("Processing file", "file", g.CurrentYAMLFile)
 
-		err := g.PrepareFiles(fileName)
+		err := g.PrepareFiles()
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
@@ -195,7 +205,7 @@ func (g *Generator) Generate(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
-		g.YAMLFilesProcessed[fileName] = true
+		g.YAMLFilesProcessed[g.CurrentYAMLFile] = true
 		g.YAMLFilesToProcess = g.YAMLFilesToProcess[1:]
 	}
 

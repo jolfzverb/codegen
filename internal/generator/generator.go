@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"path"
 	"strings"
 )
 
@@ -18,11 +19,29 @@ func parseFilenameFromRef(ref string) string {
 }
 
 func (g *Generator) GetModelsImportForFile(filename string) string {
-	return g.Opts.PackagePrefix + "/generated/" + g.GetModelName(filename) + "/" + g.GetModelName(filename) + "models"
+	return path.Join(
+		g.Opts.PackagePrefix,
+		"generated",
+		g.GetModelName(filename),
+		g.GetModelName(filename)+"models",
+	)
 }
 
 func (g *Generator) GetHandlersImportForFile(filename string) string {
-	return g.Opts.PackagePrefix + "/generated/" + g.GetModelName(filename)
+	return path.Join(
+		g.Opts.PackagePrefix,
+		"generated",
+		g.GetModelName(filename),
+	)
+}
+
+func (g *Generator) GetYAMLFilePath(filename string) string {
+	if strings.HasPrefix(filename, "/") {
+		return filename
+	}
+
+	yamlDir := path.Dir(g.CurrentYAMLFile)
+	return path.Join(yamlDir, filename)
 }
 
 func (g *Generator) ParseRefTypeName(ref string) (string, string) {
@@ -38,7 +57,7 @@ func (g *Generator) ParseRefTypeName(ref string) (string, string) {
 		if filename == "" {
 			return baseName, ""
 		}
-		g.YAMLFilesToProcess = append(g.YAMLFilesToProcess, filename)
+		g.YAMLFilesToProcess = append(g.YAMLFilesToProcess, g.GetYAMLFilePath(filename))
 
 		modelsImport := g.GetModelsImportForFile(filename)
 		modelName := g.GetModelName(filename) + "models"

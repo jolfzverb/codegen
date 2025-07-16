@@ -1,0 +1,32 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+
+paths: {}
+components:
+  schemas:
+    NewResourseResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        param:
+          type: string
+        count:
+          type: string
+        date:
+          type: string
+          format: date-time
+        date2:
+          type: string
+          format: date-time
+        enum-val:
+          type: string
+      required:
+        - name
+        - param
+        - count
+        

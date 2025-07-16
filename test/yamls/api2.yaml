@@ -1,0 +1,19 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+
+paths:
+  /path/to/resourse:
+    post:
+      operationId: create
+      summary: Create new resource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: 'def.yaml#/components/schemas/NewResourseResponse'
+      responses:
+        '200':
+          description: Resource created successfully
