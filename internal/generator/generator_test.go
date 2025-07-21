@@ -79,10 +79,12 @@ type StringModel string
 	input := strings.NewReader(mockInput)
 	outputModels := &bytes.Buffer{}
 	outputHandlers := &bytes.Buffer{}
-	gen := generator.NewGenerator(&options.Options{})
+	gen := generator.NewGenerator(&options.Options{
+		PackagePrefix: "packagename",
+	})
 	gen.PackageName = "packagename"
 	gen.ImportPrefix = "imports"
-	gen.ModelsImportPath = "imports/models"
+	gen.ModelsImportPath = "packagename/imports/models"
 	err := gen.PrepareAndRead(input)
 	assert.NoError(t, err)
 	err = gen.GenerateFiles()
@@ -710,10 +712,12 @@ type ObjectModel struct {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
-			gen := generator.NewGenerator(&options.Options{})
+			gen := generator.NewGenerator(&options.Options{
+				PackagePrefix: "packagename",
+			})
 			gen.PackageName = "packagename"
 			gen.ImportPrefix = "imports"
-			gen.ModelsImportPath = "imports/models"
+			gen.ModelsImportPath = "packagename/imports/models"
 			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
@@ -840,7 +844,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
-	"imports/models"
+	"packagename/imports/models"
 )
 
 type GetExample2Handler interface {
@@ -1083,10 +1087,12 @@ func (h *Handler) handlePostExampleParamName(w http.ResponseWriter, r *http.Requ
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
-			gen := generator.NewGenerator(&options.Options{})
+			gen := generator.NewGenerator(&options.Options{
+				PackagePrefix: "packagename",
+			})
 			gen.PackageName = "packagename"
 			gen.ImportPrefix = "imports"
-			gen.ModelsImportPath = "imports/models"
+			gen.ModelsImportPath = "packagename/imports/models"
 			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
@@ -1163,7 +1169,7 @@ import (
 	"strconv"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	"imports/models"
+	"packagename/imports/models"
 )
 
 type PostExampleHandler interface {
@@ -1262,10 +1268,12 @@ func ValidateBodyJSON(_ json.RawMessage) error {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
-			gen := generator.NewGenerator(&options.Options{})
+			gen := generator.NewGenerator(&options.Options{
+				PackagePrefix: "packagename",
+			})
 			gen.PackageName = "packagename"
 			gen.ImportPrefix = "imports"
-			gen.ModelsImportPath = "imports/models"
+			gen.ModelsImportPath = "packagename/imports/models"
 			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
@@ -1343,7 +1351,7 @@ import (
 	"strconv"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	"imports/models"
+	"packagename/imports/models"
 )
 
 type OpHandler interface {
@@ -1442,10 +1450,12 @@ func ValidateBodyJSON(_ json.RawMessage) error {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
-			gen := generator.NewGenerator(&options.Options{})
+			gen := generator.NewGenerator(&options.Options{
+				PackagePrefix: "packagename",
+			})
 			gen.PackageName = "packagename"
 			gen.ImportPrefix = "imports"
-			gen.ModelsImportPath = "imports/models"
+			gen.ModelsImportPath = "packagename/imports/models"
 			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
@@ -1515,7 +1525,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
-	"imports/models"
+	"packagename/imports/models"
 )
 
 type OpHandler interface {
@@ -1606,10 +1616,12 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
-			gen := generator.NewGenerator(&options.Options{})
+			gen := generator.NewGenerator(&options.Options{
+				PackagePrefix: "packagename",
+			})
 			gen.PackageName = "packagename"
 			gen.ImportPrefix = "imports"
-			gen.ModelsImportPath = "imports/models"
+			gen.ModelsImportPath = "packagename/imports/models"
 			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()
@@ -1658,7 +1670,7 @@ paths:
 
 package packagenamemodels
 
-import "generated/def/defmodels"
+import "packagename/generated/def/defmodels"
 
 type OpRequestBody struct {
 	ExternalRef *defmodels.ExternalRef ` + "`json:\"external-ref,omitempty\" validate:\"omitempty\"`" + `
@@ -1685,7 +1697,7 @@ import (
 	"strconv"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	"imports/models"
+	"packagename/imports/models"
 )
 
 type OpHandler interface {
@@ -1784,10 +1796,12 @@ func (h *Handler) handleOp(w http.ResponseWriter, r *http.Request) {
 			input := strings.NewReader(tc.input)
 			outputModels := &bytes.Buffer{}
 			outputHandlers := &bytes.Buffer{}
-			gen := generator.NewGenerator(&options.Options{})
+			gen := generator.NewGenerator(&options.Options{
+				PackagePrefix: "packagename",
+			})
 			gen.PackageName = "packagename"
 			gen.ImportPrefix = "imports"
-			gen.ModelsImportPath = "imports/models"
+			gen.ModelsImportPath = "packagename/imports/models"
 			err := gen.PrepareAndRead(input)
 			assert.NoError(t, err)
 			err = gen.GenerateFiles()

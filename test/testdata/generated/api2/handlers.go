@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"github.com/jolfzverb/codegen/test/testdata/generated/api2/api2models"
 	"github.com/jolfzverb/codegen/test/testdata/generated/def"
 	"github.com/jolfzverb/codegen/test/testdata/generated/def/defmodels"
-	"github.com/jolfzverb/codegen/test/testdata/generated/api2/api2models"
 )
 
 type CreateHandler interface {

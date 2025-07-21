@@ -8,7 +8,8 @@ import (
 )
 
 type CreatePathParams struct {
-	Param string `json:"param" validate:"required"`
+	Suffix string `json:"suffix" validate:"required,oneof=e es"`
+	Param  string `json:"param" validate:"required"`
 }
 type CreateQueryParams struct {
 	Count string `json:"count" validate:"required"`

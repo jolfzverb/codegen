@@ -42,6 +42,7 @@ var commonInitialisms = map[string]bool{
 	"URL":   true,
 	"UTF8":  true,
 	"VM":    true,
+	"VPN":   true,
 	"XML":   true,
 	"XMPP":  true,
 	"XSRF":  true,
