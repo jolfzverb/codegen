@@ -12,8 +12,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/go-playground/validator/v10"
-	"github.com/jolfzverb/codegen/internal/usage/generated/def"
 	"github.com/jolfzverb/codegen/internal/usage/generated/api/apimodels"
+	"github.com/jolfzverb/codegen/internal/usage/generated/def"
 )
 
 type CreateHandler interface {
@@ -28,10 +28,15 @@ func NewHandler(create CreateHandler) *Handler {
 	return &Handler{validator: validator.New(validator.WithRequiredStructEnabled()), create: create}
 }
 func (h *Handler) AddRoutes(router chi.Router) {
-	router.Post("/path/to/{param}/resourse", h.handleCreate)
+	router.Post("/path/to/{param}/resours{suffix}", h.handleCreate)
 }
 func (h *Handler) parseCreatePathParams(r *http.Request) (*apimodels.CreatePathParams, error) {
 	var pathParams apimodels.CreatePathParams
+	suffix := chi.URLParam(r, "suffix")
+	if suffix == "" {
+		return nil, errors.New("suffix path param is required")
+	}
+	pathParams.Suffix = suffix
 	param := chi.URLParam(r, "param")
 	if param == "" {
 		return nil, errors.New("param path param is required")

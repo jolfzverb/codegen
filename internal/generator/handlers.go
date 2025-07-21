@@ -16,7 +16,6 @@ import (
 
 type HandlersFile struct {
 	requiredFieldsArePointers bool
-	importPrefix              string
 	packageName               *ast.Ident
 	packageImports            []string
 	interfaceDecls            []*ast.GenDecl
@@ -112,7 +111,6 @@ func (g *Generator) InitHandlerFields(packageName string) {
 
 func (g *Generator) NewHandlersFile() {
 	g.HandlersFile = &HandlersFile{
-		importPrefix:              g.ImportPrefix,
 		requiredFieldsArePointers: g.Opts.RequiredFieldsArePointers,
 	}
 }
@@ -195,7 +193,7 @@ func (g *Generator) GenerateImportsSpecs(imp []string) ([]*ast.ImportSpec, []ast
 	var libImports []string
 	var myImports []string
 	for _, path := range imp {
-		if strings.HasPrefix(path, g.HandlersFile.importPrefix) {
+		if strings.HasPrefix(path, g.Opts.PackagePrefix) {
 			myImports = append(myImports, path)
 
 			continue

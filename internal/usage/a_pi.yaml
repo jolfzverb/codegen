@@ -4,11 +4,17 @@ info:
   version: 1.0.0
 
 paths:
-  /path/to/{param}/resourse:
+  /path/to/{param}/resours{suffix}:
     post:
       operationId: create
       summary: Create new resource
       parameters:
+        - name: suffix
+          in: path
+          schema:
+            type: string
+            enum: [e, es]
+          required: true
         - name: Idempotency-Key
           in: header
           schema:
