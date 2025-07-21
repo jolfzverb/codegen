@@ -240,7 +240,13 @@ func (g *Generator) AddParamsModel(baseName string, paramType string, params ope
 func (g *Generator) AddHeadersModel(baseName string, headers openapi3.Headers) error {
 	const op = "generator.AddHeadersModel"
 	fields := make([]SchemaField, 0, len(headers))
-	for name, header := range headers {
+	headerNames := make([]string, 0, len(headers))
+	for name := range headers {
+		headerNames = append(headerNames, name)
+	}
+	sort.Strings(headerNames)
+	for _, name := range headerNames {
+		header := headers[name]
 		if !header.Value.Schema.Value.Type.Permits(openapi3.TypeString) {
 			return errors.New("only string type parameters are supported for response headers")
 		}
