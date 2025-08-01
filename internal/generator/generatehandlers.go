@@ -304,7 +304,7 @@ func (g *Generator) ProcessPaths(paths *openapi3.Paths) error {
 			}
 		}
 		if pathItem.Delete != nil {
-			if pathItem.Delete.RequestBody != nil {
+			if !g.Opts.AllowDeleteWithBody && pathItem.Delete.RequestBody != nil {
 				return errors.New("DELETE method should not have request body")
 			}
 			err := g.ProcessOperation(pathName, "Delete", pathItem.Delete)

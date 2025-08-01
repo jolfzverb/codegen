@@ -11,6 +11,7 @@ type Options struct {
 	DirPrefix                 string
 	YAMLFiles                 []string
 	RequiredFieldsArePointers bool
+	AllowDeleteWithBody       bool
 }
 
 func GetOptions() (*Options, error) {
@@ -19,6 +20,7 @@ func GetOptions() (*Options, error) {
 	flag.StringVar(&opts.DirPrefix, "d", "internal", "Directory prefix for generated files")
 	flag.StringVar(&opts.PackagePrefix, "p", "internal", "Package prefix for imports")
 	flag.BoolVar(&opts.RequiredFieldsArePointers, "pointers", false, "Generate required fields as pointers")
+	flag.BoolVar(&opts.AllowDeleteWithBody, "allow-delete-with-body", false, "Allow DELETE operations with a body")
 
 	flag.Parse()
 	opts.YAMLFiles = flag.Args()
