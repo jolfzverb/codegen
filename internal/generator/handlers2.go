@@ -190,6 +190,14 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
 			continue
 		}
+		if g.Opts.AllowRemoteAddrParam && param.Value.Name == "Remote-Addr" && param.Value.Schema.Value.Format == "remote-addr" {
+			bodyList = append(bodyList, &ast.AssignStmt{
+				Lhs: []ast.Expr{Sel(I("headers"), FormatGoLikeIdentifier(param.Value.Name))},
+				Tok: token.ASSIGN,
+				Rhs: []ast.Expr{Sel(I("r"), "RemoteAddr")},
+			})
+			continue
+		}
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
 		bodyList = append(bodyList, &ast.AssignStmt{
 			Lhs: []ast.Expr{I(varName)},
