@@ -12,6 +12,7 @@ type Options struct {
 	YAMLFiles                 []string
 	RequiredFieldsArePointers bool
 	AllowDeleteWithBody       bool
+	AllowRemoteAddrParam      bool
 }
 
 func GetOptions() (*Options, error) {
@@ -21,6 +22,7 @@ func GetOptions() (*Options, error) {
 	flag.StringVar(&opts.PackagePrefix, "p", "internal", "Package prefix for imports")
 	flag.BoolVar(&opts.RequiredFieldsArePointers, "pointers", false, "Generate required fields as pointers")
 	flag.BoolVar(&opts.AllowDeleteWithBody, "allow-delete-with-body", false, "Allow DELETE operations with a body")
+	flag.BoolVar(&opts.AllowRemoteAddrParam, "allow-remote-addr-param", false, "Allow RemoteAddr fake parameter")
 
 	flag.Parse()
 	opts.YAMLFiles = flag.Args()
