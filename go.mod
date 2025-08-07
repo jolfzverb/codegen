@@ -8,6 +8,7 @@ require (
 	github.com/go-faster/errors v0.7.1
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/sebdah/goldie/v2 v2.7.1
+	github.com/shopspring/decimal v1.4.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/text v0.24.0
 )

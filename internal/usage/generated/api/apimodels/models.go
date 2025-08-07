@@ -4,6 +4,7 @@ package apimodels
 
 import (
 	"time"
+	"github.com/shopspring/decimal"
 	"github.com/jolfzverb/codegen/internal/usage/generated/def/defmodels"
 )
 
@@ -40,6 +41,7 @@ type CreateRequestBody struct {
 	ArrayField      *CreateRequestBodyArrayField  `json:"array-field,omitempty" validate:"omitempty"`
 	CodeForResponse *int                          `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
 	Date            *time.Time                    `json:"date,omitempty" validate:"omitempty"`
+	DecimalField    *decimal.Decimal              `json:"decimal-field,omitempty" validate:"omitempty"`
 	Description     *string                       `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
 	EnumInt         *int                          `json:"enum-int,omitempty" validate:"omitempty,oneof=1 2 3"`
 	EnumNumber      *float64                      `json:"enum-number,omitempty" validate:"omitempty,oneof=1.1 2.2 3.3"`
@@ -75,11 +77,12 @@ type CreateResponse struct {
 	Response404 *CreateResponse404
 }
 type NewResourseResponse struct {
-	Count       string     `json:"count"`
-	Date        *time.Time `json:"date,omitempty" validate:"omitempty"`
-	Date2       *time.Time `json:"date2,omitempty" validate:"omitempty"`
-	Description *string    `json:"description,omitempty" validate:"omitempty"`
-	EnumVal     *string    `json:"enum-val,omitempty" validate:"omitempty"`
-	Name        string     `json:"name"`
-	Param       string     `json:"param"`
+	Count        string           `json:"count"`
+	Date         *time.Time       `json:"date,omitempty" validate:"omitempty"`
+	Date2        *time.Time       `json:"date2,omitempty" validate:"omitempty"`
+	DecimalField *decimal.Decimal `json:"decimal-field,omitempty" validate:"omitempty"`
+	Description  *string          `json:"description,omitempty" validate:"omitempty"`
+	EnumVal      *string          `json:"enum-val,omitempty" validate:"omitempty"`
+	Name         string           `json:"name"`
+	Param        string           `json:"param"`
 }
