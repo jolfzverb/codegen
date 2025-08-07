@@ -108,6 +108,9 @@ paths:
                   $ref: 'def.yml#/components/schemas/ExternalRef'
                 external-ref2:
                   $ref: 'def.yml#/components/schemas/ExternalObject'
+                decimal-field:
+                  type: string
+                  format: decimal
               required:
                 - name
       responses:
@@ -147,6 +150,9 @@ components:
           format: date-time
         enum-val:
           type: string
+        decimal-field:
+          type: string
+          format: decimal
       required:
         - name
         - param

@@ -314,6 +314,10 @@ func (g *Generator) GetStringType(format string) string {
 		g.AddSchemasImport("time")
 		return "time.Time"
 	}
+	if format == "decimal" {
+		g.AddSchemasImport("github.com/shopspring/decimal")
+		return "decimal.Decimal"
+	}
 
 	return "string"
 }

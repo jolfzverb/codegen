@@ -38,13 +38,14 @@ func (m *mockHandler) HandleCreate(ctx context.Context, r apimodels.CreateReques
 	}
 	return api.Create200Response(
 		apimodels.NewResourseResponse{
-			Count:       r.Query.Count,
-			Description: r.Body.Description,
-			Name:        r.Body.Name,
-			Param:       r.Path.Param,
-			Date:        date,
-			Date2:       date2,
-			EnumVal:     r.Body.EnumVal,
+			Count:        r.Query.Count,
+			Description:  r.Body.Description,
+			Name:         r.Body.Name,
+			Param:        r.Path.Param,
+			Date:         date,
+			Date2:        date2,
+			EnumVal:      r.Body.EnumVal,
+			DecimalField: r.Body.DecimalField,
 		},
 		apimodels.CreateResponse200Headers{
 			IdempotencyKey: &r.Headers.IdempotencyKey,
@@ -64,7 +65,7 @@ func TestHandler(t *testing.T) {
 	defer server.Close()
 
 	t.Run("200 Success", func(t *testing.T) {
-		requestBody := `{"name": "value", "description": "descr", "date": "2023-10-01T00:00:00+03:00", "code_for_response": 200, "enum-val": "value1"}`
+		requestBody := `{"name": "value", "description": "descr", "date": "2023-10-01T00:00:00+03:00", "code_for_response": 200, "enum-val": "value1", "decimal-field": "13.42"}`
 		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
 		assert.NoError(t, err)
 		request.Header.Set("Content-Type", "application/json")
@@ -86,6 +87,7 @@ func TestHandler(t *testing.T) {
 		assert.Equal(t, "2023-09-30T21:00:00Z", responseBody["date"])
 		assert.Equal(t, "2023-09-30T21:00:00Z", responseBody["date2"])
 		assert.Equal(t, "value1", responseBody["enum-val"])
+		assert.Equal(t, "13.42", responseBody["decimal-field"])
 	})
 	t.Run("404", func(t *testing.T) {
 		requestBody := `{"name": "value", "description": "descr", "code_for_response": 404}`
