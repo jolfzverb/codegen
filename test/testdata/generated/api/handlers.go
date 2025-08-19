@@ -229,6 +229,13 @@ func Create200Response(body apimodels.NewResourseResponse, headers apimodels.Cre
 }
 func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *apimodels.CreateResponse200) {
 	var err error
+	err = json.NewEncoder(w).Encode(r.Body)
+	if err != nil {
+		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
+		return
+	}
+}
+func (h *Handler) writeCreate200ResponseHeaders(w http.ResponseWriter, r *apimodels.CreateResponse200) {
 	headersJSON, err := json.Marshal(r.Headers)
 	if err != nil {
 		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
@@ -242,11 +249,6 @@ func (h *Handler) writeCreate200Response(w http.ResponseWriter, r *apimodels.Cre
 	}
 	for key, value := range headers {
 		w.Header().Set(key, value)
-	}
-	err = json.NewEncoder(w).Encode(r.Body)
-	if err != nil {
-		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
-		return
 	}
 }
 func Create400Response() *apimodels.CreateResponse {
@@ -266,21 +268,28 @@ func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *apimodels
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		h.writeCreate200ResponseHeaders(w, response.Response200)
+		w.WriteHeader(response.StatusCode)
 		h.writeCreate200Response(w, response.Response200)
+		return
 	case 400:
 		if response.Response400 == nil {
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(response.StatusCode)
 		h.writeCreate400Response(w, response.Response400)
+		return
 	case 404:
 		if response.Response404 == nil {
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(response.StatusCode)
 		h.writeCreate404Response(w, response.Response404)
+		return
 	}
-	w.WriteHeader(response.StatusCode)
+	http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 }
 func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseCreateRequest(r)

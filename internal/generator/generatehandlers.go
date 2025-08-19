@@ -130,9 +130,16 @@ func (g *Generator) AddWriteResponseMethod(baseName string, operation *openapi3.
 		if err != nil {
 			return errors.Wrapf(err, op)
 		}
+		if len(response.Value.Headers) > 0 {
+			err = g.AddWriteHeadersForResponseCode(baseName, code, response)
+			if err != nil {
+				return errors.Wrapf(err, op)
+			}
+		}
 		codes = append(codes, code)
+
 	}
-	g.AddWriteResponseMethodHandlers(baseName, codes)
+	g.AddWriteResponseMethodHandlers(baseName, codes, operation)
 	g.AddResponseModel(baseName, keys)
 
 	return nil

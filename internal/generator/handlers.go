@@ -499,11 +499,62 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 	g.AddHandlersImport("strconv")
 }
 
-func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []string) {
+func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []string, operation *openapi3.Operation) {
 	switchBody := &ast.BlockStmt{
 		List: []ast.Stmt{},
 	}
 	for _, code := range codes {
+		response := operation.Responses.Value(code)
+
+		caseBody := []ast.Stmt{}
+		caseBody = append(caseBody, &ast.IfStmt{
+			Cond: Eq(Sel(I("response"), "Response"+code), I("nil")),
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: Sel(I("http"), "Error"),
+							Args: []ast.Expr{
+								I("w"),
+								Str("{\"error\":\"InternalServerError\"}"),
+								Sel(I("http"), "StatusInternalServerError"),
+							},
+						},
+					},
+					Ret(),
+				},
+			},
+		})
+
+		if len(response.Value.Headers) > 0 {
+			caseBody = append(caseBody,
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: Sel(I("h"), "write"+baseName+code+"ResponseHeaders"),
+						Args: []ast.Expr{
+							I("w"),
+							Sel(I("response"), "Response"+code),
+						},
+					},
+				})
+		}
+
+		caseBody = append(caseBody, &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun:  Sel(I("w"), "WriteHeader"),
+				Args: []ast.Expr{Sel(I("response"), "StatusCode")},
+			},
+		})
+		caseBody = append(caseBody, &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: Sel(I("h"), "write"+baseName+code+"Response"),
+				Args: []ast.Expr{
+					I("w"),
+					Sel(I("response"), "Response"+code),
+				},
+			},
+		})
+		caseBody = append(caseBody, &ast.ReturnStmt{})
 		switchBody.List = append(switchBody.List, &ast.CaseClause{
 			List: []ast.Expr{
 				&ast.BasicLit{
@@ -511,35 +562,7 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 					Value: code,
 				},
 			},
-			Body: []ast.Stmt{
-				&ast.IfStmt{
-					Cond: Eq(Sel(I("response"), "Response"+code), I("nil")),
-					Body: &ast.BlockStmt{
-						List: []ast.Stmt{
-							&ast.ExprStmt{
-								X: &ast.CallExpr{
-									Fun: Sel(I("http"), "Error"),
-									Args: []ast.Expr{
-										I("w"),
-										Str("{\"error\":\"InternalServerError\"}"),
-										Sel(I("http"), "StatusInternalServerError"),
-									},
-								},
-							},
-							Ret(),
-						},
-					},
-				},
-				&ast.ExprStmt{
-					X: &ast.CallExpr{
-						Fun: Sel(I("h"), "write"+baseName+code+"Response"),
-						Args: []ast.Expr{
-							I("w"),
-							Sel(I("response"), "Response"+code),
-						},
-					},
-				},
-			},
+			Body: caseBody,
 		})
 	}
 
@@ -558,8 +581,12 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 			},
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
-					Fun:  Sel(I("w"), "WriteHeader"),
-					Args: []ast.Expr{Sel(I("response"), "StatusCode")},
+					Fun: Sel(I("http"), "Error"),
+					Args: []ast.Expr{
+						I("w"),
+						Str("{\"error\":\"InternalServerError\"}"),
+						Sel(I("http"), "StatusInternalServerError"),
+					},
 				},
 			},
 		},
@@ -568,110 +595,127 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, writeResponseFunc)
 }
 
-func (g *Generator) AddWriteResponseCode(baseName string, code string, response *openapi3.ResponseRef) error {
+func (g *Generator) AddWriteHeadersForResponseCode(baseName string, code string, response *openapi3.ResponseRef) error {
 	var body []ast.Stmt
 
-	if len(response.Value.Headers) > 0 {
-		g.AddHandlersImport("encoding/json")
-		body = append(body, &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				I("headersJSON"),
-				I("err"),
+	g.AddHandlersImport("encoding/json")
+	body = append(body, &ast.AssignStmt{
+		Lhs: []ast.Expr{
+			I("headersJSON"),
+			I("err"),
+		},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun:  Sel(I("json"), "Marshal"),
+				Args: []ast.Expr{Sel(I("r"), "Headers")},
 			},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun:  Sel(I("json"), "Marshal"),
-					Args: []ast.Expr{Sel(I("r"), "Headers")},
-				},
-			},
-		})
-		body = append(body, &ast.IfStmt{
-			Cond: Ne(I("err"), I("nil")),
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ExprStmt{
-						X: &ast.CallExpr{
-							Fun: Sel(I("http"), "Error"),
-							Args: []ast.Expr{
-								I("w"),
-								Str("{\"error\":\"InternalServerError\"}"),
-								Sel(I("http"), "StatusInternalServerError"),
-							},
-						},
-					},
-					Ret(),
-				},
-			},
-		})
-		body = append(body, &ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("headers")},
-						Type: &ast.MapType{
-							Key:   I("string"),
-							Value: I("string"),
+		},
+	})
+	body = append(body, &ast.IfStmt{
+		Cond: Ne(I("err"), I("nil")),
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: Sel(I("http"), "Error"),
+						Args: []ast.Expr{
+							I("w"),
+							Str("{\"error\":\"InternalServerError\"}"),
+							Sel(I("http"), "StatusInternalServerError"),
 						},
 					},
 				},
+				Ret(),
 			},
-		})
-		body = append(body, &ast.AssignStmt{
-			Lhs: []ast.Expr{I("err")},
-			Tok: token.ASSIGN,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: Sel(I("json"), "Unmarshal"),
-					Args: []ast.Expr{
-						I("headersJSON"),
-						Amp(I("headers")),
+		},
+	})
+	body = append(body, &ast.DeclStmt{
+		Decl: &ast.GenDecl{
+			Tok: token.VAR,
+			Specs: []ast.Spec{
+				&ast.ValueSpec{
+					Names: []*ast.Ident{I("headers")},
+					Type: &ast.MapType{
+						Key:   I("string"),
+						Value: I("string"),
 					},
 				},
 			},
-		})
-		body = append(body, &ast.IfStmt{
-			Cond: Ne(I("err"), I("nil")),
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ExprStmt{
-						X: &ast.CallExpr{
-							Fun: Sel(I("http"), "Error"),
-							Args: []ast.Expr{
-								I("w"),
-								Str("{\"error\":\"InternalServerError\"}"),
-								Sel(I("http"), "StatusInternalServerError"),
-							},
-						},
-					},
-					Ret(),
+		},
+	})
+	body = append(body, &ast.AssignStmt{
+		Lhs: []ast.Expr{I("err")},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: Sel(I("json"), "Unmarshal"),
+				Args: []ast.Expr{
+					I("headersJSON"),
+					Amp(I("headers")),
 				},
 			},
-		})
-		body = append(body, &ast.RangeStmt{
-			Key:   I("key"),
-			Value: I("value"),
-			Tok:   token.DEFINE,
-			X:     I("headers"),
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ExprStmt{
-						X: &ast.CallExpr{
-							Fun: Sel(&ast.CallExpr{
-								Fun:  Sel(I("w"), "Header"),
-								Args: []ast.Expr{},
-							}, "Set"),
-							Args: []ast.Expr{
-								I("key"),
-								I("value"),
-							},
+		},
+	})
+	body = append(body, &ast.IfStmt{
+		Cond: Ne(I("err"), I("nil")),
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: Sel(I("http"), "Error"),
+						Args: []ast.Expr{
+							I("w"),
+							Str("{\"error\":\"InternalServerError\"}"),
+							Sel(I("http"), "StatusInternalServerError"),
 						},
 					},
 				},
+				Ret(),
 			},
-		})
-	}
+		},
+	})
+	body = append(body, &ast.RangeStmt{
+		Key:   I("key"),
+		Value: I("value"),
+		Tok:   token.DEFINE,
+		X:     I("headers"),
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: Sel(&ast.CallExpr{
+							Fun:  Sel(I("w"), "Header"),
+							Args: []ast.Expr{},
+						}, "Set"),
+						Args: []ast.Expr{
+							I("key"),
+							I("value"),
+						},
+					},
+				},
+			},
+		},
+	})
+
+	writeResponseFunc := Func(
+		"write"+baseName+code+"ResponseHeaders",
+		Field("h", Star(I("Handler")), ""),
+		[]*ast.Field{
+			Field("w", Sel(I("http"), "ResponseWriter"), ""),
+			Field("r", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code)), ""),
+		},
+		nil,
+		body,
+	)
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, writeResponseFunc)
+
+	return nil
+}
+
+func (g *Generator) AddWriteResponseCode(baseName string, code string, response *openapi3.ResponseRef) error {
+	var body []ast.Stmt
 
 	if len(response.Value.Content) > 1 {
 		return errors.New("multiple responses are not supported")

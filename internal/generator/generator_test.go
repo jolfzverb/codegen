@@ -881,9 +881,11 @@ func (h *Handler) writeGetExample2Response(w http.ResponseWriter, response *pack
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(response.StatusCode)
 		h.writeGetExample2200Response(w, response.Response200)
+		return
 	}
-	w.WriteHeader(response.StatusCode)
+	http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 }
 func (h *Handler) handleGetExample2Request(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseGetExample2Request(r)
@@ -1025,7 +1027,8 @@ func PostExampleParamName200Response(headers packagenamemodels.PostExampleParamN
 	return &packagenamemodels.PostExampleParamNameResponse{StatusCode: 200, Response200: &packagenamemodels.PostExampleParamNameResponse200{Headers: headers}}
 }
 func (h *Handler) writePostExampleParamName200Response(w http.ResponseWriter, r *packagenamemodels.PostExampleParamNameResponse200) {
-	var err error
+}
+func (h *Handler) writePostExampleParamName200ResponseHeaders(w http.ResponseWriter, r *packagenamemodels.PostExampleParamNameResponse200) {
 	headersJSON, err := json.Marshal(r.Headers)
 	if err != nil {
 		http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
@@ -1048,9 +1051,12 @@ func (h *Handler) writePostExampleParamNameResponse(w http.ResponseWriter, respo
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		h.writePostExampleParamName200ResponseHeaders(w, response.Response200)
+		w.WriteHeader(response.StatusCode)
 		h.writePostExampleParamName200Response(w, response.Response200)
+		return
 	}
-	w.WriteHeader(response.StatusCode)
+	http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 }
 func (h *Handler) handlePostExampleParamNameRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parsePostExampleParamNameRequest(r)
@@ -1226,9 +1232,11 @@ func (h *Handler) writePostExampleResponse(w http.ResponseWriter, response *pack
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(response.StatusCode)
 		h.writePostExample200Response(w, response.Response200)
+		return
 	}
-	w.WriteHeader(response.StatusCode)
+	http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 }
 func (h *Handler) handlePostExampleRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parsePostExampleRequest(r)
@@ -1408,9 +1416,11 @@ func (h *Handler) writeOpResponse(w http.ResponseWriter, response *packagenamemo
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(response.StatusCode)
 		h.writeOp200Response(w, response.Response200)
+		return
 	}
-	w.WriteHeader(response.StatusCode)
+	http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 }
 func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseOpRequest(r)
@@ -1577,9 +1587,11 @@ func (h *Handler) writeOpResponse(w http.ResponseWriter, response *packagenamemo
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(response.StatusCode)
 		h.writeOp200Response(w, response.Response200)
+		return
 	}
-	w.WriteHeader(response.StatusCode)
+	http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 }
 func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseOpRequest(r)
@@ -1757,9 +1769,11 @@ func (h *Handler) writeOpResponse(w http.ResponseWriter, response *packagenamemo
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(response.StatusCode)
 		h.writeOp200Response(w, response.Response200)
+		return
 	}
-	w.WriteHeader(response.StatusCode)
+	http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 }
 func (h *Handler) handleOpRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseOpRequest(r)

@@ -75,9 +75,11 @@ func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *api2model
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.WriteHeader(response.StatusCode)
 		h.writeCreate200Response(w, response.Response200)
+		return
 	}
-	w.WriteHeader(response.StatusCode)
+	http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 }
 func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
 	request, err := h.parseCreateRequest(r)
