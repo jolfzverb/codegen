@@ -49,6 +49,7 @@ func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *api3model
 			http.Error(w, "{\"error\":\"InternalServerError\"}", http.StatusInternalServerError)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(response.StatusCode)
 		h.writeCreate200Response(w, response.Response200)
 		return
