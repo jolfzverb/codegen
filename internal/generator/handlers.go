@@ -499,7 +499,7 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 	g.AddHandlersImport("strconv")
 }
 
-func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []string, operation *openapi3.Operation) {
+func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []string, operation *openapi3.Operation) error {
 	switchBody := &ast.BlockStmt{
 		List: []ast.Stmt{},
 	}
@@ -537,6 +537,32 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 						},
 					},
 				})
+		}
+
+		if len(response.Value.Content) > 0 {
+			if len(response.Value.Content) > 1 {
+				return errors.New("multiple content types are not supported for response code " + code)
+			}
+			var contentType string
+			for key := range response.Value.Content {
+				contentType = key
+				break
+			}
+			caseBody = append(caseBody,
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: Sel(&ast.CallExpr{
+							Fun:  Sel(I("w"), "Header"),
+							Args: []ast.Expr{},
+						}, "Set"),
+						Args: []ast.Expr{
+							Str("Content-Type"),
+							Str(g.getContentTypeHeadeValue(contentType)),
+						},
+					},
+				},
+			)
+
 		}
 
 		caseBody = append(caseBody, &ast.ExprStmt{
@@ -593,6 +619,22 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 	)
 
 	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, writeResponseFunc)
+	return nil
+}
+
+func (g *Generator) getContentTypeHeadeValue(contentType string) string {
+	textualContentType := map[string]struct{}{
+		"text/plain":             {},
+		"text/html":              {},
+		"text/css":               {},
+		"application/javascript": {},
+		"application/xml":        {},
+		"application/json":       {},
+	}
+	if _, ok := textualContentType[contentType]; ok {
+		return fmt.Sprintf("%s; charset=utf-8", contentType)
+	}
+	return contentType
 }
 
 func (g *Generator) AddWriteHeadersForResponseCode(baseName string, code string, response *openapi3.ResponseRef) error {

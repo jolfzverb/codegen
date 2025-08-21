@@ -269,6 +269,7 @@ func (h *Handler) writeCreateResponse(w http.ResponseWriter, response *apimodels
 			return
 		}
 		h.writeCreate200ResponseHeaders(w, response.Response200)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(response.StatusCode)
 		h.writeCreate200Response(w, response.Response200)
 		return

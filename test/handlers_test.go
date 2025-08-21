@@ -75,6 +75,7 @@ func TestHandler(t *testing.T) {
 		resp, err := http.DefaultClient.Do(request)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Equal(t, "application/json; charset=utf-8", resp.Header.Get("Content-Type"))
 
 		defer resp.Body.Close()
 		var responseBody map[string]any
