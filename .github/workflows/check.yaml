@@ -1,6 +1,8 @@
 name: codegen
 on:
-  - push
+  - push:
+      branches:
+        - main
   - pull_request
 jobs:
   check:
