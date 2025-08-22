@@ -15,6 +15,7 @@ var commonInitialisms = map[string]bool{
 	"CSS":   true,
 	"DNS":   true,
 	"EOF":   true,
+	"FQDN":  true,
 	"GUID":  true,
 	"HTML":  true,
 	"HTTP":  true,
