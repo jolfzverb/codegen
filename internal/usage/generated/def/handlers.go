@@ -10,7 +10,7 @@ import (
 )
 
 type Handler struct {
-	validator *validator.Validate
+	ololo_validator *validator.Validate
 }
 
 func NewHandler() *Handler {
