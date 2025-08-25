@@ -184,6 +184,13 @@ func ValidateCreateRequestBodyJSON(jsonData json.RawMessage) error {
 			return errors.Wrap(err, "field field_to_validate_dive is not valid")
 		}
 	}
+	val, exists = obj["object-array"]
+	if exists && !containsNull(val) {
+		err = ValidateCreateRequestBodyObjectArrayJSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field object-array is not valid")
+		}
+	}
 	val, exists = obj["object-field"]
 	if exists && !containsNull(val) {
 		err = ValidateCreateRequestBodyObjectFieldJSON(val)
@@ -466,6 +473,20 @@ func ValidateComplexObjectForDiveJSON(jsonData json.RawMessage) error {
 		}
 		if !nullableFields[field] && containsNull(val) {
 			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	val, exists = obj["array_objects_optional"]
+	if exists && !containsNull(val) {
+		err = ValidateComplexObjectForDiveArrayObjectsOptionalJSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field array_objects_optional is not valid")
+		}
+	}
+	val, exists = obj["array_objects_required"]
+	if exists && !containsNull(val) {
+		err = ValidateComplexObjectForDiveArrayObjectsRequiredJSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field array_objects_required is not valid")
 		}
 	}
 	val, exists = obj["object_field_optional"]

@@ -131,6 +131,7 @@ paths:
           description: Bad request
         '404':
           description: Not found
+
 components:
   schemas:
     NewResourseResponse:
