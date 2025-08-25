@@ -38,19 +38,20 @@ type CreateRequestBodyObjectField struct {
 	Field2 *CreateRequestBodyObjectFieldField2 `json:"field2,omitempty" validate:"omitempty"`
 }
 type CreateRequestBody struct {
-	ArrayField      *CreateRequestBodyArrayField  `json:"array-field,omitempty" validate:"omitempty"`
-	CodeForResponse *int                          `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
-	Date            *time.Time                    `json:"date,omitempty" validate:"omitempty"`
-	DecimalField    *decimal.Decimal              `json:"decimal-field,omitempty" validate:"omitempty"`
-	Description     *string                       `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
-	EnumInt         *int                          `json:"enum-int,omitempty" validate:"omitempty,oneof=1 2 3"`
-	EnumNumber      *float64                      `json:"enum-number,omitempty" validate:"omitempty,oneof=1.1 2.2 3.3"`
-	EnumVal         *string                       `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
-	ExternalRef     *defmodels.ExternalRef        `json:"external-ref,omitempty" validate:"omitempty"`
-	ExternalRef2    *defmodels.ExternalObject     `json:"external-ref2,omitempty" validate:"omitempty"`
-	Name            string                        `json:"name"`
-	ObjectArray     *CreateRequestBodyObjectArray `json:"object-array,omitempty" validate:"omitempty"`
-	ObjectField     *CreateRequestBodyObjectField `json:"object-field,omitempty" validate:"omitempty"`
+	ArrayField          *CreateRequestBodyArrayField  `json:"array-field,omitempty" validate:"omitempty,dive"`
+	CodeForResponse     *int                          `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
+	Date                *time.Time                    `json:"date,omitempty" validate:"omitempty"`
+	DecimalField        *decimal.Decimal              `json:"decimal-field,omitempty" validate:"omitempty"`
+	Description         *string                       `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
+	EnumInt             *int                          `json:"enum-int,omitempty" validate:"omitempty,oneof=1 2 3"`
+	EnumNumber          *float64                      `json:"enum-number,omitempty" validate:"omitempty,oneof=1.1 2.2 3.3"`
+	EnumVal             *string                       `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
+	ExternalRef         *defmodels.ExternalRef        `json:"external-ref,omitempty" validate:"omitempty"`
+	ExternalRef2        *defmodels.ExternalObject     `json:"external-ref2,omitempty" validate:"omitempty"`
+	FieldToValidateDive *ComplexObjectForDive         `json:"field_to_validate_dive,omitempty" validate:"omitempty"`
+	Name                string                        `json:"name"`
+	ObjectArray         *CreateRequestBodyObjectArray `json:"object-array,omitempty" validate:"omitempty,dive"`
+	ObjectField         *CreateRequestBodyObjectField `json:"object-field,omitempty" validate:"omitempty"`
 }
 type CreateRequest struct {
 	Path    CreatePathParams
@@ -75,6 +76,37 @@ type CreateResponse struct {
 	Response200 *CreateResponse200
 	Response400 *CreateResponse400
 	Response404 *CreateResponse404
+}
+type ComplexObjectForDiveArrayObjectsOptionalItem struct {
+	Field1 string `json:"field1" validate:"min=5"`
+	Field2 *int   `json:"field2,omitempty" validate:"omitempty,min=10"`
+}
+type ComplexObjectForDiveArrayObjectsOptional []ComplexObjectForDiveArrayObjectsOptionalItem
+type ComplexObjectForDiveArrayObjectsRequiredItem struct {
+	Field1 string `json:"field1" validate:"min=5"`
+	Field2 *int   `json:"field2,omitempty" validate:"omitempty,min=10"`
+}
+type ComplexObjectForDiveArrayObjectsRequired []ComplexObjectForDiveArrayObjectsRequiredItem
+type ComplexObjectForDiveArrayStringsOptional []string
+type ComplexObjectForDiveArrayStringsRequired []string
+type ComplexObjectForDiveArraysOfArraysItem []string
+type ComplexObjectForDiveArraysOfArrays []ComplexObjectForDiveArraysOfArraysItem
+type ComplexObjectForDiveObjectFieldOptional struct {
+	Field1 string `json:"field1" validate:"min=5"`
+	Field2 *int   `json:"field2,omitempty" validate:"omitempty,min=10"`
+}
+type ComplexObjectForDiveObjectFieldRequired struct {
+	Field1 string `json:"field1" validate:"min=5"`
+	Field2 *int   `json:"field2,omitempty" validate:"omitempty,min=10"`
+}
+type ComplexObjectForDive struct {
+	ArrayObjectsOptional *ComplexObjectForDiveArrayObjectsOptional `json:"array_objects_optional,omitempty" validate:"omitempty,min=1,max=2,dive"`
+	ArrayObjectsRequired ComplexObjectForDiveArrayObjectsRequired  `json:"array_objects_required" validate:"min=1,max=2,dive"`
+	ArrayStringsOptional *ComplexObjectForDiveArrayStringsOptional `json:"array_strings_optional,omitempty" validate:"omitempty,min=1,max=2,dive,min=5"`
+	ArrayStringsRequired ComplexObjectForDiveArrayStringsRequired  `json:"array_strings_required" validate:"min=1,max=2,dive,min=5"`
+	ArraysOfArrays       *ComplexObjectForDiveArraysOfArrays       `json:"arrays_of_arrays,omitempty" validate:"omitempty,min=1,max=2,dive,min=1,max=2,dive,min=5"`
+	ObjectFieldOptional  *ComplexObjectForDiveObjectFieldOptional  `json:"object_field_optional,omitempty" validate:"omitempty"`
+	ObjectFieldRequired  ComplexObjectForDiveObjectFieldRequired   `json:"object_field_required"`
 }
 type NewResourseResponse struct {
 	Count        string           `json:"count"`

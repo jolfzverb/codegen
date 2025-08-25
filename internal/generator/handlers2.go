@@ -894,14 +894,15 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 			objectFields[fieldName] = g.GetValidateFuncStmt(fieldType, fieldSchema.Ref)
 		}
 		if fieldSchema.Value.Type.Permits(openapi3.TypeArray) {
-			if fieldSchema.Value.Items != nil &&
-				(fieldSchema.Value.Items.Value.Type.Permits(openapi3.TypeObject) ||
-					fieldSchema.Value.Items.Value.Type.Permits(openapi3.TypeArray)) {
-				fieldType, err := g.GetFieldTypeFromSchema(modelName, fieldName, fieldSchema)
-				if err != nil {
-					return errors.Wrap(err, op)
+			if fieldSchema.Value.Items != nil {
+				itemsType := g.getMostNestedArrayItemType(fieldSchema.Value.Items)
+				if itemsType != nil && itemsType.Permits(openapi3.TypeObject) {
+					fieldType, err := g.GetFieldTypeFromSchema(modelName, fieldName, fieldSchema)
+					if err != nil {
+						return errors.Wrap(err, op)
+					}
+					objectFields[fieldName] = g.GetValidateFuncStmt(fieldType, fieldSchema.Ref)
 				}
-				objectFields[fieldName] = g.GetValidateFuncStmt(fieldType, fieldSchema.Ref)
 			}
 		}
 	}

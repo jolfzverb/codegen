@@ -33,7 +33,7 @@ type CreateRequestBodyObjectField struct {
 	Field2 *CreateRequestBodyObjectFieldField2 `json:"field2,omitempty" validate:"omitempty"`
 }
 type CreateRequestBody struct {
-	ArrayField      *CreateRequestBodyArrayField  `json:"array-field,omitempty" validate:"omitempty"`
+	ArrayField      *CreateRequestBodyArrayField  `json:"array-field,omitempty" validate:"omitempty,dive"`
 	CodeForResponse *int                          `json:"code_for_response,omitempty" validate:"omitempty,min=100,max=999"`
 	Date            *time.Time                    `json:"date,omitempty" validate:"omitempty"`
 	Description     *string                       `json:"description,omitempty" validate:"omitempty,min=1,max=10"`
@@ -41,7 +41,7 @@ type CreateRequestBody struct {
 	EnumNumber      *float64                      `json:"enum-number,omitempty" validate:"omitempty,oneof=1.1 2.2 3.3"`
 	EnumVal         *string                       `json:"enum-val,omitempty" validate:"omitempty,oneof=value1 value2 value3"`
 	Name            string                        `json:"name"`
-	ObjectArray     *CreateRequestBodyObjectArray `json:"object-array,omitempty" validate:"omitempty"`
+	ObjectArray     *CreateRequestBodyObjectArray `json:"object-array,omitempty" validate:"omitempty,dive"`
 	ObjectField     *CreateRequestBodyObjectField `json:"object-field,omitempty" validate:"omitempty"`
 }
 type CreateRequest struct {

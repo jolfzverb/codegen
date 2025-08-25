@@ -517,12 +517,13 @@ func (g *Generator) ProcessSchema(modelName string, schema *openapi3.SchemaRef) 
 		if err != nil {
 			return errors.Wrap(err, op)
 		}
-		if schema.Value.Items != nil &&
-			(schema.Value.Items.Value.Type.Permits(openapi3.TypeObject) ||
-				schema.Value.Items.Value.Type.Permits(openapi3.TypeArray)) {
-			err = g.AddArrayValidate(modelName, schema)
-			if err != nil {
-				return errors.Wrap(err, op)
+		if schema.Value.Items != nil {
+			itemsType := g.getMostNestedArrayItemType(schema.Value.Items)
+			if itemsType != nil && itemsType.Permits(openapi3.TypeObject) {
+				err = g.AddArrayValidate(modelName, schema)
+				if err != nil {
+					return errors.Wrap(err, op)
+				}
 			}
 		}
 
@@ -558,6 +559,16 @@ func (g *Generator) ProcessSchema(modelName string, schema *openapi3.SchemaRef) 
 	}
 
 	return errors.Errorf("unsupported schema type %s for model %s", schema.Value.Type, modelName)
+}
+
+func (g *Generator) getMostNestedArrayItemType(schema *openapi3.SchemaRef) *openapi3.Types {
+	for schema != nil && schema.Value.Type.Permits(openapi3.TypeArray) {
+		schema = schema.Value.Items
+	}
+	if schema == nil {
+		return nil
+	}
+	return schema.Value.Type
 }
 
 func (g *Generator) GenerateRequestModel(baseName string, contentType string, pathParams openapi3.Parameters,
