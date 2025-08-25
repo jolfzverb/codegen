@@ -102,8 +102,8 @@ type ComplexObjectForDiveObjectFieldRequired struct {
 type ComplexObjectForDive struct {
 	ArrayObjectsOptional *ComplexObjectForDiveArrayObjectsOptional `json:"array_objects_optional,omitempty" validate:"omitempty,min=1,max=2,dive"`
 	ArrayObjectsRequired ComplexObjectForDiveArrayObjectsRequired  `json:"array_objects_required" validate:"min=1,max=2,dive"`
-	ArrayStringsOptional *ComplexObjectForDiveArrayStringsOptional `json:"array_strings_optional,omitempty" validate:"omitempty,min=1,max=2,dive"`
-	ArrayStringsRequired ComplexObjectForDiveArrayStringsRequired  `json:"array_strings_required" validate:"min=1,max=2,dive"`
+	ArrayStringsOptional *ComplexObjectForDiveArrayStringsOptional `json:"array_strings_optional,omitempty" validate:"omitempty,min=1,max=2,dive,min=5"`
+	ArrayStringsRequired ComplexObjectForDiveArrayStringsRequired  `json:"array_strings_required" validate:"min=1,max=2,dive,min=5"`
 	ArraysOfArrays       *ComplexObjectForDiveArraysOfArrays       `json:"arrays_of_arrays,omitempty" validate:"omitempty,min=1,max=2,dive,min=1,max=2,dive,min=5"`
 	ObjectFieldOptional  *ComplexObjectForDiveObjectFieldOptional  `json:"object_field_optional,omitempty" validate:"omitempty"`
 	ObjectFieldRequired  ComplexObjectForDiveObjectFieldRequired   `json:"object_field_required"`

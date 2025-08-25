@@ -187,7 +187,6 @@ func TestHandler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
-
 	t.Run("200 on dive 1", func(t *testing.T) {
 		requestBody := `{"name": "value", "description": "descr", "date": "2023-10-01T00:00:00+03:00", "code_for_response": 200, "enum-val": "value1", "decimal-field": "13.42",
 		"field_to_validate_dive": {
@@ -211,6 +210,173 @@ func TestHandler(t *testing.T) {
 		err = json.NewDecoder(resp.Body).Decode(&responseBody)
 		assert.NoError(t, err)
 	})
+	t.Run("200 on dive with optional fields", func(t *testing.T) {
+		requestBody := `{"name": "value", "description": "descr", "date": "2023-10-01T00:00:00+03:00", "code_for_response": 200, "enum-val": "value1", "decimal-field": "13.42",
+		"field_to_validate_dive": {
+			"object_field_required": {
+				"field1": "minimum:5"
+			},
+			"object_field_optional": {
+				"field1": "minimum:5"
+			},
+			"array_objects_required": [{"field1":"minumum:5"}],
+			"array_objects_optional": [{"field1":"minumum:5"}],
+			"array_strings_required": ["minimum:5"],
+			"array_strings_optional": ["minimum:5"]
+		}}`
+		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
+		request.Header.Set("Cookie", "required-cookie-param=required-value")
+		resp, err := http.DefaultClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		defer resp.Body.Close()
+		var responseBody map[string]any
+		err = json.NewDecoder(resp.Body).Decode(&responseBody)
+		assert.NoError(t, err)
+	})
+
+	for _, tc := range []struct {
+		name      string
+		diveField string
+	}{
+		{
+			name: "400 on dive required fields 1",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "min"},
+				"array_objects_required": [{"field1":"minumum:5"}],
+				"array_strings_required": ["minimum:5"]
+			}`,
+		},
+		{
+			name: "400 on dive required fields 2",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"array_objects_required": [{"field1":"min"}],
+				"array_strings_required": ["minimum:5"]
+			}`,
+		},
+
+		{
+			name: "400 on dive required fields 3",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"array_objects_required": [{}],
+				"array_strings_required": ["minimum:5"]
+			}`,
+		},
+		{
+			name: "400 on dive required fields 4",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"array_objects_required": [],
+				"array_strings_required": ["minimum:5"]
+			}`,
+		},
+		{
+			name: "400 on dive required fields 5",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"array_objects_required": [{"field1":"minumum:5"}],
+				"array_strings_required": ["min"]
+			}`,
+		},
+		{
+			name: "400 on dive required fields 6",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"array_objects_required": [{"field1":"minumum:5"}],
+				"array_strings_required": []
+			}`,
+		},
+		{
+			name: "400 on dive optional fields 1",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"object_field_optional": {"field1": "min"},
+				"array_objects_required": [{"field1":"minumum:5"}],
+				"array_objects_optional": [{"field1":"minumum:5"}],
+				"array_strings_required": ["minimum:5"],
+				"array_strings_optional": ["minimum:5"]
+			}`,
+		},
+		{
+			name: "400 on dive optional fields 2",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"object_field_optional": {"field1": "minimum:5"},
+				"array_objects_required": [{"field1":"minumum:5"}],
+				"array_objects_optional": [{"field1":"min"}],
+				"array_strings_required": ["minimum:5"],
+				"array_strings_optional": ["minimum:5"]
+			}`,
+		},
+		{
+			name: "400 on dive optional fields 3",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"object_field_optional": {"field1": "minimum:5"},
+				"array_objects_required": [{}],
+				"array_objects_optional": [{"field1":"min"}],
+				"array_strings_required": ["minimum:5"],
+				"array_strings_optional": ["minimum:5"]
+			}`,
+		},
+		{
+			name: "400 on dive optional fields 4",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"object_field_optional": {"field1": "minimum:5"},
+				"array_objects_required": [],
+				"array_objects_optional": [{"field1":"min"}],
+				"array_strings_required": ["minimum:5"],
+				"array_strings_optional": ["minimum:5"]
+			}`,
+		},
+		{
+			name: "400 on dive optional fields 5",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"object_field_optional": {"field1": "minimum:5"},
+				"array_objects_required": [{"field1":"minumum:5"}],
+				"array_objects_optional": [{"field1":"minumum:5"}],
+				"array_strings_required": ["minimum:5"],
+				"array_strings_optional": ["min"]
+			}`,
+		},
+		{
+			name: "400 on dive optional fields 6",
+			diveField: `"field_to_validate_dive": {
+				"object_field_required": {"field1": "minimum:5"},
+				"object_field_optional": {"field1": "minimum:5"},
+				"array_objects_required": [{"field1":"minumum:5"}],
+				"array_objects_optional": [{"field1":"minumum:5"}],
+				"array_strings_required": ["minimum:5"],
+				"array_strings_optional": []
+			}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			requestBody := `{"name": "value", "description": "descr", "date": "2023-10-01T00:00:00+03:00", "code_for_response": 200, "enum-val": "value1", "decimal-field": "13.42",` +
+				tc.diveField + `}`
+			request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+			assert.NoError(t, err)
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("Idempotency-Key", "unique-idempotency-key")
+			request.Header.Set("Cookie", "required-cookie-param=required-value")
+			resp, err := http.DefaultClient.Do(request)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+			defer resp.Body.Close()
+			var responseBody map[string]any
+			err = json.NewDecoder(resp.Body).Decode(&responseBody)
+			assert.NoError(t, err)
+		})
+	}
 }
 
 type mockHandler500 struct{}
