@@ -644,7 +644,7 @@ package packagenamemodels
 
 type ArrayModel []string
 type ObjectModel struct {
-	ArrayField *ArrayModel ` + "`json:\"array_field,omitempty\" validate:\"omitempty\"`" + `
+	ArrayField *ArrayModel ` + "`json:\"array_field,omitempty\" validate:\"omitempty,dive\"`" + `
 }
 `,
 		},
@@ -671,7 +671,7 @@ package packagenamemodels
 
 type ObjectModelArrayField []string
 type ObjectModel struct {
-	ArrayField *ObjectModelArrayField ` + "`json:\"array_field,omitempty\" validate:\"omitempty\"`" + `
+	ArrayField *ObjectModelArrayField ` + "`json:\"array_field,omitempty\" validate:\"omitempty,dive\"`" + `
 }
 `,
 		},

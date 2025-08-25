@@ -113,11 +113,9 @@ func GetSchemaValidators(schema *openapi3.SchemaRef) []string {
 		if schema.Value.UniqueItems {
 			validateTags = append(validateTags, "unique")
 		}
+		validateTags = append(validateTags, "dive")
 		itemsValidators := GetSchemaValidators(schema.Value.Items)
-		if len(itemsValidators) > 0 {
-			validateTags = append(validateTags, "dive")
-			validateTags = append(validateTags, itemsValidators...)
-		}
+		validateTags = append(validateTags, itemsValidators...)
 	}
 
 	return validateTags

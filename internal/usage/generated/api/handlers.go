@@ -177,11 +177,11 @@ func ValidateCreateRequestBodyJSON(jsonData json.RawMessage) error {
 			return errors.Wrap(err, "field external-ref2 is not valid")
 		}
 	}
-	val, exists = obj["object-array"]
+	val, exists = obj["field_to_validate_dive"]
 	if exists && !containsNull(val) {
-		err = ValidateCreateRequestBodyObjectArrayJSON(val)
+		err = ValidateComplexObjectForDiveJSON(val)
 		if err != nil {
-			return errors.Wrap(err, "field object-array is not valid")
+			return errors.Wrap(err, "field field_to_validate_dive is not valid")
 		}
 	}
 	val, exists = obj["object-field"]
@@ -332,6 +332,157 @@ func (h *Handler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "{\"error\":\"Unsupported Content-Type\"}", http.StatusUnsupportedMediaType)
 		return
 	}
+}
+func ValidateComplexObjectForDiveArrayObjectsOptionalItemJSON(jsonData json.RawMessage) error {
+	requiredFields := map[string]bool{"field1": true}
+	nullableFields := map[string]bool{}
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	for field := range requiredFields {
+		val, exists = obj[field]
+		if !exists {
+			return errors.New("field " + field + " is required")
+		}
+		if !nullableFields[field] && containsNull(val) {
+			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	return nil
+}
+func ValidateComplexObjectForDiveArrayObjectsOptionalJSON(jsonData json.RawMessage) error {
+	var arr []json.RawMessage
+	err := json.Unmarshal(jsonData, &arr)
+	if err != nil {
+		return err
+	}
+	for index, obj := range arr {
+		if !containsNull(obj) {
+			err = ValidateComplexObjectForDiveArrayObjectsOptionalItemJSON(obj)
+			if err != nil {
+				return errors.Wrapf(err, "error validating object at index %d", index)
+			}
+		}
+	}
+	return nil
+}
+func ValidateComplexObjectForDiveArrayObjectsRequiredItemJSON(jsonData json.RawMessage) error {
+	requiredFields := map[string]bool{"field1": true}
+	nullableFields := map[string]bool{}
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	for field := range requiredFields {
+		val, exists = obj[field]
+		if !exists {
+			return errors.New("field " + field + " is required")
+		}
+		if !nullableFields[field] && containsNull(val) {
+			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	return nil
+}
+func ValidateComplexObjectForDiveArrayObjectsRequiredJSON(jsonData json.RawMessage) error {
+	var arr []json.RawMessage
+	err := json.Unmarshal(jsonData, &arr)
+	if err != nil {
+		return err
+	}
+	for index, obj := range arr {
+		if !containsNull(obj) {
+			err = ValidateComplexObjectForDiveArrayObjectsRequiredItemJSON(obj)
+			if err != nil {
+				return errors.Wrapf(err, "error validating object at index %d", index)
+			}
+		}
+	}
+	return nil
+}
+func ValidateComplexObjectForDiveObjectFieldOptionalJSON(jsonData json.RawMessage) error {
+	requiredFields := map[string]bool{"field1": true}
+	nullableFields := map[string]bool{}
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	for field := range requiredFields {
+		val, exists = obj[field]
+		if !exists {
+			return errors.New("field " + field + " is required")
+		}
+		if !nullableFields[field] && containsNull(val) {
+			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	return nil
+}
+func ValidateComplexObjectForDiveObjectFieldRequiredJSON(jsonData json.RawMessage) error {
+	requiredFields := map[string]bool{"field1": true}
+	nullableFields := map[string]bool{}
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	for field := range requiredFields {
+		val, exists = obj[field]
+		if !exists {
+			return errors.New("field " + field + " is required")
+		}
+		if !nullableFields[field] && containsNull(val) {
+			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	return nil
+}
+func ValidateComplexObjectForDiveJSON(jsonData json.RawMessage) error {
+	requiredFields := map[string]bool{"array_objects_required": true, "array_strings_required": true, "object_field_required": true}
+	nullableFields := map[string]bool{}
+	var obj map[string]json.RawMessage
+	err := json.Unmarshal(jsonData, &obj)
+	if err != nil {
+		return err
+	}
+	var val json.RawMessage
+	var exists bool
+	for field := range requiredFields {
+		val, exists = obj[field]
+		if !exists {
+			return errors.New("field " + field + " is required")
+		}
+		if !nullableFields[field] && containsNull(val) {
+			return errors.New("field " + field + " cannot be null")
+		}
+	}
+	val, exists = obj["object_field_optional"]
+	if exists && !containsNull(val) {
+		err = ValidateComplexObjectForDiveObjectFieldOptionalJSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field object_field_optional is not valid")
+		}
+	}
+	val, exists = obj["object_field_required"]
+	if exists && !containsNull(val) {
+		err = ValidateComplexObjectForDiveObjectFieldRequiredJSON(val)
+		if err != nil {
+			return errors.Wrap(err, "field object_field_required is not valid")
+		}
+	}
+	return nil
 }
 func ValidateNewResourseResponseJSON(jsonData json.RawMessage) error {
 	requiredFields := map[string]bool{"count": true, "name": true, "param": true}

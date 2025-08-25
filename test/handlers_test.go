@@ -187,6 +187,30 @@ func TestHandler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
+
+	t.Run("200 on dive 1", func(t *testing.T) {
+		requestBody := `{"name": "value", "description": "descr", "date": "2023-10-01T00:00:00+03:00", "code_for_response": 200, "enum-val": "value1", "decimal-field": "13.42",
+		"field_to_validate_dive": {
+		  "object_field_required": {
+		  	"field1": "minimum:5"
+		  },
+		  "array_objects_required": [{"field1":"minumum:5"}],
+		  "array_strings_required": ["minimum:5"]
+		}}`
+		request, err := http.NewRequest(http.MethodPost, server.URL+"/path/to/param/resourse?count=3", bytes.NewBufferString(requestBody))
+		assert.NoError(t, err)
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Idempotency-Key", "unique-idempotency-key")
+		request.Header.Set("Cookie", "required-cookie-param=required-value")
+		resp, err := http.DefaultClient.Do(request)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		defer resp.Body.Close()
+		var responseBody map[string]any
+		err = json.NewDecoder(resp.Body).Decode(&responseBody)
+		assert.NoError(t, err)
+	})
 }
 
 type mockHandler500 struct{}
