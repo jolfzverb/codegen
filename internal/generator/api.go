@@ -12,6 +12,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
 	"github.com/sintoniastrategy/validgo-gen/internal/generator/options"
+	"github.com/sintoniastrategy/validgo-gen/internal/generator/astbuilder"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -33,6 +34,9 @@ type Generator struct {
 
 	YAMLFilesToProcess []string
 	YAMLFilesProcessed map[string]bool
+
+	HandlerImportsBuilder *astbuilder.ImportsBuilder
+	SchemasImportsBuilder *astbuilder.ImportsBuilder
 }
 
 func NewGenerator(opts *options.Options) *Generator {
@@ -145,6 +149,9 @@ func (g *Generator) PrepareFiles() error {
 
 	g.ImportPrefix = path.Join(g.Opts.PackagePrefix, "generated", g.PackageName)
 	g.ModelsImportPath = path.Join(g.ImportPrefix, g.GetCurrentModelsPackage())
+	g.HandlerImportsBuilder = astbuilder.NewImportsBuilder(g.Opts.PackagePrefix)
+	g.SchemasImportsBuilder = astbuilder.NewImportsBuilder(g.Opts.PackagePrefix)
+
 	err = g.PrepareAndRead(reader)
 	if err != nil {
 		return errors.Wrap(err, op)

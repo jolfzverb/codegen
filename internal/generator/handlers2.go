@@ -9,11 +9,13 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
+
+	"github.com/jolfzverb/codegen/internal/generator/astbuilder"
 )
 
 func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.Parameters) error {
-	bodyList := []ast.Stmt{
-		&ast.DeclStmt{
+	bodyBuilder := astbuilder.NewBodyBuilder().
+		AddStatement(&ast.DeclStmt{
 			Decl: &ast.GenDecl{
 				Tok: token.VAR,
 				Specs: []ast.Spec{
@@ -23,89 +25,61 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 					},
 				},
 			},
-		},
-	}
+		})
+
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
 			continue
 		}
 
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
-		bodyList = append(bodyList, &ast.AssignStmt{
-			Lhs: []ast.Expr{I(varName)},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: Sel(&ast.CallExpr{
-						Fun:  Sel(Sel(I("r"), "URL"), "Query"),
-						Args: []ast.Expr{},
-					}, "Get"),
-					Args: []ast.Expr{Str(param.Value.Name)},
-				},
-			},
-		})
+		bodyBuilder.AddStmt(astbuilder.Define(I(varName), &ast.CallExpr{
+			Fun: Sel(&ast.CallExpr{
+				Fun:  Sel(Sel(I("r"), "URL"), "Query"),
+				Args: []ast.Expr{},
+			}, "Get"),
+			Args: []ast.Expr{Str(param.Value.Name)},
+		}))
+
 		if param.Value.Required {
-			bodyList = append(bodyList, &ast.IfStmt{
-				Cond: Eq(I(varName), Str("")),
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{Ret2(I("nil"),
-						&ast.CallExpr{
-							Fun: Sel(I("errors"), "New"),
-							Args: []ast.Expr{
-								Str(param.Value.Name + " query param is required"),
-							},
-						},
-					)},
-				},
-			})
+			bodyBuilder.AddStmt(astbuilder.If(Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Return2(I("nil"), &ast.CallExpr{
+					Fun:  Sel(I("errors"), "New"),
+					Args: []ast.Expr{Str(param.Value.Name + " query param is required")},
+				}))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
-				bodyList = append(bodyList,
-					g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)...,
-				)
+				for _, stmt := range g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
+					bodyBuilder.AddStatement(stmt)
+				}
 			default:
 				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
 			}
 		} else {
-			bodyList = append(bodyList, &ast.IfStmt{
-				Cond: Ne(I(varName), Str("")),
-				Body: &ast.BlockStmt{
-					List: g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required),
-				},
-			})
+			ifBody := astbuilder.NewBodyBuilder()
+			for _, stmt := range g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
+				ifBody.AddStatement(stmt)
+			}
+			bodyBuilder.AddStmt(astbuilder.If(Ne(I(varName), Str(""))).WithBody(ifBody))
 		}
 	}
-	bodyList = append(bodyList, &ast.AssignStmt{
-		Lhs: []ast.Expr{I("err")},
-		Tok: token.DEFINE,
-		Rhs: []ast.Expr{
-			&ast.CallExpr{
-				Fun: Sel(Sel(I("h"), "validator"), "Struct"),
-				Args: []ast.Expr{
-					I("queryParams"),
-				},
-			},
-		},
-	})
-	bodyList = append(bodyList, &ast.IfStmt{
-		Cond: Ne(I("err"), I("nil")),
-		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-	})
 
-	bodyList = append(bodyList, Ret2(Amp(I("queryParams")), I("nil")))
+	bodyBuilder.
+		AddStmt(astbuilder.DefineCall("err", Sel(Sel(I("h"), "validator"), "Struct"), I("queryParams"))).
+		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
+		AddStmt(astbuilder.Return2(Amp(I("queryParams")), I("nil")))
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("parse"+baseName+"QueryParams",
-		Field("h", Star(I("Handler")), ""),
-		[]*ast.Field{
-			Field("r", Star(Sel(I("http"), "Request")), ""),
-		},
-		[]*ast.Field{
-			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"QueryParams")), ""),
-			Field("", I("error"), ""),
-		},
-		bodyList,
-	))
+	fn := astbuilder.NewFunctionBuilder().
+		WithName("parse" + baseName + "QueryParams").
+		WithPointerReceiver("h", "Handler").
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"QueryParams").AsPointer(true))).
+		AddResult(astbuilder.ErrorField()).
+		WithBody(bodyBuilder).
+		Build()
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 
 	return nil
 }
@@ -113,51 +87,25 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 func (g *Generator) AssignStringField(paramsName string, varName string, fieldName string, param *openapi3.SchemaRef, required bool) []ast.Stmt {
 	if param.Value.Format == "date-time" {
 		g.AddHandlersImport("time")
-		var result []ast.Stmt
-		result = append(result, &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				I("parsed" + fieldName),
-				I("err"),
-			},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: Sel(I("time"), "Parse"),
-					Args: []ast.Expr{
-						Sel(I("time"), "RFC3339"),
-						I(varName),
-					},
-				},
-			},
-		})
-		result = append(result, &ast.IfStmt{
-			Cond: Ne(I("err"), I("nil")),
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{Ret2(
-					I("nil"),
-					&ast.CallExpr{
-						Fun: Sel(I("errors"), "Wrap"),
-						Args: []ast.Expr{
-							I("err"),
-							Str(fieldName + " is not a valid date-time format"),
-						},
-					},
-				)},
-			},
-		})
+		bodyBuilder := astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.DefineCallWithErr("parsed"+fieldName, Sel(I("time"), "Parse"), Sel(I("time"), "RFC3339"), I(varName))).
+			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Return2(I("nil"), &ast.CallExpr{
+					Fun:  Sel(I("errors"), "Wrap"),
+					Args: []ast.Expr{I("err"), Str(fieldName + " is not a valid date-time format")},
+				}))))
+
 		var rhs ast.Expr
 		if required && !g.HandlersFile.requiredFieldsArePointers {
 			rhs = I("parsed" + fieldName)
 		} else {
 			rhs = Amp(I("parsed" + fieldName))
 		}
+		bodyBuilder.AddStmt(astbuilder.Assign(Sel(I(paramsName), fieldName), rhs))
 
-		return append(result, &ast.AssignStmt{
-			Lhs: []ast.Expr{Sel(I(paramsName), fieldName)},
-			Tok: token.ASSIGN,
-			Rhs: []ast.Expr{rhs},
-		})
+		return bodyBuilder.Build().List
 	}
+
 	var rhs ast.Expr
 	if required && !g.HandlersFile.requiredFieldsArePointers {
 		rhs = I(varName)
@@ -165,16 +113,12 @@ func (g *Generator) AssignStringField(paramsName string, varName string, fieldNa
 		rhs = Amp(I(varName))
 	}
 
-	return []ast.Stmt{&ast.AssignStmt{
-		Lhs: []ast.Expr{Sel(I(paramsName), fieldName)},
-		Tok: token.ASSIGN,
-		Rhs: []ast.Expr{rhs},
-	}}
+	return []ast.Stmt{astbuilder.Assign(Sel(I(paramsName), fieldName), rhs).Build()}
 }
 
 func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Parameters) error {
-	bodyList := []ast.Stmt{
-		&ast.DeclStmt{
+	bodyBuilder := astbuilder.NewBodyBuilder().
+		AddStatement(&ast.DeclStmt{
 			Decl: &ast.GenDecl{
 				Tok: token.VAR,
 				Specs: []ast.Spec{
@@ -184,102 +128,71 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 					},
 				},
 			},
-		},
-	}
+		})
+
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
 			continue
 		}
 		if g.Opts.AllowRemoteAddrParam && param.Value.Name == "Remote-Addr" && param.Value.Schema.Value.Format == "remote-addr" {
-			bodyList = append(bodyList, &ast.AssignStmt{
-				Lhs: []ast.Expr{Sel(I("headers"), FormatGoLikeIdentifier(param.Value.Name))},
-				Tok: token.ASSIGN,
-				Rhs: []ast.Expr{Sel(I("r"), "RemoteAddr")},
-			})
+			bodyBuilder.AddStmt(astbuilder.Assign(
+				Sel(I("headers"), FormatGoLikeIdentifier(param.Value.Name)),
+				Sel(I("r"), "RemoteAddr"),
+			))
 			continue
 		}
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
-		bodyList = append(bodyList, &ast.AssignStmt{
-			Lhs: []ast.Expr{I(varName)},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun:  Sel(Sel(I("r"), "Header"), "Get"),
-					Args: []ast.Expr{Str(param.Value.Name)},
-				},
-			},
-		})
+		bodyBuilder.AddStmt(astbuilder.Define(I(varName), &ast.CallExpr{
+			Fun:  Sel(Sel(I("r"), "Header"), "Get"),
+			Args: []ast.Expr{Str(param.Value.Name)},
+		}))
+
 		if param.Value.Required {
-			bodyList = append(bodyList, &ast.IfStmt{
-				Cond: Eq(I(varName), Str("")),
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{Ret2(I("nil"),
-						&ast.CallExpr{
-							Fun: Sel(I("errors"), "New"),
-							Args: []ast.Expr{
-								Str(param.Value.Name + " header is required"),
-							},
-						},
-					)},
-				},
-			})
+			bodyBuilder.AddStmt(astbuilder.If(Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Return2(I("nil"), &ast.CallExpr{
+					Fun:  Sel(I("errors"), "New"),
+					Args: []ast.Expr{Str(param.Value.Name + " header is required")},
+				}))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
-				bodyList = append(bodyList,
-					g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name),
-						param.Value.Schema, param.Value.Required,
-					)...,
-				)
+				for _, stmt := range g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
+					bodyBuilder.AddStatement(stmt)
+				}
 			default:
 				return errors.New("unsupported path parameter type: " + fmt.Sprint(param.Value.Schema.Value.Type))
 			}
 		} else {
-			bodyList = append(bodyList, &ast.IfStmt{
-				Cond: Ne(I(varName), Str("")),
-				Body: &ast.BlockStmt{
-					List: g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name),
-						param.Value.Schema, param.Value.Required,
-					),
-				},
-			})
+			ifBody := astbuilder.NewBodyBuilder()
+			for _, stmt := range g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
+				ifBody.AddStatement(stmt)
+			}
+			bodyBuilder.AddStmt(astbuilder.If(Ne(I(varName), Str(""))).WithBody(ifBody))
 		}
 	}
-	bodyList = append(bodyList, &ast.AssignStmt{
-		Lhs: []ast.Expr{I("err")},
-		Tok: token.DEFINE,
-		Rhs: []ast.Expr{
-			&ast.CallExpr{
-				Fun: Sel(Sel(I("h"), "validator"), "Struct"),
-				Args: []ast.Expr{
-					I("headers"),
-				},
-			},
-		},
-	})
-	bodyList = append(bodyList, &ast.IfStmt{
-		Cond: Ne(I("err"), I("nil")),
-		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-	})
-	bodyList = append(bodyList, Ret2(Amp(I("headers")), I("nil")))
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("parse"+baseName+"Headers",
-		Field("h", Star(I("Handler")), ""),
-		[]*ast.Field{
-			Field("r", Star(Sel(I("http"), "Request")), ""),
-		},
-		[]*ast.Field{
-			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Headers")), ""),
-			Field("", I("error"), ""),
-		},
-		bodyList,
-	))
+
+	bodyBuilder.
+		AddStmt(astbuilder.DefineCall("err", Sel(Sel(I("h"), "validator"), "Struct"), I("headers"))).
+		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
+		AddStmt(astbuilder.Return2(Amp(I("headers")), I("nil")))
+
+	fn := astbuilder.NewFunctionBuilder().
+		WithName("parse" + baseName + "Headers").
+		WithPointerReceiver("h", "Handler").
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Headers").AsPointer(true))).
+		AddResult(astbuilder.ErrorField()).
+		WithBody(bodyBuilder).
+		Build()
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 
 	return nil
 }
 
 func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Parameters) error {
-	bodyList := []ast.Stmt{
-		&ast.DeclStmt{
+	bodyBuilder := astbuilder.NewBodyBuilder().
+		AddStatement(&ast.DeclStmt{
 			Decl: &ast.GenDecl{
 				Tok: token.VAR,
 				Specs: []ast.Spec{
@@ -289,113 +202,72 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 					},
 				},
 			},
-		},
-	}
+		})
+
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
 			continue
 		}
 
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
-		bodyList = append(bodyList, &ast.AssignStmt{
-			Lhs: []ast.Expr{I(varName), I("err")},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun:  Sel(I("r"), "Cookie"),
-					Args: []ast.Expr{Str(param.Value.Name)},
-				},
-			},
-		})
+		bodyBuilder.AddStmt(astbuilder.DefineCallWithErr(varName, Sel(I("r"), "Cookie"), Str(param.Value.Name)))
 
 		if param.Value.Required {
-			bodyList = append(bodyList, &ast.IfStmt{
-				Cond: Ne(I("err"), I("nil")),
-				Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-			})
+			bodyBuilder.AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 		} else {
-			bodyList = append(bodyList, &ast.IfStmt{
-				Cond: &ast.BinaryExpr{
-					X:  Ne(I("err"), I("nil")),
-					Op: token.LAND,
-					Y: &ast.UnaryExpr{
-						Op: token.NOT,
-						X: &ast.CallExpr{
-							Fun: Sel(I("errors"), "Is"),
-							Args: []ast.Expr{
-								I("err"),
-								Sel(I("http"), "ErrNoCookie"),
-							},
-						},
+			bodyBuilder.AddStmt(astbuilder.If(&ast.BinaryExpr{
+				X:  Ne(I("err"), I("nil")),
+				Op: token.LAND,
+				Y: &ast.UnaryExpr{
+					Op: token.NOT,
+					X: &ast.CallExpr{
+						Fun:  Sel(I("errors"), "Is"),
+						Args: []ast.Expr{I("err"), Sel(I("http"), "ErrNoCookie")},
 					},
 				},
-				Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-			})
+			}).WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return2(I("nil"), I("err")))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 		}
 
 		if param.Value.Required {
-			bodyList = append(bodyList, &ast.AssignStmt{
-				Lhs: []ast.Expr{I(varName + "Value")},
-				Tok: token.DEFINE,
-				Rhs: []ast.Expr{Sel(I(varName), "Value")},
-			})
+			bodyBuilder.AddStmt(astbuilder.Define(I(varName+"Value"), Sel(I(varName), "Value")))
 
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
-				bodyList = append(bodyList,
-					g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name),
-						param.Value.Schema, param.Value.Required,
-					)...,
-				)
+				for _, stmt := range g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
+					bodyBuilder.AddStatement(stmt)
+				}
 			default:
 				return errors.New("unsupported path parameter type: " + fmt.Sprint(param.Value.Schema.Value.Type))
 			}
 		} else {
-			ifBody := []ast.Stmt{&ast.AssignStmt{
-				Lhs: []ast.Expr{I(varName + "Value")},
-				Tok: token.DEFINE,
-				Rhs: []ast.Expr{Sel(I(varName), "Value")},
-			}}
-			ifBody = append(ifBody,
-				g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name),
-					param.Value.Schema, param.Value.Required,
-				)...,
-			)
-			bodyList = append(bodyList, &ast.IfStmt{
-				Cond: Eq(I("err"), I("nil")),
-				Body: &ast.BlockStmt{
-					List: ifBody,
-				},
-			})
+			ifBody := astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Define(I(varName+"Value"), Sel(I(varName), "Value")))
+			for _, stmt := range g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
+				ifBody.AddStatement(stmt)
+			}
+			bodyBuilder.AddStmt(astbuilder.If(Eq(I("err"), I("nil"))).WithBody(ifBody))
 		}
 	}
-	bodyList = append(bodyList, &ast.AssignStmt{
-		Lhs: []ast.Expr{I("err")},
-		Tok: token.ASSIGN,
-		Rhs: []ast.Expr{
-			&ast.CallExpr{
-				Fun:  Sel(Sel(I("h"), "validator"), "Struct"),
-				Args: []ast.Expr{I("cookies")},
-			},
-		},
-	})
-	bodyList = append(bodyList, &ast.IfStmt{
-		Cond: Ne(I("err"), I("nil")),
-		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-	})
-	bodyList = append(bodyList, Ret2(Amp(I("cookies")), I("nil")))
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("parse"+baseName+"Cookies",
-		Field("h", Star(I("Handler")), ""),
-		[]*ast.Field{
-			Field("r", Star(Sel(I("http"), "Request")), ""),
-		},
-		[]*ast.Field{
-			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Cookies")), ""),
-			Field("", I("error"), ""),
-		},
-		bodyList,
-	))
+
+	bodyBuilder.
+		AddStmt(astbuilder.Assign(I("err"), &ast.CallExpr{
+			Fun:  Sel(Sel(I("h"), "validator"), "Struct"),
+			Args: []ast.Expr{I("cookies")},
+		})).
+		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
+		AddStmt(astbuilder.Return2(Amp(I("cookies")), I("nil")))
+
+	fn := astbuilder.NewFunctionBuilder().
+		WithName("parse" + baseName + "Cookies").
+		WithPointerReceiver("h", "Handler").
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Cookies").AsPointer(true))).
+		AddResult(astbuilder.ErrorField()).
+		WithBody(bodyBuilder).
+		Build()
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 
 	return nil
 }
@@ -426,12 +298,11 @@ func (g *Generator) GetValidateFuncStmt(typeName string, ref string) ast.Expr {
 }
 
 func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType string, body *openapi3.RequestBodyRef) error {
-	bodyList := []ast.Stmt{}
+	bodyBuilder := astbuilder.NewBodyBuilder()
+
 	if !body.Value.Required {
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: Eq(Sel(I("r"), "Body"), I("nil")),
-			Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("nil"))}},
-		})
+		bodyBuilder.AddStmt(astbuilder.IfNil(Sel(I("r"), "Body")).WithBody(astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.Return2(I("nil"), I("nil")))))
 	}
 
 	typeName := baseName + "RequestBody"
@@ -451,7 +322,8 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 			}
 		}
 	}
-	bodyList = append(bodyList, &ast.DeclStmt{
+
+	bodyBuilder.AddStatement(&ast.DeclStmt{
 		Decl: &ast.GenDecl{
 			Tok: token.VAR,
 			Specs: []ast.Spec{
@@ -463,46 +335,20 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		},
 	})
 	g.AddHandlersImport("encoding/json")
-	bodyList = append(bodyList, &ast.AssignStmt{
-		Lhs: []ast.Expr{I("err")},
-		Tok: token.DEFINE,
-		Rhs: []ast.Expr{
-			&ast.CallExpr{
-				Fun: Sel(
-					&ast.CallExpr{
-						Fun:  Sel(I("json"), "NewDecoder"),
-						Args: []ast.Expr{Sel(I("r"), "Body")},
-					},
-					"Decode",
-				),
-				Args: []ast.Expr{
-					Amp(I("bodyJSON")),
-				},
-			},
-		},
-	})
-	bodyList = append(bodyList, &ast.IfStmt{
-		Cond: Ne(I("err"), I("nil")),
-		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-	})
-	bodyList = append(bodyList, &ast.AssignStmt{
-		Lhs: []ast.Expr{I("err")},
-		Tok: token.ASSIGN,
-		Rhs: []ast.Expr{
-			&ast.CallExpr{
-				Fun: g.GetValidateFuncStmt(typeName, content.Schema.Ref),
-				Args: []ast.Expr{
-					I("bodyJSON"),
-				},
-			},
-		},
-	})
-	bodyList = append(bodyList, &ast.IfStmt{
-		Cond: Ne(I("err"), I("nil")),
-		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-	})
 
-	bodyList = append(bodyList, &ast.DeclStmt{
+	bodyBuilder.
+		AddStmt(astbuilder.DefineCall("err", Sel(&ast.CallExpr{
+			Fun:  Sel(I("json"), "NewDecoder"),
+			Args: []ast.Expr{Sel(I("r"), "Body")},
+		}, "Decode"), Amp(I("bodyJSON")))).
+		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
+		AddStmt(astbuilder.Assign(I("err"), &ast.CallExpr{
+			Fun:  g.GetValidateFuncStmt(typeName, content.Schema.Ref),
+			Args: []ast.Expr{I("bodyJSON")},
+		})).
+		AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
+
+	bodyBuilder.AddStatement(&ast.DeclStmt{
 		Decl: &ast.GenDecl{
 			Tok: token.VAR,
 			Specs: []ast.Spec{
@@ -514,51 +360,33 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		},
 	})
 
-	bodyList = append(bodyList, &ast.AssignStmt{
-		Lhs: []ast.Expr{I("err")},
-		Tok: token.ASSIGN,
-		Rhs: []ast.Expr{
-			&ast.CallExpr{
-				Fun:  Sel(I("json"), "Unmarshal"),
-				Args: []ast.Expr{I("bodyJSON"), Amp(I("body"))},
-			},
-		},
-	})
-	bodyList = append(bodyList, &ast.IfStmt{
-		Cond: Ne(I("err"), I("nil")),
-		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-	})
+	bodyBuilder.
+		AddStmt(astbuilder.Assign(I("err"), &ast.CallExpr{
+			Fun:  Sel(I("json"), "Unmarshal"),
+			Args: []ast.Expr{I("bodyJSON"), Amp(I("body"))},
+		})).
+		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
+		AddStmt(astbuilder.Assign(I("err"), &ast.CallExpr{
+			Fun:  Sel(Sel(I("h"), "validator"), "Struct"),
+			Args: []ast.Expr{I("body")},
+		})).
+		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
+		AddStmt(astbuilder.Return2(Amp(I("body")), I("nil")))
 
-	bodyList = append(bodyList, &ast.AssignStmt{
-		Lhs: []ast.Expr{I("err")},
-		Tok: token.ASSIGN,
-		Rhs: []ast.Expr{
-			&ast.CallExpr{
-				Fun: Sel(Sel(I("h"), "validator"), "Struct"),
-				Args: []ast.Expr{
-					I("body"),
-				},
-			},
-		},
-	})
-	bodyList = append(bodyList, &ast.IfStmt{
-		Cond: Ne(I("err"), I("nil")),
-		Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-	})
-	bodyList = append(bodyList, Ret2(Amp(I("body")), I("nil")))
+	fn := astbuilder.Function("parse" + baseName + "RequestBody").
+		WithPointerReceiver("h", "Handler").
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
+		AddResult(astbuilder.ErrorField()).
+		WithBody(bodyBuilder).
+		Build()
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func(
-		"parse"+baseName+"RequestBody",
-		Field("h", Star(I("Handler")), ""),
-		[]*ast.Field{
-			Field("r", Star(Sel(I("http"), "Request")), ""),
-		},
-		[]*ast.Field{
-			Field("", Star(bodyType), ""),
-			Field("", I("error"), ""),
-		},
-		bodyList,
-	))
+	// Set the first result type manually since it's a dynamic type
+	fn.Type.Results.List = []*ast.Field{
+		{Type: Star(bodyType)},
+		{Type: I("error")},
+	}
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 
 	return nil
 }
@@ -567,169 +395,72 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 	queryParams openapi3.Parameters, headers openapi3.Parameters, cookieParams openapi3.Parameters,
 	body *openapi3.RequestBodyRef,
 ) {
-	bodyList := []ast.Stmt{}
+	bodyBuilder := astbuilder.NewBodyBuilder()
 	elts := []ast.Expr{}
+
 	if len(pathParams) > 0 {
-		elts = append(elts, &ast.KeyValueExpr{
-			Key:   I("Path"),
-			Value: Star(I("pathParams")),
-		})
-		bodyList = append(bodyList, &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				I("pathParams"),
-				I("err"),
-			},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: Sel(I("h"), "parse"+baseName+"PathParams"),
-					Args: []ast.Expr{
-						I("r"),
-					},
-				},
-			},
-		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: Ne(I("err"), I("nil")),
-			Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-		})
+		elts = append(elts, &ast.KeyValueExpr{Key: I("Path"), Value: Star(I("pathParams"))})
+		bodyBuilder.
+			AddStmt(astbuilder.DefineCallWithErr("pathParams", Sel(I("h"), "parse"+baseName+"PathParams"), I("r"))).
+			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 	}
 	if len(queryParams) > 0 {
-		elts = append(elts, &ast.KeyValueExpr{
-			Key:   I("Query"),
-			Value: Star(I("queryParams")),
-		})
-		bodyList = append(bodyList, &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				I("queryParams"),
-				I("err"),
-			},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: Sel(I("h"), "parse"+baseName+"QueryParams"),
-					Args: []ast.Expr{
-						I("r"),
-					},
-				},
-			},
-		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: Ne(I("err"), I("nil")),
-			Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-		})
+		elts = append(elts, &ast.KeyValueExpr{Key: I("Query"), Value: Star(I("queryParams"))})
+		bodyBuilder.
+			AddStmt(astbuilder.DefineCallWithErr("queryParams", Sel(I("h"), "parse"+baseName+"QueryParams"), I("r"))).
+			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 	}
 	if len(headers) > 0 {
-		elts = append(elts, &ast.KeyValueExpr{
-			Key:   I("Headers"),
-			Value: Star(I("headers")),
-		})
-		bodyList = append(bodyList, &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				I("headers"),
-				I("err"),
-			},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: Sel(I("h"), "parse"+baseName+"Headers"),
-					Args: []ast.Expr{
-						I("r"),
-					},
-				},
-			},
-		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: Ne(I("err"), I("nil")),
-			Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-		})
+		elts = append(elts, &ast.KeyValueExpr{Key: I("Headers"), Value: Star(I("headers"))})
+		bodyBuilder.
+			AddStmt(astbuilder.DefineCallWithErr("headers", Sel(I("h"), "parse"+baseName+"Headers"), I("r"))).
+			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 	}
 	if len(cookieParams) > 0 {
-		elts = append(elts, &ast.KeyValueExpr{
-			Key:   I("Cookies"),
-			Value: Star(I("cookieParams")),
-		})
-		bodyList = append(bodyList, &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				I("cookieParams"),
-				I("err"),
-			},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: Sel(I("h"), "parse"+baseName+"Cookies"),
-					Args: []ast.Expr{
-						I("r"),
-					},
-				},
-			},
-		})
-		bodyList = append(bodyList, &ast.IfStmt{
-			Cond: Ne(I("err"), I("nil")),
-			Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-		})
+		elts = append(elts, &ast.KeyValueExpr{Key: I("Cookies"), Value: Star(I("cookieParams"))})
+		bodyBuilder.
+			AddStmt(astbuilder.DefineCallWithErr("cookieParams", Sel(I("h"), "parse"+baseName+"Cookies"), I("r"))).
+			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 	}
 	if body != nil && body.Value != nil {
 		content, ok := body.Value.Content[contentType]
 		if ok && content.Schema != nil {
 			if body.Value.Required {
-				elts = append(elts, &ast.KeyValueExpr{
-					Key:   I("Body"),
-					Value: Star(I("body")),
-				})
+				elts = append(elts, &ast.KeyValueExpr{Key: I("Body"), Value: Star(I("body"))})
 			} else {
-				elts = append(elts, &ast.KeyValueExpr{
-					Key:   I("Body"),
-					Value: I("body"),
-				})
+				elts = append(elts, &ast.KeyValueExpr{Key: I("Body"), Value: I("body")})
 			}
-			bodyList = append(bodyList, &ast.AssignStmt{
-				Lhs: []ast.Expr{
-					I("body"),
-					I("err"),
-				},
-				Tok: token.DEFINE,
-				Rhs: []ast.Expr{
-					&ast.CallExpr{
-						Fun: Sel(I("h"), "parse"+baseName+"RequestBody"),
-						Args: []ast.Expr{
-							I("r"),
-						},
-					},
-				},
-			})
-			bodyList = append(bodyList, &ast.IfStmt{
-				Cond: Ne(I("err"), I("nil")),
-				Body: &ast.BlockStmt{List: []ast.Stmt{Ret2(I("nil"), I("err"))}},
-			})
+			bodyBuilder.
+				AddStmt(astbuilder.DefineCallWithErr("body", Sel(I("h"), "parse"+baseName+"RequestBody"), I("r"))).
+				AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 		}
 	}
 
-	bodyList = append(bodyList,
-		Ret2(Amp(&ast.CompositeLit{
+	bodyBuilder.AddStmt(astbuilder.Return2(
+		Amp(&ast.CompositeLit{
 			Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Request"),
 			Elts: elts,
 		}),
-			I("nil"),
-		),
-	)
-
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func(
-		"parse"+baseName+"Request",
-		Field("h", Star(I("Handler")), ""),
-		[]*ast.Field{
-			Field("r", Star(Sel(I("http"), "Request")), ""),
-		},
-		[]*ast.Field{
-			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Request")), ""),
-			Field("", I("error"), ""),
-		},
-		bodyList,
+		I("nil"),
 	))
+
+	fn := astbuilder.NewFunctionBuilder().
+		WithName("parse" + baseName + "Request").
+		WithPointerReceiver("h", "Handler").
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Request").AsPointer(true))).
+		AddResult(astbuilder.ErrorField()).
+		WithBody(bodyBuilder).
+		Build()
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 }
 
 func (g *Generator) AddCreateResponseModel(baseName string, code string, response *openapi3.ResponseRef) error {
-	arglist := []*ast.Field{}
+	fnBuilder := astbuilder.NewFunctionBuilder().
+		WithName(baseName + code + "Response").
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response").AsPointer(true)))
+
 	constructorArgs := []ast.Expr{}
 
 	if len(response.Value.Content) > 0 {
@@ -754,56 +485,82 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 					g.AddHandlersImport(importPath)
 				}
 			}
-			arglist = append(arglist, &ast.Field{
+			// Add param manually since we have a dynamic type
+			fn := fnBuilder.Build()
+			fn.Type.Params.List = append(fn.Type.Params.List, &ast.Field{
 				Names: []*ast.Ident{I("body")},
 				Type:  astType,
 			})
-			constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
-				Key:   I("Body"),
-				Value: I("body"),
-			})
+			fnBuilder = astbuilder.NewFunctionBuilder().WithName(baseName + code + "Response")
+			fnBuilder.Build().Type = fn.Type
+			fnBuilder.Build().Recv = fn.Recv
+
+			constructorArgs = append(constructorArgs, &ast.KeyValueExpr{Key: I("Body"), Value: I("body")})
 		}
 	}
 
+	if len(response.Value.Headers) > 0 {
+		constructorArgs = append(constructorArgs, &ast.KeyValueExpr{Key: I("Headers"), Value: I("headers")})
+	}
+
+	bodyBuilder := astbuilder.NewBodyBuilder().
+		AddStmt(astbuilder.Return1(Amp(&ast.CompositeLit{
+			Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"),
+			Elts: []ast.Expr{
+				&ast.KeyValueExpr{
+					Key:   I("StatusCode"),
+					Value: &ast.BasicLit{Kind: token.INT, Value: code},
+				},
+				&ast.KeyValueExpr{
+					Key: I("Response" + code),
+					Value: Amp(&ast.CompositeLit{
+						Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code),
+						Elts: constructorArgs,
+					}),
+				},
+			},
+		})))
+
+	// Build manually since params have dynamic types
+	arglist := []*ast.Field{}
+	if len(response.Value.Content) > 0 {
+		json, ok := response.Value.Content["application/json"]
+		if ok && json.Schema != nil {
+			typeName := baseName + "Response" + code + "Body"
+			var astType ast.Expr
+			astType = Sel(I(g.GetCurrentModelsPackage()), typeName)
+			if json.Schema.Ref != "" {
+				var importPath string
+				typeName, importPath = g.ParseRefTypeName(json.Schema.Ref)
+				if refIsExternal(json.Schema.Ref) {
+					astType = I(typeName)
+				} else {
+					astType = Sel(I(g.GetCurrentModelsPackage()), typeName)
+				}
+				if importPath != "" {
+					g.AddHandlersImport(importPath)
+				}
+			}
+			arglist = append(arglist, &ast.Field{Names: []*ast.Ident{I("body")}, Type: astType})
+		}
+	}
 	if len(response.Value.Headers) > 0 {
 		arglist = append(arglist, &ast.Field{
 			Names: []*ast.Ident{I("headers")},
 			Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code+"Headers"),
 		})
-		constructorArgs = append(constructorArgs, &ast.KeyValueExpr{
-			Key:   I("Headers"),
-			Value: I("headers"),
-		})
 	}
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func(baseName+code+"Response",
-		nil,
-		arglist,
-		[]*ast.Field{
-			Field("", Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response")), ""),
+	fn := &ast.FuncDecl{
+		Name: I(baseName + code + "Response"),
+		Type: &ast.FuncType{
+			Params:  &ast.FieldList{List: arglist},
+			Results: &ast.FieldList{List: []*ast.Field{{Type: Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"))}}},
 		},
-		[]ast.Stmt{Ret1(
-			Amp(&ast.CompositeLit{
-				Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"),
-				Elts: []ast.Expr{
-					&ast.KeyValueExpr{
-						Key: I("StatusCode"),
-						Value: &ast.BasicLit{
-							Kind:  token.INT,
-							Value: code,
-						},
-					},
-					&ast.KeyValueExpr{
-						Key: I("Response" + code),
-						Value: Amp(&ast.CompositeLit{
-							Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code),
-							Elts: constructorArgs,
-						}),
-					},
-				},
-			}),
-		)},
-	))
+		Body: bodyBuilder.Build(),
+	}
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 
 	return nil
 }
@@ -814,58 +571,31 @@ func (g *Generator) AddContainsNullIfNeeded() {
 	}
 
 	g.HandlersFile.hasContainsNullMethod = true
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("containsNull",
-		nil,
-		[]*ast.Field{
-			Field("data", Sel(I("json"), "RawMessage"), ""),
-		},
-		[]*ast.Field{
-			Field("", I("bool"), ""),
-		},
-		[]ast.Stmt{
-			&ast.DeclStmt{
-				Decl: &ast.GenDecl{
-					Tok: token.VAR,
-					Specs: []ast.Spec{
-						&ast.ValueSpec{
-							Names: []*ast.Ident{I("temp")},
-							Type:  I("any"),
-						},
+
+	bodyBuilder := astbuilder.NewBodyBuilder().
+		AddStatement(&ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{I("temp")},
+						Type:  I("any"),
 					},
 				},
 			},
-			&ast.AssignStmt{
-				Lhs: []ast.Expr{I("err")},
-				Tok: token.DEFINE,
-				Rhs: []ast.Expr{
-					&ast.CallExpr{
-						Fun: Sel(I("json"), "Unmarshal"),
-						Args: []ast.Expr{
-							I("data"),
-							Amp(I("temp")),
-						},
-					},
-				},
-			},
-			&ast.IfStmt{
-				Cond: Ne(I("err"), I("nil")),
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{
-						Ret1(I("false")),
-					},
-				},
-			},
-			&ast.ReturnStmt{
-				Results: []ast.Expr{
-					&ast.BinaryExpr{
-						X:  I("temp"),
-						Op: token.EQL,
-						Y:  I("nil"),
-					},
-				},
-			},
-		},
-	))
+		}).
+		AddStmt(astbuilder.DefineCall("err", Sel(I("json"), "Unmarshal"), I("data"), Amp(I("temp")))).
+		AddStmt(astbuilder.If(Ne(I("err"), I("nil"))).WithBody(astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.Return1(I("false"))))).
+		AddStmt(astbuilder.Return1(&ast.BinaryExpr{X: I("temp"), Op: token.EQL, Y: I("nil")}))
+
+	fn := astbuilder.Function("containsNull").
+		AddParam(astbuilder.SelectorField("data", "json", "RawMessage")).
+		AddResult(astbuilder.BoolField("")).
+		WithBody(bodyBuilder).
+		Build()
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 	g.AddHandlersImport("encoding/json")
 }
 
@@ -913,54 +643,30 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	sort.Strings(requiredFields)
 	sort.Strings(nullableFields)
 
-	funcBody := make([]ast.Stmt, 0, len(objectFields))
+	bodyBuilder := astbuilder.NewBodyBuilder()
 
 	if len(requiredFields) > 0 {
 		requiredFieldsElts := make([]ast.Expr, 0, len(requiredFields))
 		for _, fieldName := range requiredFields {
-			requiredFieldsElts = append(requiredFieldsElts, &ast.KeyValueExpr{
-				Key:   Str(fieldName),
-				Value: I("true"),
-			})
+			requiredFieldsElts = append(requiredFieldsElts, &ast.KeyValueExpr{Key: Str(fieldName), Value: I("true")})
 		}
-		funcBody = append(funcBody, &ast.AssignStmt{
-			Lhs: []ast.Expr{I("requiredFields")},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CompositeLit{
-					Type: &ast.MapType{
-						Key:   I("string"),
-						Value: I("bool"),
-					},
-					Elts: requiredFieldsElts,
-				},
-			},
-		})
+		bodyBuilder.AddStmt(astbuilder.Define(I("requiredFields"), &ast.CompositeLit{
+			Type: &ast.MapType{Key: I("string"), Value: I("bool")},
+			Elts: requiredFieldsElts,
+		}))
 
 		nullableFieldsElts := make([]ast.Expr, 0, len(nullableFields))
 		for _, fieldName := range nullableFields {
-			nullableFieldsElts = append(nullableFieldsElts, &ast.KeyValueExpr{
-				Key:   Str(fieldName),
-				Value: I("true"),
-			})
+			nullableFieldsElts = append(nullableFieldsElts, &ast.KeyValueExpr{Key: Str(fieldName), Value: I("true")})
 		}
-		funcBody = append(funcBody, &ast.AssignStmt{
-			Lhs: []ast.Expr{I("nullableFields")},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CompositeLit{
-					Type: &ast.MapType{
-						Key:   I("string"),
-						Value: I("bool"),
-					},
-					Elts: nullableFieldsElts,
-				},
-			},
-		})
+		bodyBuilder.AddStmt(astbuilder.Define(I("nullableFields"), &ast.CompositeLit{
+			Type: &ast.MapType{Key: I("string"), Value: I("bool")},
+			Elts: nullableFieldsElts,
+		}))
 	}
 
 	if len(requiredFields) > 0 || len(objectFields) > 0 {
-		funcBody = append(funcBody, &ast.DeclStmt{
+		bodyBuilder.AddStatement(&ast.DeclStmt{
 			Decl: &ast.GenDecl{
 				Tok: token.VAR,
 				Specs: []ast.Spec{
@@ -971,130 +677,53 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 				},
 			},
 		})
-		funcBody = append(funcBody, &ast.AssignStmt{
-			Lhs: []ast.Expr{I("err")},
-			Tok: token.DEFINE,
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: Sel(I("json"), "Unmarshal"),
-					Args: []ast.Expr{
-						I("jsonData"),
-						Amp(I("obj")),
-					},
-				},
-			},
-		})
-		funcBody = append(funcBody, &ast.IfStmt{
-			Cond: Ne(I("err"), I("nil")),
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					Ret1(I("err")),
-				},
-			},
-		})
+		bodyBuilder.
+			AddStmt(astbuilder.DefineCall("err", Sel(I("json"), "Unmarshal"), I("jsonData"), Amp(I("obj")))).
+			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(I("err")))))
 	}
+
 	if len(requiredFields) > 0 || len(objectFields) > 0 {
-		funcBody = append(funcBody, &ast.DeclStmt{
+		bodyBuilder.AddStatement(&ast.DeclStmt{
 			Decl: &ast.GenDecl{
 				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("val")},
-						Type:  Sel(I("json"), "RawMessage"),
-					},
-				},
+				Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{I("val")}, Type: Sel(I("json"), "RawMessage")}},
 			},
 		})
-		funcBody = append(funcBody, &ast.DeclStmt{
+		bodyBuilder.AddStatement(&ast.DeclStmt{
 			Decl: &ast.GenDecl{
 				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("exists")},
-						Type:  I("bool"),
-					},
-				},
+				Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{I("exists")}, Type: I("bool")}},
 			},
 		})
 	}
+
 	if len(requiredFields) > 0 {
-		funcBody = append(funcBody, &ast.RangeStmt{
-			Key: I("field"),
-			Tok: token.DEFINE,
-			X:   I("requiredFields"),
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.AssignStmt{
-						Lhs: []ast.Expr{I("val"), I("exists")},
-						Tok: token.ASSIGN,
-						Rhs: []ast.Expr{
-							&ast.IndexExpr{
-								X:     I("obj"),
-								Index: I("field"),
-							},
-						},
-					},
-					&ast.IfStmt{
-						Cond: &ast.UnaryExpr{
-							Op: token.NOT,
-							X:  I("exists"),
-						},
-						Body: &ast.BlockStmt{
-							List: []ast.Stmt{
-								Ret1(&ast.CallExpr{
-									Fun: Sel(I("errors"), "New"),
-									Args: []ast.Expr{
-										&ast.BinaryExpr{
-											X: &ast.BinaryExpr{
-												X:  Str("field "),
-												Op: token.ADD,
-												Y:  I("field"),
-											},
-											Op: token.ADD,
-											Y:  Str(" is required"),
-										},
-									},
-								}),
-							},
-						},
-					},
-					&ast.IfStmt{
-						Cond: &ast.BinaryExpr{
-							X: &ast.UnaryExpr{
-								Op: token.NOT,
-								X: &ast.IndexExpr{
-									X:     I("nullableFields"),
-									Index: I("field"),
-								},
-							},
-							Op: token.LAND,
-							Y: &ast.CallExpr{
-								Fun:  I("containsNull"),
-								Args: []ast.Expr{I("val")},
-							},
-						},
-						Body: &ast.BlockStmt{
-							List: []ast.Stmt{
-								Ret1(&ast.CallExpr{
-									Fun: Sel(I("errors"), "New"),
-									Args: []ast.Expr{
-										&ast.BinaryExpr{
-											X: &ast.BinaryExpr{
-												X:  Str("field "),
-												Op: token.ADD,
-												Y:  I("field"),
-											},
-											Op: token.ADD,
-											Y:  Str(" cannot be null"),
-										},
-									},
-								}),
-							},
-						},
-					},
-				},
-			},
-		})
+		rangeBody := astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(&ast.IndexExpr{X: I("obj"), Index: I("field")})).
+			AddStmt(astbuilder.If(&ast.UnaryExpr{Op: token.NOT, X: I("exists")}).WithBody(astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Return1(&ast.CallExpr{
+					Fun: Sel(I("errors"), "New"),
+					Args: []ast.Expr{&ast.BinaryExpr{
+						X:  &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")},
+						Op: token.ADD,
+						Y:  Str(" is required"),
+					}},
+				})))).
+			AddStmt(astbuilder.If(&ast.BinaryExpr{
+				X:  &ast.UnaryExpr{Op: token.NOT, X: &ast.IndexExpr{X: I("nullableFields"), Index: I("field")}},
+				Op: token.LAND,
+				Y:  &ast.CallExpr{Fun: I("containsNull"), Args: []ast.Expr{I("val")}},
+			}).WithBody(astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Return1(&ast.CallExpr{
+					Fun: Sel(I("errors"), "New"),
+					Args: []ast.Expr{&ast.BinaryExpr{
+						X:  &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")},
+						Op: token.ADD,
+						Y:  Str(" cannot be null"),
+					}},
+				}))))
+
+		bodyBuilder.AddStmt(astbuilder.RangeIndex("field", I("requiredFields")).WithBody(rangeBody))
 		g.AddContainsNullIfNeeded()
 		g.AddHandlersImport("github.com/go-faster/errors")
 	}
@@ -1107,81 +736,40 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 
 	for _, fieldName := range objectFieldsNames {
 		fieldValidationFunc := objectFields[fieldName]
-		funcBody = append(funcBody, &ast.AssignStmt{
-			Lhs: []ast.Expr{I("val"), I("exists")},
-			Tok: token.ASSIGN,
-			Rhs: []ast.Expr{
-				&ast.IndexExpr{
-					X:     I("obj"),
-					Index: Str(fieldName),
-				},
-			},
-		})
-		funcBody = append(funcBody, &ast.IfStmt{
-			Cond: &ast.BinaryExpr{
-				X:  I("exists"),
-				Op: token.LAND,
-				Y: &ast.UnaryExpr{
-					Op: token.NOT,
-					X: &ast.CallExpr{
-						Fun:  I("containsNull"),
-						Args: []ast.Expr{I("val")},
-					},
-				},
-			},
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.AssignStmt{
-						Lhs: []ast.Expr{I("err")},
-						Tok: token.ASSIGN,
-						Rhs: []ast.Expr{
-							&ast.CallExpr{
-								Fun:  fieldValidationFunc,
-								Args: []ast.Expr{I("val")},
-							},
-						},
-					},
-					&ast.IfStmt{
-						Cond: Ne(I("err"), I("nil")),
-						Body: &ast.BlockStmt{
-							List: []ast.Stmt{
-								Ret1(&ast.CallExpr{
-									Fun: Sel(I("errors"), "Wrap"),
-									Args: []ast.Expr{
-										I("err"),
-										Str("field " + fieldName + " is not valid"),
-									},
-								}),
-							},
-						},
-					},
-				},
-			},
-		})
+		bodyBuilder.AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(&ast.IndexExpr{X: I("obj"), Index: Str(fieldName)}))
+
+		ifBody := astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.Assign(I("err"), &ast.CallExpr{Fun: fieldValidationFunc, Args: []ast.Expr{I("val")}})).
+			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Return1(&ast.CallExpr{
+					Fun:  Sel(I("errors"), "Wrap"),
+					Args: []ast.Expr{I("err"), Str("field " + fieldName + " is not valid")},
+				}))))
+
+		bodyBuilder.AddStmt(astbuilder.If(&ast.BinaryExpr{
+			X:  I("exists"),
+			Op: token.LAND,
+			Y:  &ast.UnaryExpr{Op: token.NOT, X: &ast.CallExpr{Fun: I("containsNull"), Args: []ast.Expr{I("val")}}},
+		}).WithBody(ifBody))
 
 		g.AddContainsNullIfNeeded()
 		g.AddHandlersImport("github.com/go-faster/errors")
 	}
 
-	funcBody = append(funcBody, &ast.ReturnStmt{
-		Results: []ast.Expr{I("nil")},
-	})
+	bodyBuilder.AddStmt(astbuilder.Return1(I("nil")))
 
-	fieldName := "jsonData"
+	paramName := "jsonData"
 	if len(requiredFields) == 0 && len(objectFields) == 0 {
-		fieldName = "_"
+		paramName = "_"
 	}
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("Validate"+modelName+"JSON",
-		nil,
-		[]*ast.Field{
-			Field(fieldName, Sel(I("json"), "RawMessage"), ""),
-		},
-		[]*ast.Field{
-			Field("", I("error"), ""),
-		},
-		funcBody,
-	))
+	fn := astbuilder.Function("Validate" + modelName + "JSON").
+		AddParam(astbuilder.SelectorField(paramName, "json", "RawMessage")).
+		AddResult(astbuilder.ErrorField()).
+		WithBody(bodyBuilder).
+		Build()
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 	return nil
 }
 
@@ -1193,96 +781,45 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 		return errors.Wrap(err, op)
 	}
 	validateFunc := g.GetValidateFuncStmt(elemType, schema.Value.Items.Ref)
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, Func("Validate"+modelName+"JSON",
-		nil,
-		[]*ast.Field{
-			Field("jsonData", Sel(I("json"), "RawMessage"), ""),
-		},
-		[]*ast.Field{
-			Field("", I("error"), ""),
-		},
-		[]ast.Stmt{
-			&ast.DeclStmt{
-				Decl: &ast.GenDecl{
-					Tok: token.VAR,
-					Specs: []ast.Spec{
-						&ast.ValueSpec{
-							Names: []*ast.Ident{I("arr")},
-							Type:  &ast.ArrayType{Elt: Sel(I("json"), "RawMessage")},
-						},
+
+	rangeIfBody := astbuilder.NewBodyBuilder().
+		AddStmt(astbuilder.Assign(I("err"), &ast.CallExpr{Fun: validateFunc, Args: []ast.Expr{I("obj")}})).
+		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.Return1(&ast.CallExpr{
+				Fun:  Sel(I("errors"), "Wrapf"),
+				Args: []ast.Expr{I("err"), Str("error validating object at index %d"), I("index")},
+			}))))
+
+	rangeBody := astbuilder.NewBodyBuilder().
+		AddStmt(astbuilder.If(&ast.UnaryExpr{
+			Op: token.NOT,
+			X:  &ast.CallExpr{Fun: I("containsNull"), Args: []ast.Expr{I("obj")}},
+		}).WithBody(rangeIfBody))
+
+	bodyBuilder := astbuilder.NewBodyBuilder().
+		AddStatement(&ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{I("arr")},
+						Type:  &ast.ArrayType{Elt: Sel(I("json"), "RawMessage")},
 					},
 				},
 			},
-			&ast.AssignStmt{
-				Lhs: []ast.Expr{I("err")},
-				Tok: token.DEFINE,
-				Rhs: []ast.Expr{
-					&ast.CallExpr{
-						Fun: Sel(I("json"), "Unmarshal"),
-						Args: []ast.Expr{
-							I("jsonData"),
-							Amp(I("arr")),
-						},
-					},
-				},
-			},
-			&ast.IfStmt{
-				Cond: Ne(I("err"), I("nil")),
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{Ret1(I("err"))},
-				},
-			},
-			&ast.RangeStmt{
-				Key:   I("index"),
-				Value: I("obj"),
-				Tok:   token.DEFINE,
-				X:     I("arr"),
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{
-						&ast.IfStmt{
-							Cond: &ast.UnaryExpr{
-								Op: token.NOT,
-								X: &ast.CallExpr{
-									Fun:  I("containsNull"),
-									Args: []ast.Expr{I("obj")},
-								},
-							},
-							Body: &ast.BlockStmt{
-								List: []ast.Stmt{
-									&ast.AssignStmt{
-										Lhs: []ast.Expr{I("err")},
-										Tok: token.ASSIGN,
-										Rhs: []ast.Expr{
-											&ast.CallExpr{
-												Fun:  validateFunc,
-												Args: []ast.Expr{I("obj")},
-											},
-										},
-									},
-									&ast.IfStmt{
-										Cond: Ne(I("err"), I("nil")),
-										Body: &ast.BlockStmt{
-											List: []ast.Stmt{Ret1(&ast.CallExpr{
-												Fun: Sel(I("errors"), "Wrapf"),
-												Args: []ast.Expr{
-													I("err"),
-													Str("error validating object at index %d"),
-													I("index"),
-												},
-											})},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			&ast.ReturnStmt{
-				Results: []ast.Expr{I("nil")},
-			},
-		},
-	))
+		}).
+		AddStmt(astbuilder.DefineCall("err", Sel(I("json"), "Unmarshal"), I("jsonData"), Amp(I("arr")))).
+		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(I("err"))))).
+		AddStmt(astbuilder.Range("index", "obj", I("arr")).WithBody(rangeBody)).
+		AddStmt(astbuilder.Return1(I("nil")))
+
+	fn := astbuilder.Function("Validate" + modelName + "JSON").
+		AddParam(astbuilder.SelectorField("jsonData", "json", "RawMessage")).
+		AddResult(astbuilder.ErrorField()).
+		WithBody(bodyBuilder).
+		Build()
+
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 	g.AddHandlersImport("github.com/go-faster/errors")
 
 	return nil
