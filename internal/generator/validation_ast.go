@@ -288,7 +288,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 		rangeBody := astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(&ast.IndexExpr{X: I("obj"), Index: I("field")})).
 			AddStmt(
-				astbuilder.If(&ast.UnaryExpr{Op: token.NOT, X: I("exists")}).WithBody(astbuilder.NewBodyBuilder().
+				astbuilder.If(astbuilder.Not(I("exists"))).WithBody(astbuilder.NewBodyBuilder().
 					AddStmt(
 						astbuilder.Return1(
 							astbuilder.Call(
@@ -375,10 +375,7 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 			AddStmt(astbuilder.Return1(astbuilder.Call(Sel(I("errors"), "Wrapf"), I("err"), Str("error validating object at index %d"), I("index"))))))
 
 	rangeBody := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.If(&ast.UnaryExpr{
-			Op: token.NOT,
-			X:  astbuilder.Call(I("containsNull"), I("obj")),
-		}).WithBody(rangeIfBody))
+		AddStmt(astbuilder.If(astbuilder.Not(astbuilder.Call(I("containsNull"), I("obj")))).WithBody(rangeIfBody))
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
 		AddStatement(&ast.DeclStmt{
