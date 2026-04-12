@@ -29,17 +29,13 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
-				for _, stmt := range g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
-					bodyBuilder.AddStatement(stmt)
-				}
+				g.AssignStringField(bodyBuilder, "queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)
 			default:
 				return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
 			}
 		} else {
 			ifBody := astbuilder.NewBodyBuilder()
-			for _, stmt := range g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
-				ifBody.AddStatement(stmt)
-			}
+			g.AssignStringField(ifBody, "queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)
 			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Ne(astbuilder.I(varName), astbuilder.Str(""))).WithBody(ifBody))
 		}
 	}
@@ -63,10 +59,10 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 	return nil
 }
 
-func (g *Generator) AssignStringField(paramsName string, varName string, fieldName string, param *openapi3.SchemaRef, required bool) []ast.Stmt {
+func (g *Generator) AssignStringField(bodyBuilder *astbuilder.BodyBuilder, paramsName string, varName string, fieldName string, param *openapi3.SchemaRef, required bool) {
 	if param.Value.Format == "date-time" {
 		g.AddHandlersImport("time")
-		bodyBuilder := astbuilder.NewBodyBuilder().
+		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("parsed"+fieldName, astbuilder.Sel(astbuilder.I("time"), "Parse"), astbuilder.Sel(astbuilder.I("time"), "RFC3339"), astbuilder.I(varName))).
 			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.Return2(astbuilder.I("nil"), astbuilder.Call(astbuilder.Sel(astbuilder.I("errors"), "Wrap"), astbuilder.I("err"), astbuilder.Str(fieldName+" is not a valid date-time format"))))))
@@ -78,8 +74,7 @@ func (g *Generator) AssignStringField(paramsName string, varName string, fieldNa
 			rhs = astbuilder.Amp(astbuilder.I("parsed" + fieldName))
 		}
 		bodyBuilder.AddStmt(astbuilder.Assign(astbuilder.Sel(astbuilder.I(paramsName), fieldName), rhs))
-
-		return bodyBuilder.Build().List
+		return
 	}
 
 	var rhs ast.Expr
@@ -88,8 +83,7 @@ func (g *Generator) AssignStringField(paramsName string, varName string, fieldNa
 	} else {
 		rhs = astbuilder.Amp(astbuilder.I(varName))
 	}
-
-	return []ast.Stmt{astbuilder.Assign(astbuilder.Sel(astbuilder.I(paramsName), fieldName), rhs).Build()}
+	bodyBuilder.AddStmt(astbuilder.Assign(astbuilder.Sel(astbuilder.I(paramsName), fieldName), rhs))
 }
 
 func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Parameters) error {
@@ -117,17 +111,13 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
-				for _, stmt := range g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
-					bodyBuilder.AddStatement(stmt)
-				}
+				g.AssignStringField(bodyBuilder, "headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)
 			default:
 				return errors.New("unsupported path parameter type: " + fmt.Sprint(param.Value.Schema.Value.Type))
 			}
 		} else {
 			ifBody := astbuilder.NewBodyBuilder()
-			for _, stmt := range g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
-				ifBody.AddStatement(stmt)
-			}
+			g.AssignStringField(ifBody, "headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)
 			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Ne(astbuilder.I(varName), astbuilder.Str(""))).WithBody(ifBody))
 		}
 	}
@@ -178,18 +168,14 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
-				for _, stmt := range g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
-					bodyBuilder.AddStatement(stmt)
-				}
+				g.AssignStringField(bodyBuilder, "cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)
 			default:
 				return errors.New("unsupported path parameter type: " + fmt.Sprint(param.Value.Schema.Value.Type))
 			}
 		} else {
 			ifBody := astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.Define(astbuilder.I(varName+"Value"), astbuilder.Sel(astbuilder.I(varName), "Value")))
-			for _, stmt := range g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
-				ifBody.AddStatement(stmt)
-			}
+			g.AssignStringField(ifBody, "cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required)
 			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(astbuilder.I("err"), astbuilder.I("nil"))).WithBody(ifBody))
 		}
 	}
