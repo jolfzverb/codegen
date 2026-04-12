@@ -130,17 +130,17 @@ func (g *Generator) GetValidateFuncStmt(typeName string, ref string) ast.Expr {
 	validateFuncName := "Validate" + typeName + "JSON"
 
 	if ref == "" || !refIsExternal(ref) {
-		return astbuilder.I(validateFuncName)
+		return astbuilder.I(validateFuncName).Build()
 	}
 
 	filename := parseFilenameFromRef(ref)
 	if filename == "" {
-		return astbuilder.I(validateFuncName)
+		return astbuilder.I(validateFuncName).Build()
 	}
 
 	parts := strings.Split(ref, "/")
 	if len(parts) == 0 {
-		return astbuilder.I(validateFuncName)
+		return astbuilder.I(validateFuncName).Build()
 	}
 
 	validateFuncName = "Validate" + parts[len(parts)-1] + "JSON"
@@ -148,7 +148,7 @@ func (g *Generator) GetValidateFuncStmt(typeName string, ref string) ast.Expr {
 	g.YAMLFilesToProcess = append(g.YAMLFilesToProcess, g.GetYAMLFilePath(filename))
 	g.AddHandlersImport(g.GetHandlersImportForFile(filename))
 	modelName := g.GetModelName(filename)
-	return astbuilder.Sel(astbuilder.I(modelName), validateFuncName)
+	return astbuilder.Sel(astbuilder.I(modelName).Build(), validateFuncName)
 }
 
 func (g *Generator) AddContainsNullIfNeeded() {
@@ -159,11 +159,11 @@ func (g *Generator) AddContainsNullIfNeeded() {
 	g.HandlersFile.hasContainsNullMethod = true
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.DeclareVar("temp", astbuilder.I("any"))).
-		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("data"), astbuilder.Amp(astbuilder.Ident("temp")).Build())).
-		AddStmt(astbuilder.If(astbuilder.Ne(astbuilder.I("err"), astbuilder.I("nil"))).WithBody(astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.Return1(astbuilder.I("false"))))).
-		AddStmt(astbuilder.Return1(astbuilder.Eq(astbuilder.I("temp"), astbuilder.I("nil"))))
+		AddStmt(astbuilder.DeclareVar("temp", astbuilder.I("any").Build())).
+		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json").Build(), "Unmarshal"), astbuilder.I("data").Build(), astbuilder.Amp(astbuilder.Ident("temp")).Build())).
+		AddStmt(astbuilder.If(astbuilder.Ne(astbuilder.I("err").Build(), astbuilder.I("nil").Build())).WithBody(astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.Return1(astbuilder.I("false").Build())))).
+		AddStmt(astbuilder.Return1(astbuilder.Eq(astbuilder.I("temp").Build(), astbuilder.I("nil").Build())))
 
 	fn := astbuilder.Function("containsNull").
 		AddParam(astbuilder.SelectorField("data", "json", "RawMessage")).
@@ -223,17 +223,17 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	if len(requiredFields) > 0 {
 		requiredFieldsElts := make([]ast.Expr, 0, len(requiredFields))
 		for _, fieldName := range requiredFields {
-			requiredFieldsElts = append(requiredFieldsElts, astbuilder.KeyValue(astbuilder.Str(fieldName), astbuilder.I("true")))
+			requiredFieldsElts = append(requiredFieldsElts, astbuilder.KeyValue(astbuilder.Str(fieldName), astbuilder.I("true").Build()))
 		}
-		bodyBuilder.AddStmt(astbuilder.Define(astbuilder.I("requiredFields"),
+		bodyBuilder.AddStmt(astbuilder.Define(astbuilder.I("requiredFields").Build(),
 			astbuilder.CompositeLit(astbuilder.MapOf(astbuilder.String(), astbuilder.Bool()), requiredFieldsElts...).Build(),
 		))
 
 		nullableFieldsElts := make([]ast.Expr, 0, len(nullableFields))
 		for _, fieldName := range nullableFields {
-			nullableFieldsElts = append(nullableFieldsElts, astbuilder.KeyValue(astbuilder.Str(fieldName), astbuilder.I("true")))
+			nullableFieldsElts = append(nullableFieldsElts, astbuilder.KeyValue(astbuilder.Str(fieldName), astbuilder.I("true").Build()))
 		}
-		bodyBuilder.AddStmt(astbuilder.Define(astbuilder.I("nullableFields"),
+		bodyBuilder.AddStmt(astbuilder.Define(astbuilder.I("nullableFields").Build(),
 			astbuilder.CompositeLit(astbuilder.MapOf(astbuilder.String(), astbuilder.Bool()), nullableFieldsElts...).Build(),
 		))
 	}
@@ -241,8 +241,8 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	if len(requiredFields) > 0 || len(objectFields) > 0 {
 		bodyBuilder.AddStmt(astbuilder.DeclareVarWithType("obj", astbuilder.MapOf(astbuilder.String(), astbuilder.Selector("json", "RawMessage"))))
 		bodyBuilder.
-			AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("jsonData"), astbuilder.Amp(astbuilder.Ident("obj")).Build())).
-			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(astbuilder.I("err")))))
+			AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json").Build(), "Unmarshal"), astbuilder.I("jsonData").Build(), astbuilder.Amp(astbuilder.Ident("obj")).Build())).
+			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(astbuilder.I("err").Build()))))
 	}
 
 	if len(requiredFields) > 0 || len(objectFields) > 0 {
@@ -252,35 +252,35 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 
 	if len(requiredFields) > 0 {
 		rangeBody := astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.NewAssignBuilder().Lhs(astbuilder.I("val"), astbuilder.I("exists")).Rhs(astbuilder.Index(astbuilder.I("obj"), astbuilder.I("field")))).
+			AddStmt(astbuilder.NewAssignBuilder().Lhs(astbuilder.I("val").Build(), astbuilder.I("exists").Build()).Rhs(astbuilder.Index(astbuilder.I("obj").Build(), astbuilder.I("field").Build()))).
 			AddStmt(
-				astbuilder.If(astbuilder.Not(astbuilder.I("exists"))).WithBody(astbuilder.NewBodyBuilder().
+				astbuilder.If(astbuilder.Not(astbuilder.I("exists").Build())).WithBody(astbuilder.NewBodyBuilder().
 					AddStmt(
 						astbuilder.Return1(
 							astbuilder.Call(
-								astbuilder.Sel(astbuilder.I("errors"), "New"),
-								astbuilder.Add(astbuilder.Add(astbuilder.Str("field "), astbuilder.I("field")), astbuilder.Str(" is required")),
+								astbuilder.Sel(astbuilder.I("errors").Build(), "New"),
+								astbuilder.Add(astbuilder.Add(astbuilder.Str("field "), astbuilder.I("field").Build()), astbuilder.Str(" is required")),
 							),
 						),
 					),
 				),
 			).
 			AddStmt(astbuilder.If(astbuilder.And(
-				astbuilder.Not(astbuilder.Index(astbuilder.I("nullableFields"), astbuilder.I("field"))),
-				astbuilder.Call(astbuilder.I("containsNull"), astbuilder.I("val")),
+				astbuilder.Not(astbuilder.Index(astbuilder.I("nullableFields").Build(), astbuilder.I("field").Build())),
+				astbuilder.Call(astbuilder.I("containsNull").Build(), astbuilder.I("val").Build()),
 			)).WithBody(
 				astbuilder.NewBodyBuilder().AddStmt(
 					astbuilder.Return1(
 						astbuilder.Call(
-							astbuilder.Sel(astbuilder.I("errors"), "New"),
-							astbuilder.Add(astbuilder.Add(astbuilder.Str("field "), astbuilder.I("field")), astbuilder.Str(" cannot be null")),
+							astbuilder.Sel(astbuilder.I("errors").Build(), "New"),
+							astbuilder.Add(astbuilder.Add(astbuilder.Str("field "), astbuilder.I("field").Build()), astbuilder.Str(" cannot be null")),
 						),
 					),
 				),
 			),
 			)
 
-		bodyBuilder.AddStmt(astbuilder.RangeIndex("field", astbuilder.I("requiredFields")).WithBody(rangeBody))
+		bodyBuilder.AddStmt(astbuilder.RangeIndex("field", astbuilder.I("requiredFields").Build()).WithBody(rangeBody))
 		g.AddContainsNullIfNeeded()
 		g.AddHandlersImport("github.com/go-faster/errors")
 	}
@@ -293,23 +293,23 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 
 	for _, fieldName := range objectFieldsNames {
 		fieldValidationFunc := objectFields[fieldName]
-		bodyBuilder.AddStmt(astbuilder.NewAssignBuilder().Lhs(astbuilder.I("val"), astbuilder.I("exists")).Rhs(astbuilder.Index(astbuilder.I("obj"), astbuilder.Str(fieldName))))
+		bodyBuilder.AddStmt(astbuilder.NewAssignBuilder().Lhs(astbuilder.I("val").Build(), astbuilder.I("exists").Build()).Rhs(astbuilder.Index(astbuilder.I("obj").Build(), astbuilder.Str(fieldName))))
 
 		ifBody := astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(fieldValidationFunc, astbuilder.I("val")))).
+			AddStmt(astbuilder.Assign(astbuilder.I("err").Build(), astbuilder.Call(fieldValidationFunc, astbuilder.I("val").Build()))).
 			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return1(astbuilder.Call(astbuilder.Sel(astbuilder.I("errors"), "Wrap"), astbuilder.I("err"), astbuilder.Str("field "+fieldName+" is not valid"))))))
+				AddStmt(astbuilder.Return1(astbuilder.Call(astbuilder.Sel(astbuilder.I("errors").Build(), "Wrap"), astbuilder.I("err").Build(), astbuilder.Str("field "+fieldName+" is not valid"))))))
 
 		bodyBuilder.AddStmt(astbuilder.If(astbuilder.And(
-			astbuilder.I("exists"),
-			astbuilder.Not(astbuilder.Call(astbuilder.I("containsNull"), astbuilder.I("val"))),
+			astbuilder.I("exists").Build(),
+			astbuilder.Not(astbuilder.Call(astbuilder.I("containsNull").Build(), astbuilder.I("val").Build())),
 		)).WithBody(ifBody))
 
 		g.AddContainsNullIfNeeded()
 		g.AddHandlersImport("github.com/go-faster/errors")
 	}
 
-	bodyBuilder.AddStmt(astbuilder.Return1(astbuilder.I("nil")))
+	bodyBuilder.AddStmt(astbuilder.Return1(astbuilder.I("nil").Build()))
 
 	paramName := "jsonData"
 	if len(requiredFields) == 0 && len(objectFields) == 0 {
@@ -335,19 +335,19 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 	validateFunc := g.GetValidateFuncStmt(elemType, schema.Value.Items.Ref)
 
 	rangeIfBody := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(validateFunc, astbuilder.I("obj")))).
+		AddStmt(astbuilder.Assign(astbuilder.I("err").Build(), astbuilder.Call(validateFunc, astbuilder.I("obj").Build()))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.Return1(astbuilder.Call(astbuilder.Sel(astbuilder.I("errors"), "Wrapf"), astbuilder.I("err"), astbuilder.Str("error validating object at index %d"), astbuilder.I("index"))))))
+			AddStmt(astbuilder.Return1(astbuilder.Call(astbuilder.Sel(astbuilder.I("errors").Build(), "Wrapf"), astbuilder.I("err").Build(), astbuilder.Str("error validating object at index %d"), astbuilder.I("index").Build())))))
 
 	rangeBody := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.If(astbuilder.Not(astbuilder.Call(astbuilder.I("containsNull"), astbuilder.I("obj")))).WithBody(rangeIfBody))
+		AddStmt(astbuilder.If(astbuilder.Not(astbuilder.Call(astbuilder.I("containsNull").Build(), astbuilder.I("obj").Build()))).WithBody(rangeIfBody))
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.DeclareVarWithType("arr", astbuilder.SelectorSlice("json", "RawMessage"))).
-		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("jsonData"), astbuilder.Amp(astbuilder.Ident("arr")).Build())).
-		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(astbuilder.I("err"))))).
-		AddStmt(astbuilder.Range("index", "obj", astbuilder.I("arr")).WithBody(rangeBody)).
-		AddStmt(astbuilder.Return1(astbuilder.I("nil")))
+		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json").Build(), "Unmarshal"), astbuilder.I("jsonData").Build(), astbuilder.Amp(astbuilder.Ident("arr")).Build())).
+		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(astbuilder.I("err").Build())))).
+		AddStmt(astbuilder.Range("index", "obj", astbuilder.I("arr").Build()).WithBody(rangeBody)).
+		AddStmt(astbuilder.Return1(astbuilder.I("nil").Build()))
 
 	fn := astbuilder.Function("Validate" + modelName + "JSON").
 		AddParam(astbuilder.SelectorField("jsonData", "json", "RawMessage")).

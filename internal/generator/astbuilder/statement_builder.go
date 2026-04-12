@@ -554,8 +554,8 @@ func IntLit(value string) *ast.BasicLit {
 }
 
 // I creates an identifier expression
-func I(name string) *ast.Ident {
-	return ast.NewIdent(name)
+func I(name string) *SimpleTypeBuilder {
+	return Ident(name)
 }
 
 // Str creates a string literal expression
@@ -890,7 +890,7 @@ func NewCompositeLitBuilder(typeExpr TypeExpressionBuilder) *CompositeLitBuilder
 
 // AddKeyValue adds a key-value pair to the composite literal.
 func (b *CompositeLitBuilder) AddKeyValue(key string, value ast.Expr) *CompositeLitBuilder {
-	b.elts = append(b.elts, KeyValue(I(key), value))
+	b.elts = append(b.elts, KeyValue(I(key).Build(), value))
 	return b
 }
 

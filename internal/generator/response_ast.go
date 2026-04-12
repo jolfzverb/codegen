@@ -25,34 +25,34 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 		if json.Schema != nil {
 			typeName := baseName + "Response" + code + "Body"
 			var astType ast.Expr
-			astType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), typeName)
+			astType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()).Build(), typeName)
 			if json.Schema.Ref != "" {
 				var importPath string
 				typeName, importPath = g.ParseRefTypeName(json.Schema.Ref)
 				if refIsExternal(json.Schema.Ref) {
-					astType = astbuilder.I(typeName)
+					astType = astbuilder.I(typeName).Build()
 				} else {
-					astType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), typeName)
+					astType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()).Build(), typeName)
 				}
 				if importPath != "" {
 					g.AddHandlersImport(importPath)
 				}
 			}
 			fnBuilder.AddParamExpr("body", astType)
-			constructorArgs = append(constructorArgs, astbuilder.KeyValue(astbuilder.I("Body"), astbuilder.I("body")))
+			constructorArgs = append(constructorArgs, astbuilder.KeyValue(astbuilder.I("Body").Build(), astbuilder.I("body").Build()))
 		}
 	}
 
 	if len(response.Value.Headers) > 0 {
-		fnBuilder.AddParamExpr("headers", astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), baseName+"Response"+code+"Headers"))
-		constructorArgs = append(constructorArgs, astbuilder.KeyValue(astbuilder.I("Headers"), astbuilder.I("headers")))
+		fnBuilder.AddParamExpr("headers", astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()).Build(), baseName+"Response"+code+"Headers"))
+		constructorArgs = append(constructorArgs, astbuilder.KeyValue(astbuilder.I("Headers").Build(), astbuilder.I("headers").Build()))
 	}
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.Return1(astbuilder.Amp(astbuilder.CompositeLit(
 			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"),
-			astbuilder.KeyValue(astbuilder.I("StatusCode"), astbuilder.IntLit(code)),
-			astbuilder.KeyValue(astbuilder.I("Response"+code), astbuilder.Amp(astbuilder.CompositeLit(
+			astbuilder.KeyValue(astbuilder.I("StatusCode").Build(), astbuilder.IntLit(code)),
+			astbuilder.KeyValue(astbuilder.I("Response"+code).Build(), astbuilder.Amp(astbuilder.CompositeLit(
 				astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code),
 				constructorArgs...,
 			)).Build()),
