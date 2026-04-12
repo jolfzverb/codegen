@@ -174,7 +174,7 @@ func (g *Generator) AddContainsNullIfNeeded() {
 		AddStmt(astbuilder.DefineCall("err", Sel(I("json"), "Unmarshal"), I("data"), Amp(I("temp")))).
 		AddStmt(astbuilder.If(Ne(I("err"), I("nil"))).WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.Return1(I("false"))))).
-		AddStmt(astbuilder.Return1(&ast.BinaryExpr{X: I("temp"), Op: token.EQL, Y: I("nil")}))
+		AddStmt(astbuilder.Return1(Eq(I("temp"), I("nil"))))
 
 	fn := astbuilder.Function("containsNull").
 		AddParam(astbuilder.SelectorField("data", "json", "RawMessage")).
@@ -287,22 +287,32 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	if len(requiredFields) > 0 {
 		rangeBody := astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(&ast.IndexExpr{X: I("obj"), Index: I("field")})).
-			AddStmt(astbuilder.If(&ast.UnaryExpr{Op: token.NOT, X: I("exists")}).WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return1(astbuilder.Call(Sel(I("errors"), "New"), &ast.BinaryExpr{
-					X:  &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")},
-					Op: token.ADD,
-					Y:  Str(" is required"),
-				}))))). 
-			AddStmt(astbuilder.If(&ast.BinaryExpr{
-				X:  &ast.UnaryExpr{Op: token.NOT, X: &ast.IndexExpr{X: I("nullableFields"), Index: I("field")}},
-				Op: token.LAND,
-				Y:  astbuilder.Call(I("containsNull"), I("val")),
-			}).WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return1(astbuilder.Call(Sel(I("errors"), "New"), &ast.BinaryExpr{
-					X:  &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")},
-					Op: token.ADD,
-					Y:  Str(" cannot be null"),
-				})))))
+			AddStmt(
+				astbuilder.If(&ast.UnaryExpr{Op: token.NOT, X: I("exists")}).WithBody(astbuilder.NewBodyBuilder().
+					AddStmt(
+						astbuilder.Return1(
+							astbuilder.Call(
+								Sel(I("errors"), "New"),
+								astbuilder.Add(astbuilder.Add(Str("field "), I("field")), Str(" is required")),
+							),
+						),
+					),
+				),
+			).
+			AddStmt(astbuilder.If(astbuilder.And(
+				astbuilder.Not(&ast.IndexExpr{X: I("nullableFields"), Index: I("field")}),
+				astbuilder.Call(I("containsNull"), I("val")),
+			)).WithBody(
+				astbuilder.NewBodyBuilder().AddStmt(
+					astbuilder.Return1(
+						astbuilder.Call(
+							Sel(I("errors"), "New"),
+							astbuilder.Add(astbuilder.Add(Str("field "), I("field")), Str(" cannot be null")),
+						),
+					),
+				),
+			),
+			)
 
 		bodyBuilder.AddStmt(astbuilder.RangeIndex("field", I("requiredFields")).WithBody(rangeBody))
 		g.AddContainsNullIfNeeded()
@@ -324,11 +334,10 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.Return1(astbuilder.Call(Sel(I("errors"), "Wrap"), I("err"), Str("field "+fieldName+" is not valid"))))))
 
-		bodyBuilder.AddStmt(astbuilder.If(&ast.BinaryExpr{
-			X:  I("exists"),
-			Op: token.LAND,
-			Y:  &ast.UnaryExpr{Op: token.NOT, X: astbuilder.Call(I("containsNull"), I("val"))},
-		}).WithBody(ifBody))
+		bodyBuilder.AddStmt(astbuilder.If(astbuilder.And(
+			I("exists"),
+			astbuilder.Not(astbuilder.Call(I("containsNull"), I("val"))),
+		)).WithBody(ifBody))
 
 		g.AddContainsNullIfNeeded()
 		g.AddHandlersImport("github.com/go-faster/errors")

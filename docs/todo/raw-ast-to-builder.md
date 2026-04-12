@@ -5,35 +5,17 @@ Each group describes what new builder capability is needed and lists every occur
 
 ---
 
-## 1. `&ast.BinaryExpr{}` complex operators — extend binary expression builders
+## 1. `&ast.UnaryExpr{}` — replace with `astbuilder.Not(x)` helper
 
-`Ne()` and `Eq()` exist in `ast_helpers.go` for `!=` and `==`.
-Missing: `||` (LOR), `&&` (LAND), `+` (ADD) operators.
-Should add `astbuilder.Or(x, y)`, `astbuilder.And(x, y)`, `astbuilder.Add(x, y)` or a general `BinaryExpr(op, x, y)`.
+`astbuilder.Not(x)` was added alongside `Or`/`And`/`Add` and is already used in migrated sites.
+Remaining standalone unary NOT expressions:
 
-- [handler_ast.go:338-341](../../internal/generator/handler_ast.go#L338) — `&ast.BinaryExpr{X: Ne(...), Op: token.LOR, Y: Eq(...)}` — OR of two comparisons
-- [parse_ast.go:216-220](../../internal/generator/parse_ast.go#L216) — `&ast.BinaryExpr{X: Ne(...), Op: token.LAND, Y: &ast.UnaryExpr{Op: token.NOT, ...}}` — AND NOT
-- [validation_ast.go:177](../../internal/generator/validation_ast.go#L177) — `&ast.BinaryExpr{X: I("temp"), Op: token.EQL, Y: I("nil")}` — can use `Eq()` already
-- [validation_ast.go:293-295](../../internal/generator/validation_ast.go#L293) — `&ast.BinaryExpr{X: &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")}, Op: token.ADD, Y: Str(" is required")}` — string concat chain
-- [validation_ast.go:299-302](../../internal/generator/validation_ast.go#L299) — `&ast.BinaryExpr{X: &ast.UnaryExpr{NOT, ...}, Op: token.LAND, Y: callExpr}` — NOT AND
-- [validation_ast.go:306-308](../../internal/generator/validation_ast.go#L306) — string concat (same as line 293)
-- [validation_ast.go:336-339](../../internal/generator/validation_ast.go#L336) — `&ast.BinaryExpr{X: I("exists"), Op: token.LAND, Y: &ast.UnaryExpr{NOT, ...}}`
+- [validation_ast.go:291](../../internal/generator/validation_ast.go#L291) — `&ast.UnaryExpr{Op: token.NOT, X: I("exists")}` inside `If()`
+- [validation_ast.go:369-372](../../internal/generator/validation_ast.go#L369) — `&ast.UnaryExpr{Op: token.NOT, X: astbuilder.Call(I("containsNull"), I("obj"))}` inside `If()`
 
 ---
 
-## 2. `&ast.UnaryExpr{}` — add `astbuilder.Not(x)` helper
-
-Unary NOT expressions used as conditions.
-
-- [parse_ast.go:219-224](../../internal/generator/parse_ast.go#L219) — `&ast.UnaryExpr{Op: token.NOT, X: &ast.CallExpr{...errors.Is...}}`
-- [validation_ast.go:290](../../internal/generator/validation_ast.go#L290) — `&ast.UnaryExpr{Op: token.NOT, X: I("exists")}`
-- [validation_ast.go:300](../../internal/generator/validation_ast.go#L300) — `&ast.UnaryExpr{Op: token.NOT, X: &ast.IndexExpr{...}}`
-- [validation_ast.go:339](../../internal/generator/validation_ast.go#L339) — `&ast.UnaryExpr{Op: token.NOT, X: &ast.CallExpr{...}}`
-- [validation_ast.go:381-383](../../internal/generator/validation_ast.go#L381) — `&ast.UnaryExpr{Op: token.NOT, X: &ast.CallExpr{...containsNull...}}`
-
----
-
-## 3. `&ast.DeclStmt{Decl: &ast.GenDecl{...ValueSpec{}}}` — extend `DeclareVar` builder
+## 2. `&ast.DeclStmt{Decl: &ast.GenDecl{...ValueSpec{}}}` — extend `DeclareVar` builder
 
 `astbuilder.DeclareVar(name, typeExpr)` exists but only handles simple `ast.Expr`.
 All the places below pass raw types not yet covered (selector types, map types, array types).
@@ -54,7 +36,7 @@ Needs either extending `DeclareVar` or adding `DeclareVarWithType(name string, t
 
 ---
 
-## 4. `&ast.KeyValueExpr{}` in composite literals — add `astbuilder.KeyValue(k, v)` helper
+## 3. `&ast.KeyValueExpr{}` in composite literals — add `astbuilder.KeyValue(k, v)` helper
 
 Used to build struct/map literal fields.
 
@@ -74,7 +56,7 @@ Used to build struct/map literal fields.
 
 ---
 
-## 5. `&ast.CompositeLit{}` — add `astbuilder.CompositeLit(type, fields...)` builder
+## 4. `&ast.CompositeLit{}` — add `astbuilder.CompositeLit(type, fields...)` builder
 
 Used for struct and map literal expressions.
 
@@ -86,7 +68,7 @@ Used for struct and map literal expressions.
 
 ---
 
-## 6. `&ast.IndexExpr{}` — add `astbuilder.Index(x, index)` expression builder
+## 5. `&ast.IndexExpr{}` — add `astbuilder.Index(x, index)` expression builder
 
 Map/slice index expressions used as values.
 
@@ -96,7 +78,7 @@ Map/slice index expressions used as values.
 
 ---
 
-## 7. `&ast.MapType{}` / `&ast.ArrayType{}` — extend type builders
+## 6. `&ast.MapType{}` / `&ast.ArrayType{}` — extend type builders
 
 Raw map/array type expressions in variable declarations and composite literals.
 `astbuilder.ArrayTypeBuilder` exists for `[]T` but not for `map[K]V`.
@@ -109,7 +91,7 @@ Raw map/array type expressions in variable declarations and composite literals.
 
 ---
 
-## 8. `&ast.BasicLit{Kind: token.INT}` — add `IntLit(value string)` to `ast_helpers.go`
+## 7. `&ast.BasicLit{Kind: token.INT}` — add `IntLit(value string)` to `ast_helpers.go`
 
 Integer literal expressions.
 
@@ -118,7 +100,7 @@ Integer literal expressions.
 
 ---
 
-## 9. `Ret1()` / `Ret2()` / `Ret()` helpers — replace with `astbuilder.Return*()`
+## 8. `Ret1()` / `Ret2()` / `Ret()` helpers — replace with `astbuilder.Return*()`
 
 These three helpers in `ast_helpers.go` duplicate what `astbuilder.Return1()`, `astbuilder.Return2()`, `astbuilder.Return()` already provide.
 
@@ -126,7 +108,7 @@ These three helpers in `ast_helpers.go` duplicate what `astbuilder.Return1()`, `
 
 ---
 
-## 10. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
+## 9. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
 
 `Ne()` and `Eq()` are defined in `ast_helpers.go`. Since `astbuilder` already has comparison helpers,
 these could either be removed or re-exported from there to avoid dual sources.
@@ -136,7 +118,7 @@ but all follow the pattern `astbuilder.If(Ne(I("err"), I("nil")))`.
 
 ---
 
-## 11. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
+## 10. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
 
 These three shorthand functions from `ast_helpers.go` are fundamental building blocks used everywhere.
 They could be promoted into `astbuilder` as package-level functions so that `ast_helpers.go`
@@ -146,13 +128,13 @@ Used pervasively across all `*_ast.go` files — no single location to pin.
 
 ---
 
-## 12. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
+## 11. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
 
 - [handler_ast.go:215-217](../../internal/generator/handler_ast.go#L215) — `switchBody := &ast.BlockStmt{List: []ast.Stmt{}}` in `CreateHandler`
 
 ---
 
-## 13. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
+## 12. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
 
 These are at the file-output level and may warrant a dedicated `FileBuilder` or remain as is
 if deemed infrastructural rather than generated code.
@@ -166,9 +148,9 @@ if deemed infrastructural rather than generated code.
 
 | File | Raw AST count (approx) | Primary gap |
 |---|---|---|
-| [handler_ast.go](../../internal/generator/handler_ast.go) | ~30 | `&ast.CallExpr` inline, `DeclareVar` map type, `BinaryExpr` LOR |
-| [parse_ast.go](../../internal/generator/parse_ast.go) | ~28 | `&ast.CallExpr` inline, `DeclareVar` selector types, `BinaryExpr` LAND NOT |
-| [validation_ast.go](../../internal/generator/validation_ast.go) | ~30 | `DeclareVar` map/array types, `IndexExpr`, `BinaryExpr` ADD/LAND/NOT, `CompositeLit` |
+| [handler_ast.go](../../internal/generator/handler_ast.go) | ~25 | `DeclareVar` map type, `BlockStmt`, `BasicLit` INT |
+| [parse_ast.go](../../internal/generator/parse_ast.go) | ~20 | `DeclareVar` selector types, `KeyValueExpr`, `CompositeLit` |
+| [validation_ast.go](../../internal/generator/validation_ast.go) | ~25 | `DeclareVar` map/array types, `IndexExpr`, `UnaryExpr`, `CompositeLit` |
 | [response_ast.go](../../internal/generator/response_ast.go) | ~7 | `CompositeLit`, `KeyValueExpr`, `BasicLit` INT |
 | [schema_ast.go](../../internal/generator/schema_ast.go) | 3 | `&ast.File{}`, import GenDecl |
 | [ast_helpers.go](../../internal/generator/ast_helpers.go) | all | is itself raw AST — to be eliminated as each site migrates |

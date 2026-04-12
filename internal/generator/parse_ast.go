@@ -197,14 +197,10 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 		if param.Value.Required {
 			bodyBuilder.AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 		} else {
-			bodyBuilder.AddStmt(astbuilder.If(&ast.BinaryExpr{
-				X:  Ne(I("err"), I("nil")),
-				Op: token.LAND,
-				Y: &ast.UnaryExpr{
-					Op: token.NOT,
-					X:  astbuilder.Call(Sel(I("errors"), "Is"), I("err"), Sel(I("http"), "ErrNoCookie")),
-				},
-			}).WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return2(I("nil"), I("err")))))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.And(
+				Ne(I("err"), I("nil")),
+				astbuilder.Not(astbuilder.Call(Sel(I("errors"), "Is"), I("err"), Sel(I("http"), "ErrNoCookie"))),
+			)).WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return2(I("nil"), I("err")))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 		}
 

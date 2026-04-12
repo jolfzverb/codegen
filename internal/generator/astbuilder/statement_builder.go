@@ -495,6 +495,26 @@ func Call(fun ast.Expr, args ...ast.Expr) *ast.CallExpr {
 	return &ast.CallExpr{Fun: fun, Args: args}
 }
 
+// Or creates a logical OR expression: x || y
+func Or(x, y ast.Expr) *ast.BinaryExpr {
+	return &ast.BinaryExpr{X: x, Op: token.LOR, Y: y}
+}
+
+// And creates a logical AND expression: x && y
+func And(x, y ast.Expr) *ast.BinaryExpr {
+	return &ast.BinaryExpr{X: x, Op: token.LAND, Y: y}
+}
+
+// Add creates an addition expression: x + y
+func Add(x, y ast.Expr) *ast.BinaryExpr {
+	return &ast.BinaryExpr{X: x, Op: token.ADD, Y: y}
+}
+
+// Not creates a logical NOT expression: !x
+func Not(x ast.Expr) *ast.UnaryExpr {
+	return &ast.UnaryExpr{Op: token.NOT, X: x}
+}
+
 // CallStmt creates a function call statement
 func CallStmt(fun ast.Expr, args ...ast.Expr) *ExprStmtBuilder {
 	return ExprStmt(Call(fun, args...))

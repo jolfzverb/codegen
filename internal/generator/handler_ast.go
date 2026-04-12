@@ -318,11 +318,8 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 		AddStmt(astbuilder.DefineCallWithErr("response",
 			Sel(Sel(I("h"), GoIdentLowercase(baseName)), "Handle"+baseName),
 			I("ctx"), Star(I("request")))).
-		AddStmt(astbuilder.If(&ast.BinaryExpr{
-			X:  Ne(I("err"), I("nil")),
-			Op: token.LOR,
-			Y:  Eq(I("response"), I("nil")),
-		}).WithBody(astbuilder.NewBodyBuilder().
+		AddStmt(astbuilder.If(astbuilder.Or(Ne(I("err"), I("nil")), Eq(I("response"), I("nil")))).
+			WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.CallStmt(
 				Sel(I("http"), "Error"),
 				I("w"),
