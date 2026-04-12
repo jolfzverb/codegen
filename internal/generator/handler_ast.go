@@ -146,7 +146,7 @@ func (g *Generator) AddDependencyToHandlers(baseName string) {
 			astbuilder.NewSimpleTypeBuilder().AddElement(baseName + "Handler")))
 
 	g.HandlersFile.handlerConstructorDeclQAArgs.List = append(g.HandlersFile.handlerConstructorDeclQAArgs.List,
-		Field(fieldName, I(baseName+"Handler"), ""))
+		astbuilder.IdentField(fieldName, baseName+"Handler").Build())
 
 	g.HandlersFile.handlerConstructorDeclQAConstructorComposite.Elts = append(
 		g.HandlersFile.handlerConstructorDeclQAConstructorComposite.Elts, &ast.KeyValueExpr{
@@ -252,23 +252,21 @@ func (g *Generator) CreateHandler(baseName string) {
 // without checking Content-Type. Used for operations with no request body (e.g. GET, DELETE)
 // where Content-Type is irrelevant.
 func (g *Generator) CreateDirectHandler(baseName string) {
-	handleFunc := Func(
-		"handle"+baseName,
-		Field("h", Star(I("Handler")), ""),
-		[]*ast.Field{
-			Field("w", Sel(I("http"), "ResponseWriter"), ""),
-			Field("r", Star(Sel(I("http"), "Request")), ""),
-		},
-		nil,
-		[]ast.Stmt{
-			&ast.ExprStmt{
-				X: &ast.CallExpr{
-					Fun:  Sel(I("h"), "handle"+baseName+"Request"),
-					Args: []ast.Expr{I("w"), I("r")},
-				},
-			},
-		},
-	)
+	handleFunc := astbuilder.NewFunctionBuilder().
+		WithName("handle" + baseName).
+		WithReceiver(astbuilder.NewFieldBuilder().
+			WithName("h").
+			WithType(astbuilder.Ident("Handler").AsPointer(true))).
+		AddParams(
+			astbuilder.SelectorField("w", "http", "ResponseWriter"),
+			astbuilder.NewFieldBuilder().
+				WithName("r").
+				WithType(astbuilder.Selector("http", "Request").AsPointer(true)),
+		).
+		WithBody(astbuilder.NewBodyBuilder().
+			Call(Sel(I("h"), "handle"+baseName+"Request"), I("w"), I("r")),
+		).
+		Build()
 
 	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, handleFunc)
 }
