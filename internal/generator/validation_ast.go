@@ -288,27 +288,21 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 		rangeBody := astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(&ast.IndexExpr{X: I("obj"), Index: I("field")})).
 			AddStmt(astbuilder.If(&ast.UnaryExpr{Op: token.NOT, X: I("exists")}).WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return1(&ast.CallExpr{
-					Fun: Sel(I("errors"), "New"),
-					Args: []ast.Expr{&ast.BinaryExpr{
-						X:  &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")},
-						Op: token.ADD,
-						Y:  Str(" is required"),
-					}},
-				})))).
+				AddStmt(astbuilder.Return1(astbuilder.Call(Sel(I("errors"), "New"), &ast.BinaryExpr{
+					X:  &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")},
+					Op: token.ADD,
+					Y:  Str(" is required"),
+				}))))). 
 			AddStmt(astbuilder.If(&ast.BinaryExpr{
 				X:  &ast.UnaryExpr{Op: token.NOT, X: &ast.IndexExpr{X: I("nullableFields"), Index: I("field")}},
 				Op: token.LAND,
-				Y:  &ast.CallExpr{Fun: I("containsNull"), Args: []ast.Expr{I("val")}},
+				Y:  astbuilder.Call(I("containsNull"), I("val")),
 			}).WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return1(&ast.CallExpr{
-					Fun: Sel(I("errors"), "New"),
-					Args: []ast.Expr{&ast.BinaryExpr{
-						X:  &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")},
-						Op: token.ADD,
-						Y:  Str(" cannot be null"),
-					}},
-				}))))
+				AddStmt(astbuilder.Return1(astbuilder.Call(Sel(I("errors"), "New"), &ast.BinaryExpr{
+					X:  &ast.BinaryExpr{X: Str("field "), Op: token.ADD, Y: I("field")},
+					Op: token.ADD,
+					Y:  Str(" cannot be null"),
+				})))))
 
 		bodyBuilder.AddStmt(astbuilder.RangeIndex("field", I("requiredFields")).WithBody(rangeBody))
 		g.AddContainsNullIfNeeded()
@@ -326,17 +320,14 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 		bodyBuilder.AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(&ast.IndexExpr{X: I("obj"), Index: Str(fieldName)}))
 
 		ifBody := astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.Assign(I("err"), &ast.CallExpr{Fun: fieldValidationFunc, Args: []ast.Expr{I("val")}})).
+			AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(fieldValidationFunc, I("val")))).
 			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return1(&ast.CallExpr{
-					Fun:  Sel(I("errors"), "Wrap"),
-					Args: []ast.Expr{I("err"), Str("field " + fieldName + " is not valid")},
-				}))))
+				AddStmt(astbuilder.Return1(astbuilder.Call(Sel(I("errors"), "Wrap"), I("err"), Str("field "+fieldName+" is not valid"))))))
 
 		bodyBuilder.AddStmt(astbuilder.If(&ast.BinaryExpr{
 			X:  I("exists"),
 			Op: token.LAND,
-			Y:  &ast.UnaryExpr{Op: token.NOT, X: &ast.CallExpr{Fun: I("containsNull"), Args: []ast.Expr{I("val")}}},
+			Y:  &ast.UnaryExpr{Op: token.NOT, X: astbuilder.Call(I("containsNull"), I("val"))},
 		}).WithBody(ifBody))
 
 		g.AddContainsNullIfNeeded()
@@ -370,17 +361,14 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 	validateFunc := g.GetValidateFuncStmt(elemType, schema.Value.Items.Ref)
 
 	rangeIfBody := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.Assign(I("err"), &ast.CallExpr{Fun: validateFunc, Args: []ast.Expr{I("obj")}})).
+		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(validateFunc, I("obj")))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.Return1(&ast.CallExpr{
-				Fun:  Sel(I("errors"), "Wrapf"),
-				Args: []ast.Expr{I("err"), Str("error validating object at index %d"), I("index")},
-			}))))
+			AddStmt(astbuilder.Return1(astbuilder.Call(Sel(I("errors"), "Wrapf"), I("err"), Str("error validating object at index %d"), I("index"))))))
 
 	rangeBody := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.If(&ast.UnaryExpr{
 			Op: token.NOT,
-			X:  &ast.CallExpr{Fun: I("containsNull"), Args: []ast.Expr{I("obj")}},
+			X:  astbuilder.Call(I("containsNull"), I("obj")),
 		}).WithBody(rangeIfBody))
 
 	bodyBuilder := astbuilder.NewBodyBuilder().

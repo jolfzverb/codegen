@@ -203,14 +203,14 @@ func Define2(lhs1, lhs2, rhs ast.Expr) *AssignBuilder {
 func DefineCall(result string, fun ast.Expr, args ...ast.Expr) *AssignBuilder {
 	return NewDefineBuilder().
 		AddLhs(ast.NewIdent(result)).
-		AddRhs(&ast.CallExpr{Fun: fun, Args: args})
+		AddRhs(Call(fun, args...))
 }
 
 // DefineCallWithErr creates: result, err := funcCall(args...)
 func DefineCallWithErr(result string, fun ast.Expr, args ...ast.Expr) *AssignBuilder {
 	return NewDefineBuilder().
 		Lhs(ast.NewIdent(result), ast.NewIdent("err")).
-		AddRhs(&ast.CallExpr{Fun: fun, Args: args})
+		AddRhs(Call(fun, args...))
 }
 
 // VarDeclBuilder builds variable declaration statements
@@ -489,9 +489,15 @@ func ExprStmt(expr ast.Expr) *ExprStmtBuilder {
 	return NewExprStmtBuilder().WithExpr(expr)
 }
 
+// Call creates a function call expression: fun(args...)
+// Returns *ast.CallExpr which implements ast.Expr, for use as a sub-expression.
+func Call(fun ast.Expr, args ...ast.Expr) *ast.CallExpr {
+	return &ast.CallExpr{Fun: fun, Args: args}
+}
+
 // CallStmt creates a function call statement
 func CallStmt(fun ast.Expr, args ...ast.Expr) *ExprStmtBuilder {
-	return ExprStmt(&ast.CallExpr{Fun: fun, Args: args})
+	return ExprStmt(Call(fun, args...))
 }
 
 // MethodCallStmt creates a method call statement: receiver.method(args...)
