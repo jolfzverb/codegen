@@ -55,8 +55,8 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 			astbuilder.KeyValue(astbuilder.I("Response"+code), astbuilder.Amp(astbuilder.CompositeLit(
 				astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code),
 				constructorArgs...,
-			))),
-		))))
+			)).Build()),
+		)).Build()))
 
 	fnBuilder.WithBody(bodyBuilder)
 	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fnBuilder)

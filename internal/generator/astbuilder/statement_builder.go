@@ -509,8 +509,8 @@ func KeyValue(key, value ast.Expr) *ast.KeyValueExpr {
 
 // CompositeLit creates a composite literal: Type{elts...}
 // The type is built from a TypeExpressionBuilder (Ident, Selector, MapOf, etc.).
-func CompositeLit(tb TypeExpressionBuilder, elts ...ast.Expr) *ast.CompositeLit {
-	return &ast.CompositeLit{Type: tb.Build(), Elts: elts}
+func CompositeLit(tb TypeExpressionBuilder, elts ...ast.Expr) *CompositeLitBuilder {
+	return &CompositeLitBuilder{typeExpr: tb, elts: elts}
 }
 
 // Index creates an index expression: x[index]
@@ -568,9 +568,19 @@ func Sel(x ast.Expr, sel string) *ast.SelectorExpr {
 	return &ast.SelectorExpr{X: x, Sel: ast.NewIdent(sel)}
 }
 
+// AmpBuilder builds an address-of expression: &x
+type AmpBuilder struct {
+	x TypeExpressionBuilder
+}
+
+// Build creates the &x expression.
+func (b *AmpBuilder) Build() ast.Expr {
+	return &ast.UnaryExpr{Op: token.AND, X: b.x.Build()}
+}
+
 // Amp creates an address-of expression: &x
-func Amp(x ast.Expr) *ast.UnaryExpr {
-	return &ast.UnaryExpr{Op: token.AND, X: x}
+func Amp(x TypeExpressionBuilder) *AmpBuilder {
+	return &AmpBuilder{x: x}
 }
 
 // StarBuilder builds a pointer-dereference or pointer-type expression: *x
@@ -867,14 +877,14 @@ func Default() *CaseBuilder {
 	return NewCaseBuilder()
 }
 
-// CompositeLitBuilder accumulates key-value pairs for a composite literal.
+// CompositeLitBuilder accumulates elements for a composite literal.
 type CompositeLitBuilder struct {
-	typeExpr ast.Expr
+	typeExpr TypeExpressionBuilder
 	elts     []ast.Expr
 }
 
 // NewCompositeLitBuilder creates a CompositeLitBuilder for the given type expression.
-func NewCompositeLitBuilder(typeExpr ast.Expr) *CompositeLitBuilder {
+func NewCompositeLitBuilder(typeExpr TypeExpressionBuilder) *CompositeLitBuilder {
 	return &CompositeLitBuilder{typeExpr: typeExpr}
 }
 
@@ -884,7 +894,7 @@ func (b *CompositeLitBuilder) AddKeyValue(key string, value ast.Expr) *Composite
 	return b
 }
 
-// Build creates the *ast.CompositeLit.
-func (b *CompositeLitBuilder) Build() *ast.CompositeLit {
-	return &ast.CompositeLit{Type: b.typeExpr, Elts: b.elts}
+// Build creates the composite literal expression.
+func (b *CompositeLitBuilder) Build() ast.Expr {
+	return &ast.CompositeLit{Type: b.typeExpr.Build(), Elts: b.elts}
 }
