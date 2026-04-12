@@ -537,6 +537,11 @@ func Not(x ast.Expr) *ast.UnaryExpr {
 	return &ast.UnaryExpr{Op: token.NOT, X: x}
 }
 
+// IntLit creates an integer literal expression
+func IntLit(value string) *ast.BasicLit {
+	return &ast.BasicLit{Kind: token.INT, Value: value}
+}
+
 // CallStmt creates a function call statement
 func CallStmt(fun ast.Expr, args ...ast.Expr) *ExprStmtBuilder {
 	return ExprStmt(Call(fun, args...))

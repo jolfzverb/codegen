@@ -2,7 +2,6 @@ package generator
 
 import (
 	"go/ast"
-	"go/token"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
@@ -52,7 +51,7 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 	bodyBuilder := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.Return1(Amp(astbuilder.CompositeLit(
 			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"),
-			astbuilder.KeyValue(I("StatusCode"), &ast.BasicLit{Kind: token.INT, Value: code}),
+			astbuilder.KeyValue(I("StatusCode"), astbuilder.IntLit(code)),
 			astbuilder.KeyValue(I("Response"+code), Amp(astbuilder.CompositeLit(
 				astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code),
 				constructorArgs...,

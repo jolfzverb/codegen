@@ -384,7 +384,7 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 			)).
 			AddStmt(astbuilder.Return())
 
-		switchBuilder.AddCase(astbuilder.Case(&ast.BasicLit{Kind: token.INT, Value: code}).WithBody(caseBodyBuilder))
+		switchBuilder.AddCase(astbuilder.Case(astbuilder.IntLit(code)).WithBody(caseBodyBuilder))
 	}
 
 	body := astbuilder.NewBodyBuilder().
