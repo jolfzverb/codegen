@@ -220,43 +220,6 @@ func (g *Generator) CreateHandler(baseName string) {
 		List: []ast.Stmt{},
 	}
 
-	/* TODO:
-	handleFunc := Func(
-		"handle"+baseName,
-		Field("h", Star(I("Handler")), ""),
-		[]*ast.Field{
-			Field("w", Sel(I("http"), "ResponseWriter"), ""),
-			Field("r", Star(Sel(I("http"), "Request")), ""),
-		},
-		nil,
-		[]ast.Stmt{
-			// contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
-			&ast.AssignStmt{
-				Lhs: []ast.Expr{
-					I("contentType"),
-					I("_"),
-					I("_"),
-				},
-				Tok: token.DEFINE,
-				Rhs: []ast.Expr{
-					&ast.CallExpr{
-						Fun: Sel(I("mime"), "ParseMediaType"),
-						Args: []ast.Expr{
-							&ast.CallExpr{
-								Fun:  Sel(I("r.Header"), "Get"),
-								Args: []ast.Expr{Str("Content-Type")},
-							},
-						},
-					},
-				},
-			},
-			&ast.SwitchStmt{
-				Tag:  I("contentType"),
-				Body: switchBody,
-			},
-		},
-	)
-	*/
 	handleFunc := astbuilder.NewFunctionBuilder().
 		WithName("handle"+baseName).
 		WithPointerReceiver("h", "Handler").
@@ -265,13 +228,21 @@ func (g *Generator) CreateHandler(baseName string) {
 		Build()
 
 	handleFunc.Body.List = []ast.Stmt{
-		astbuilder.Switch(&ast.CallExpr{
-			Fun:  Sel(I("r.Header"), "Get"),
-			Args: []ast.Expr{Str("Content-Type")},
-		}).Build(),
+		astbuilder.NewDefineBuilder(). // TODO use builders
+						Lhs(I("contentType"), I("_"), I("_")).
+						AddRhs(&ast.CallExpr{
+				Fun: Sel(I("mime"), "ParseMediaType"),
+				Args: []ast.Expr{
+					&ast.CallExpr{
+						Fun:  Sel(I("r.Header"), "Get"),
+						Args: []ast.Expr{Str("Content-Type")},
+					},
+				},
+			}).Build(),
+		astbuilder.Switch(I("contentType")).Build(),
 	}
 	// Replace the switch body with our tracked one
-	handleFunc.Body.List[0].(*ast.SwitchStmt).Body = switchBody
+	handleFunc.Body.List[1].(*ast.SwitchStmt).Body = switchBody
 
 	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, handleFunc)
 
