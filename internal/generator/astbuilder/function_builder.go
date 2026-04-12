@@ -100,11 +100,10 @@ func (fb *FunctionBuilder) AddParamExpr(name string, typeExpr ast.Expr) *Functio
 	return fb
 }
 
-// AddResultExpr adds a return value with a raw ast.Expr type.
-// Use this when the type cannot be expressed via TypeExpressionBuilder (e.g. dynamically computed types).
+// AddResultExpr adds a return value using a TypeExpressionBuilder.
 // Returns the builder for method chaining
-func (fb *FunctionBuilder) AddResultExpr(typeExpr ast.Expr) *FunctionBuilder {
-	fb.rawResults = append(fb.rawResults, &ast.Field{Type: typeExpr})
+func (fb *FunctionBuilder) AddResultExpr(typeExpr TypeExpressionBuilder) *FunctionBuilder {
+	fb.rawResults = append(fb.rawResults, &ast.Field{Type: typeExpr.Build()})
 	return fb
 }
 

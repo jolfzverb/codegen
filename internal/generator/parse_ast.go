@@ -205,19 +205,19 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 	}
 
 	typeName := baseName + "RequestBody"
-	var bodyType ast.Expr
+	var bodyType astbuilder.TypeExpressionBuilder
 	content, ok := body.Value.Content[contentType]
-	bodyType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), typeName)
+	bodyType = astbuilder.Selector(g.GetCurrentModelsPackage(), typeName)
 	if ok && content.Schema != nil {
 		if content.Schema.Ref != "" {
 			var importPath string
 			typeName, importPath = g.ParseRefTypeName(content.Schema.Ref)
-			bodyType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), typeName)
+			bodyType = astbuilder.Selector(g.GetCurrentModelsPackage(), typeName)
 			if importPath != "" {
 				g.AddHandlersImport(importPath)
 			}
 			if refIsExternal(content.Schema.Ref) {
-				bodyType = astbuilder.I(typeName)
+				bodyType = astbuilder.Ident(typeName)
 			}
 		}
 	}
@@ -231,7 +231,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(g.GetValidateFuncStmt(typeName, content.Schema.Ref), astbuilder.I("bodyJSON")))).
 		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 
-	bodyBuilder.AddStmt(astbuilder.DeclareVar("body", bodyType))
+	bodyBuilder.AddStmt(astbuilder.DeclareVar("body", bodyType.Build()))
 
 	bodyBuilder.
 		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("bodyJSON"), astbuilder.Amp(astbuilder.I("body"))))).
@@ -244,7 +244,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResultExpr(astbuilder.Star(bodyType)).
-		AddResultExpr(astbuilder.I("error")).
+		AddResultExpr(astbuilder.Error()).
 		WithBody(bodyBuilder)
 
 	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
@@ -260,25 +260,25 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 	elts := []ast.Expr{}
 
 	if len(pathParams) > 0 {
-		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Path"), astbuilder.Star(astbuilder.I("pathParams"))))
+		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Path"), astbuilder.Star(astbuilder.Ident("pathParams")).Build()))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("pathParams", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"PathParams"), astbuilder.I("r"))).
 			AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 	}
 	if len(queryParams) > 0 {
-		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Query"), astbuilder.Star(astbuilder.I("queryParams"))))
+		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Query"), astbuilder.Star(astbuilder.Ident("queryParams")).Build()))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("queryParams", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"QueryParams"), astbuilder.I("r"))).
 			AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 	}
 	if len(headers) > 0 {
-		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Headers"), astbuilder.Star(astbuilder.I("headers"))))
+		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Headers"), astbuilder.Star(astbuilder.Ident("headers")).Build()))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("headers", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"Headers"), astbuilder.I("r"))).
 			AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 	}
 	if len(cookieParams) > 0 {
-		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Cookies"), astbuilder.Star(astbuilder.I("cookieParams"))))
+		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Cookies"), astbuilder.Star(astbuilder.Ident("cookieParams")).Build()))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("cookieParams", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"Cookies"), astbuilder.I("r"))).
 			AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
@@ -287,7 +287,7 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 		content, ok := body.Value.Content[contentType]
 		if ok && content.Schema != nil {
 			if body.Value.Required {
-				elts = append(elts, astbuilder.KeyValue(astbuilder.I("Body"), astbuilder.Star(astbuilder.I("body"))))
+				elts = append(elts, astbuilder.KeyValue(astbuilder.I("Body"), astbuilder.Star(astbuilder.Ident("body")).Build()))
 			} else {
 				elts = append(elts, astbuilder.KeyValue(astbuilder.I("Body"), astbuilder.I("body")))
 			}

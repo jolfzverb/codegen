@@ -299,7 +299,7 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 		AddStmt(astbuilder.DefineCall("ctx", astbuilder.Sel(astbuilder.I("r"), "Context"))).
 		AddStmt(astbuilder.DefineCallWithErr("response",
 			astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), GoIdentLowercase(baseName)), "Handle"+baseName),
-			astbuilder.I("ctx"), astbuilder.Star(astbuilder.I("request")))).
+			astbuilder.I("ctx"), astbuilder.Star(astbuilder.Ident("request")).Build())).
 		AddStmt(astbuilder.If(astbuilder.Or(astbuilder.Ne(astbuilder.I("err"), astbuilder.I("nil")), astbuilder.Eq(astbuilder.I("response"), astbuilder.I("nil")))).
 			WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.CallStmt(

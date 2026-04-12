@@ -12,7 +12,7 @@ import (
 func (g *Generator) AddCreateResponseModel(baseName string, code string, response *openapi3.ResponseRef) error {
 	fnBuilder := astbuilder.NewFunctionBuilder().
 		WithName(baseName + code + "Response").
-		AddResultExpr(astbuilder.Star(astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), baseName+"Response")))
+		AddResultExpr(astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response")))
 
 	constructorArgs := []ast.Expr{}
 

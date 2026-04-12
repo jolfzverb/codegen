@@ -573,9 +573,19 @@ func Amp(x ast.Expr) *ast.UnaryExpr {
 	return &ast.UnaryExpr{Op: token.AND, X: x}
 }
 
+// StarBuilder builds a pointer-dereference or pointer-type expression: *x
+type StarBuilder struct {
+	x TypeExpressionBuilder
+}
+
+// Build creates the *ast.StarExpr.
+func (b *StarBuilder) Build() ast.Expr {
+	return &ast.StarExpr{X: b.x.Build()}
+}
+
 // Star creates a pointer dereference/type expression: *x
-func Star(x ast.Expr) *ast.StarExpr {
-	return &ast.StarExpr{X: x}
+func Star(x TypeExpressionBuilder) *StarBuilder {
+	return &StarBuilder{x: x}
 }
 
 // CallStmt creates a function call statement
