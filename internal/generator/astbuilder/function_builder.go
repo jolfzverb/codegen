@@ -6,19 +6,23 @@ import (
 
 // FunctionBuilder provides a fluent interface for building Go function declarations
 type FunctionBuilder struct {
-	name     string
-	receiver *FieldBuilder
-	params   []*FieldBuilder
-	results  []*FieldBuilder
-	body     *BodyBuilder
+	name       string
+	receiver   *FieldBuilder
+	params     []*FieldBuilder
+	rawParams  []*ast.Field
+	results    []*FieldBuilder
+	rawResults []*ast.Field
+	body       *BodyBuilder
 }
 
 // NewFunctionBuilder creates a new FunctionBuilder
 func NewFunctionBuilder() *FunctionBuilder {
 	return &FunctionBuilder{
-		params:  make([]*FieldBuilder, 0),
-		results: make([]*FieldBuilder, 0),
-		body:    NewBodyBuilder(),
+		params:     make([]*FieldBuilder, 0),
+		rawParams:  make([]*ast.Field, 0),
+		results:    make([]*FieldBuilder, 0),
+		rawResults: make([]*ast.Field, 0),
+		body:       NewBodyBuilder(),
 	}
 }
 
@@ -84,6 +88,26 @@ func (fb *FunctionBuilder) AddResults(results ...*FieldBuilder) *FunctionBuilder
 	return fb
 }
 
+// AddParamExpr adds a parameter with a raw ast.Expr type.
+// Use this when the type cannot be expressed via TypeExpressionBuilder (e.g. dynamically computed types).
+// Returns the builder for method chaining
+func (fb *FunctionBuilder) AddParamExpr(name string, typeExpr ast.Expr) *FunctionBuilder {
+	field := &ast.Field{Type: typeExpr}
+	if name != "" {
+		field.Names = []*ast.Ident{ast.NewIdent(name)}
+	}
+	fb.rawParams = append(fb.rawParams, field)
+	return fb
+}
+
+// AddResultExpr adds a return value with a raw ast.Expr type.
+// Use this when the type cannot be expressed via TypeExpressionBuilder (e.g. dynamically computed types).
+// Returns the builder for method chaining
+func (fb *FunctionBuilder) AddResultExpr(typeExpr ast.Expr) *FunctionBuilder {
+	fb.rawResults = append(fb.rawResults, &ast.Field{Type: typeExpr})
+	return fb
+}
+
 // WithBody sets the body builder
 // Returns the builder for method chaining
 func (fb *FunctionBuilder) WithBody(body *BodyBuilder) *FunctionBuilder {
@@ -112,12 +136,14 @@ func (fb *FunctionBuilder) Build() *ast.FuncDecl {
 	for i, param := range fb.params {
 		params[i] = param.Build()
 	}
+	params = append(params, fb.rawParams...)
 
 	// Convert results
 	results := make([]*ast.Field, len(fb.results))
 	for i, result := range fb.results {
 		results[i] = result.Build()
 	}
+	results = append(results, fb.rawResults...)
 
 	funcDecl := &ast.FuncDecl{
 		Name: ast.NewIdent(fb.name),
@@ -155,20 +181,22 @@ func (fb *FunctionBuilder) HasReceiver() bool {
 
 // ParamCount returns the number of parameters
 func (fb *FunctionBuilder) ParamCount() int {
-	return len(fb.params)
+	return len(fb.params) + len(fb.rawParams)
 }
 
 // ResultCount returns the number of return values
 func (fb *FunctionBuilder) ResultCount() int {
-	return len(fb.results)
+	return len(fb.results) + len(fb.rawResults)
 }
 
 // Clone creates a copy of the FunctionBuilder
 func (fb *FunctionBuilder) Clone() *FunctionBuilder {
 	clone := &FunctionBuilder{
-		name:    fb.name,
-		params:  make([]*FieldBuilder, len(fb.params)),
-		results: make([]*FieldBuilder, len(fb.results)),
+		name:       fb.name,
+		params:     make([]*FieldBuilder, len(fb.params)),
+		rawParams:  make([]*ast.Field, len(fb.rawParams)),
+		results:    make([]*FieldBuilder, len(fb.results)),
+		rawResults: make([]*ast.Field, len(fb.rawResults)),
 	}
 	if fb.receiver != nil {
 		clone.receiver = fb.receiver.Clone()
@@ -176,9 +204,11 @@ func (fb *FunctionBuilder) Clone() *FunctionBuilder {
 	for i, param := range fb.params {
 		clone.params[i] = param.Clone()
 	}
+	copy(clone.rawParams, fb.rawParams)
 	for i, result := range fb.results {
 		clone.results[i] = result.Clone()
 	}
+	copy(clone.rawResults, fb.rawResults)
 	if fb.body != nil {
 		clone.body = fb.body.Clone()
 	}

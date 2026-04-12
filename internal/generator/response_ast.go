@@ -13,7 +13,7 @@ import (
 func (g *Generator) AddCreateResponseModel(baseName string, code string, response *openapi3.ResponseRef) error {
 	fnBuilder := astbuilder.NewFunctionBuilder().
 		WithName(baseName + code + "Response").
-		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response").AsPointer(true)))
+		AddResultExpr(Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response")))
 
 	constructorArgs := []ast.Expr{}
 
@@ -39,21 +39,13 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 					g.AddHandlersImport(importPath)
 				}
 			}
-			// Add param manually since we have a dynamic type
-			fn := fnBuilder.Build()
-			fn.Type.Params.List = append(fn.Type.Params.List, &ast.Field{
-				Names: []*ast.Ident{I("body")},
-				Type:  astType,
-			})
-			fnBuilder = astbuilder.NewFunctionBuilder().WithName(baseName + code + "Response")
-			fnBuilder.Build().Type = fn.Type
-			fnBuilder.Build().Recv = fn.Recv
-
+			fnBuilder.AddParamExpr("body", astType)
 			constructorArgs = append(constructorArgs, &ast.KeyValueExpr{Key: I("Body"), Value: I("body")})
 		}
 	}
 
 	if len(response.Value.Headers) > 0 {
+		fnBuilder.AddParamExpr("headers", Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code+"Headers"))
 		constructorArgs = append(constructorArgs, &ast.KeyValueExpr{Key: I("Headers"), Value: I("headers")})
 	}
 
@@ -75,46 +67,7 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 			},
 		})))
 
-	// Build manually since params have dynamic types
-	arglist := []*ast.Field{}
-	if len(response.Value.Content) > 0 {
-		json, ok := response.Value.Content["application/json"]
-		if ok && json.Schema != nil {
-			typeName := baseName + "Response" + code + "Body"
-			var astType ast.Expr
-			astType = Sel(I(g.GetCurrentModelsPackage()), typeName)
-			if json.Schema.Ref != "" {
-				var importPath string
-				typeName, importPath = g.ParseRefTypeName(json.Schema.Ref)
-				if refIsExternal(json.Schema.Ref) {
-					astType = I(typeName)
-				} else {
-					astType = Sel(I(g.GetCurrentModelsPackage()), typeName)
-				}
-				if importPath != "" {
-					g.AddHandlersImport(importPath)
-				}
-			}
-			arglist = append(arglist, &ast.Field{Names: []*ast.Ident{I("body")}, Type: astType})
-		}
-	}
-	if len(response.Value.Headers) > 0 {
-		arglist = append(arglist, &ast.Field{
-			Names: []*ast.Ident{I("headers")},
-			Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code+"Headers"),
-		})
-	}
-
-	fn := &ast.FuncDecl{
-		Name: I(baseName + code + "Response"),
-		Type: &ast.FuncType{
-			Params:  &ast.FieldList{List: arglist},
-			Results: &ast.FieldList{List: []*ast.Field{{Type: Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"))}}},
-		},
-		Body: bodyBuilder.Build(),
-	}
-
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fnBuilder.WithBody(bodyBuilder).Build())
 
 	return nil
 }

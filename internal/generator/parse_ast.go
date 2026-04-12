@@ -349,15 +349,10 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 	fn := astbuilder.Function("parse"+baseName+"RequestBody").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
-		AddResult(astbuilder.ErrorField()).
+		AddResultExpr(Star(bodyType)).
+		AddResultExpr(I("error")).
 		WithBody(bodyBuilder).
 		Build()
-
-	// Set the first result type manually since it's a dynamic type
-	fn.Type.Results.List = []*ast.Field{
-		{Type: Star(bodyType)},
-		{Type: I("error")},
-	}
 
 	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
 

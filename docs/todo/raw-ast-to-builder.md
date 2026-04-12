@@ -5,18 +5,7 @@ Each group describes what new builder capability is needed and lists every occur
 
 ---
 
-## 1. `&ast.FuncDecl{}` direct construction — replace with `astbuilder.NewFunctionBuilder()`
-
-Manually assembling a `*ast.FuncDecl` with its `Type`, `Params`, `Results`, `Body` fields.
-Needed because the current `FunctionBuilder` does not support dynamically-typed params/results.
-The builder should be extended to accept raw `ast.Expr` for param/result types.
-
-- [response_ast.go:108-114](../../internal/generator/response_ast.go#L108) — `AddCreateResponseModel`: `fn := &ast.FuncDecl{Name: ..., Type: &ast.FuncType{...}, Body: ...}`
-- [parse_ast.go:357-359](../../internal/generator/parse_ast.go#L357) — `AddParseRequestBodyMethod`: manual override `fn.Type.Results.List = []*ast.Field{...}` after builder
-
----
-
-## 2. `&ast.ExprStmt{X: &ast.CallExpr{}}` — replace with `astbuilder.CallStmt()`
+## 1. `&ast.ExprStmt{X: &ast.CallExpr{}}` — replace with `astbuilder.CallStmt()`
 
 Wrapping a call expression in an expression statement manually.
 
@@ -24,7 +13,7 @@ Wrapping a call expression in an expression statement manually.
 
 ---
 
-## 3. `&ast.CallExpr{}` as inline expression — add `astbuilder.Call()` expression builder
+## 2. `&ast.CallExpr{}` as inline expression — add `astbuilder.Call()` expression builder
 
 `CallExpr` is used as a sub-expression (argument to another call, right-hand side, etc.) where
 `CallStmt` does not apply. A `Call(fun, args...)` expression builder returning `ast.Expr` is needed.
@@ -60,7 +49,7 @@ Wrapping a call expression in an expression statement manually.
 
 ---
 
-## 4. `&ast.BinaryExpr{}` complex operators — extend binary expression builders
+## 3. `&ast.BinaryExpr{}` complex operators — extend binary expression builders
 
 `Ne()` and `Eq()` exist in `ast_helpers.go` for `!=` and `==`.
 Missing: `||` (LOR), `&&` (LAND), `+` (ADD) operators.
@@ -76,7 +65,7 @@ Should add `astbuilder.Or(x, y)`, `astbuilder.And(x, y)`, `astbuilder.Add(x, y)`
 
 ---
 
-## 5. `&ast.UnaryExpr{}` — add `astbuilder.Not(x)` helper
+## 4. `&ast.UnaryExpr{}` — add `astbuilder.Not(x)` helper
 
 Unary NOT expressions used as conditions.
 
@@ -88,7 +77,7 @@ Unary NOT expressions used as conditions.
 
 ---
 
-## 6. `&ast.DeclStmt{Decl: &ast.GenDecl{...ValueSpec{}}}` — extend `DeclareVar` builder
+## 5. `&ast.DeclStmt{Decl: &ast.GenDecl{...ValueSpec{}}}` — extend `DeclareVar` builder
 
 `astbuilder.DeclareVar(name, typeExpr)` exists but only handles simple `ast.Expr`.
 All the places below pass raw types not yet covered (selector types, map types, array types).
@@ -109,7 +98,7 @@ Needs either extending `DeclareVar` or adding `DeclareVarWithType(name string, t
 
 ---
 
-## 7. `&ast.KeyValueExpr{}` in composite literals — add `astbuilder.KeyValue(k, v)` helper
+## 6. `&ast.KeyValueExpr{}` in composite literals — add `astbuilder.KeyValue(k, v)` helper
 
 Used to build struct/map literal fields.
 
@@ -121,28 +110,27 @@ Used to build struct/map literal fields.
 - [parse_ast.go:393](../../internal/generator/parse_ast.go#L393) — `{Key: I("Cookies"), ...}`
 - [parse_ast.go:402](../../internal/generator/parse_ast.go#L402) — `{Key: I("Body"), Value: Star(...)}`
 - [parse_ast.go:404](../../internal/generator/parse_ast.go#L404) — `{Key: I("Body"), Value: I("body")}`
-- [response_ast.go:52](../../internal/generator/response_ast.go#L52) — `{Key: I("Body"), Value: I("body")}`
-- [response_ast.go:57](../../internal/generator/response_ast.go#L57) — `{Key: I("Headers"), Value: I("headers")}`
-- [response_ast.go:64-71](../../internal/generator/response_ast.go#L64) — `{Key: I("StatusCode"), ...}`, `{Key: I("Response"+code), Value: Amp(...)}`
+- [response_ast.go:43](../../internal/generator/response_ast.go#L43) — `{Key: I("Body"), Value: I("body")}`
+- [response_ast.go:49](../../internal/generator/response_ast.go#L49) — `{Key: I("Headers"), Value: I("headers")}`
+- [response_ast.go:56-65](../../internal/generator/response_ast.go#L56) — `{Key: I("StatusCode"), ...}`, `{Key: I("Response"+code), Value: Amp(...)}`
 - [validation_ast.go:238](../../internal/generator/validation_ast.go#L238) — `{Key: Str(fieldName), Value: I("true")}`
 - [validation_ast.go:247](../../internal/generator/validation_ast.go#L247) — same for nullableFields
 
 ---
 
-## 8. `&ast.CompositeLit{}` — add `astbuilder.CompositeLit(type, fields...)` builder
+## 7. `&ast.CompositeLit{}` — add `astbuilder.CompositeLit(type, fields...)` builder
 
 Used for struct and map literal expressions.
 
 - [handler_ast.go:45-63](../../internal/generator/handler_ast.go#L45) — `InitHandlerConstructor`: `&ast.CompositeLit{Type: I("Handler"), Elts: [...]}`
 - [parse_ast.go:413-415](../../internal/generator/parse_ast.go#L413) — `Amp(&ast.CompositeLit{Type: Sel(..., "XxxRequest"), Elts: elts})`
-- [response_ast.go:61-73](../../internal/generator/response_ast.go#L61) — nested composite literals for `XxxResponse{StatusCode: ..., ResponseNNN: &XxxResponseNNN{...}}`
-- [response_ast.go:70-72](../../internal/generator/response_ast.go#L70) — inner `&ast.CompositeLit{Type: ..., Elts: constructorArgs}`
+- [response_ast.go:53-68](../../internal/generator/response_ast.go#L53) — nested composite literals for `XxxResponse{StatusCode: ..., ResponseNNN: &XxxResponseNNN{...}}`
 - [validation_ast.go:240-242](../../internal/generator/validation_ast.go#L240) — `&ast.CompositeLit{Type: &ast.MapType{...}, Elts: requiredFieldsElts}`
 - [validation_ast.go:249-251](../../internal/generator/validation_ast.go#L249) — same for nullableFields map
 
 ---
 
-## 9. `&ast.IndexExpr{}` — add `astbuilder.Index(x, index)` expression builder
+## 8. `&ast.IndexExpr{}` — add `astbuilder.Index(x, index)` expression builder
 
 Map/slice index expressions used as values.
 
@@ -152,7 +140,7 @@ Map/slice index expressions used as values.
 
 ---
 
-## 10. `&ast.MapType{}` / `&ast.ArrayType{}` — extend type builders
+## 9. `&ast.MapType{}` / `&ast.ArrayType{}` — extend type builders
 
 Raw map/array type expressions in variable declarations and composite literals.
 `astbuilder.ArrayTypeBuilder` exists for `[]T` but not for `map[K]V`.
@@ -165,16 +153,16 @@ Raw map/array type expressions in variable declarations and composite literals.
 
 ---
 
-## 11. `&ast.BasicLit{Kind: token.INT}` — add `IntLit(value string)` to `ast_helpers.go`
+## 10. `&ast.BasicLit{Kind: token.INT}` — add `IntLit(value string)` to `ast_helpers.go`
 
 Integer literal expressions.
 
 - [handler_ast.go:415](../../internal/generator/handler_ast.go#L415) — `&ast.BasicLit{Kind: token.INT, Value: code}` in switch case
-- [response_ast.go:66](../../internal/generator/response_ast.go#L66) — `&ast.BasicLit{Kind: token.INT, Value: code}` in composite literal
+- [response_ast.go:58](../../internal/generator/response_ast.go#L58) — `&ast.BasicLit{Kind: token.INT, Value: code}` in composite literal
 
 ---
 
-## 12. `Ret1()` / `Ret2()` / `Ret()` helpers — replace with `astbuilder.Return*()`
+## 11. `Ret1()` / `Ret2()` / `Ret()` helpers — replace with `astbuilder.Return*()`
 
 These three helpers in `ast_helpers.go` duplicate what `astbuilder.Return1()`, `astbuilder.Return2()`, `astbuilder.Return()` already provide.
 
@@ -182,7 +170,7 @@ These three helpers in `ast_helpers.go` duplicate what `astbuilder.Return1()`, `
 
 ---
 
-## 13. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
+## 12. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
 
 `Ne()` and `Eq()` are defined in `ast_helpers.go`. Since `astbuilder` already has comparison helpers,
 these could either be removed or re-exported from there to avoid dual sources.
@@ -192,7 +180,7 @@ but all follow the pattern `astbuilder.If(Ne(I("err"), I("nil")))`.
 
 ---
 
-## 14. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
+## 13. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
 
 These three shorthand functions from `ast_helpers.go` are fundamental building blocks used everywhere.
 They could be promoted into `astbuilder` as package-level functions so that `ast_helpers.go`
@@ -202,13 +190,13 @@ Used pervasively across all `*_ast.go` files — no single location to pin.
 
 ---
 
-## 15. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
+## 14. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
 
 - [handler_ast.go:215-217](../../internal/generator/handler_ast.go#L215) — `switchBody := &ast.BlockStmt{List: []ast.Stmt{}}` in `CreateHandler`
 
 ---
 
-## 16. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
+## 15. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
 
 These are at the file-output level and may warrant a dedicated `FileBuilder` or remain as is
 if deemed infrastructural rather than generated code.
@@ -223,8 +211,8 @@ if deemed infrastructural rather than generated code.
 | File | Raw AST count (approx) | Primary gap |
 |---|---|---|
 | [handler_ast.go](../../internal/generator/handler_ast.go) | ~30 | `&ast.CallExpr` inline, `DeclareVar` map type, `BinaryExpr` LOR |
-| [parse_ast.go](../../internal/generator/parse_ast.go) | ~30 | `&ast.CallExpr` inline, `DeclareVar` selector types, `BinaryExpr` LAND NOT |
+| [parse_ast.go](../../internal/generator/parse_ast.go) | ~28 | `&ast.CallExpr` inline, `DeclareVar` selector types, `BinaryExpr` LAND NOT |
 | [validation_ast.go](../../internal/generator/validation_ast.go) | ~30 | `DeclareVar` map/array types, `IndexExpr`, `BinaryExpr` ADD/LAND/NOT, `CompositeLit` |
-| [response_ast.go](../../internal/generator/response_ast.go) | ~10 | `&ast.FuncDecl` direct, `CompositeLit`, `KeyValueExpr` |
+| [response_ast.go](../../internal/generator/response_ast.go) | ~7 | `CompositeLit`, `KeyValueExpr`, `BasicLit` INT |
 | [schema_ast.go](../../internal/generator/schema_ast.go) | 3 | `&ast.File{}`, import GenDecl |
 | [ast_helpers.go](../../internal/generator/ast_helpers.go) | all | is itself raw AST — to be eliminated as each site migrates |
