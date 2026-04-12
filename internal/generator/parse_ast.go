@@ -12,7 +12,7 @@ import (
 
 func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.Parameters) error {
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.DeclareVar("queryParams", Sel(I(g.GetCurrentModelsPackage()), baseName+"QueryParams")))
+		AddStmt(astbuilder.DeclareVar("queryParams", astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), baseName+"QueryParams")))
 
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
@@ -20,12 +20,12 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 		}
 
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
-		bodyBuilder.AddStmt(astbuilder.Define(I(varName),
-			astbuilder.Call(Sel(astbuilder.Call(Sel(Sel(I("r"), "URL"), "Query")), "Get"), Str(param.Value.Name))))
+		bodyBuilder.AddStmt(astbuilder.Define(astbuilder.I(varName),
+			astbuilder.Call(astbuilder.Sel(astbuilder.Call(astbuilder.Sel(astbuilder.Sel(astbuilder.I("r"), "URL"), "Query")), "Get"), astbuilder.Str(param.Value.Name))))
 
 		if param.Value.Required {
-			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return2(I("nil"), astbuilder.Call(Sel(I("errors"), "New"), Str(param.Value.Name+" query param is required"))))))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(astbuilder.I(varName), astbuilder.Str(""))).WithBody(astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Return2(astbuilder.I("nil"), astbuilder.Call(astbuilder.Sel(astbuilder.I("errors"), "New"), astbuilder.Str(param.Value.Name+" query param is required"))))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
@@ -40,14 +40,14 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 			for _, stmt := range g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
 				ifBody.AddStatement(stmt)
 			}
-			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Ne(I(varName), Str(""))).WithBody(ifBody))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Ne(astbuilder.I(varName), astbuilder.Str(""))).WithBody(ifBody))
 		}
 	}
 
 	bodyBuilder.
-		AddStmt(astbuilder.DefineCall("err", Sel(Sel(I("h"), "validator"), "Struct"), I("queryParams"))).
-		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
-		AddStmt(astbuilder.Return2(Amp(I("queryParams")), I("nil")))
+		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), "validator"), "Struct"), astbuilder.I("queryParams"))).
+		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil"))).
+		AddStmt(astbuilder.Return2(astbuilder.Amp(astbuilder.I("queryParams")), astbuilder.I("nil")))
 
 	fn := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"QueryParams").
@@ -67,34 +67,34 @@ func (g *Generator) AssignStringField(paramsName string, varName string, fieldNa
 	if param.Value.Format == "date-time" {
 		g.AddHandlersImport("time")
 		bodyBuilder := astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.DefineCallWithErr("parsed"+fieldName, Sel(I("time"), "Parse"), Sel(I("time"), "RFC3339"), I(varName))).
+			AddStmt(astbuilder.DefineCallWithErr("parsed"+fieldName, astbuilder.Sel(astbuilder.I("time"), "Parse"), astbuilder.Sel(astbuilder.I("time"), "RFC3339"), astbuilder.I(varName))).
 			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return2(I("nil"), astbuilder.Call(Sel(I("errors"), "Wrap"), I("err"), Str(fieldName+" is not a valid date-time format"))))))
+				AddStmt(astbuilder.Return2(astbuilder.I("nil"), astbuilder.Call(astbuilder.Sel(astbuilder.I("errors"), "Wrap"), astbuilder.I("err"), astbuilder.Str(fieldName+" is not a valid date-time format"))))))
 
 		var rhs ast.Expr
 		if required && !g.HandlersFile.requiredFieldsArePointers {
-			rhs = I("parsed" + fieldName)
+			rhs = astbuilder.I("parsed" + fieldName)
 		} else {
-			rhs = Amp(I("parsed" + fieldName))
+			rhs = astbuilder.Amp(astbuilder.I("parsed" + fieldName))
 		}
-		bodyBuilder.AddStmt(astbuilder.Assign(Sel(I(paramsName), fieldName), rhs))
+		bodyBuilder.AddStmt(astbuilder.Assign(astbuilder.Sel(astbuilder.I(paramsName), fieldName), rhs))
 
 		return bodyBuilder.Build().List
 	}
 
 	var rhs ast.Expr
 	if required && !g.HandlersFile.requiredFieldsArePointers {
-		rhs = I(varName)
+		rhs = astbuilder.I(varName)
 	} else {
-		rhs = Amp(I(varName))
+		rhs = astbuilder.Amp(astbuilder.I(varName))
 	}
 
-	return []ast.Stmt{astbuilder.Assign(Sel(I(paramsName), fieldName), rhs).Build()}
+	return []ast.Stmt{astbuilder.Assign(astbuilder.Sel(astbuilder.I(paramsName), fieldName), rhs).Build()}
 }
 
 func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Parameters) error {
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.DeclareVar("headers", Sel(I(g.GetCurrentModelsPackage()), baseName+"Headers")))
+		AddStmt(astbuilder.DeclareVar("headers", astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), baseName+"Headers")))
 
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
@@ -102,18 +102,18 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 		}
 		if g.Opts.AllowRemoteAddrParam && param.Value.Name == "Remote-Addr" && param.Value.Schema.Value.Format == "remote-addr" {
 			bodyBuilder.AddStmt(astbuilder.Assign(
-				Sel(I("headers"), FormatGoLikeIdentifier(param.Value.Name)),
-				Sel(I("r"), "RemoteAddr"),
+				astbuilder.Sel(astbuilder.I("headers"), FormatGoLikeIdentifier(param.Value.Name)),
+				astbuilder.Sel(astbuilder.I("r"), "RemoteAddr"),
 			))
 			continue
 		}
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
-		bodyBuilder.AddStmt(astbuilder.Define(I(varName),
-			astbuilder.Call(Sel(Sel(I("r"), "Header"), "Get"), Str(param.Value.Name))))
+		bodyBuilder.AddStmt(astbuilder.Define(astbuilder.I(varName),
+			astbuilder.Call(astbuilder.Sel(astbuilder.Sel(astbuilder.I("r"), "Header"), "Get"), astbuilder.Str(param.Value.Name))))
 
 		if param.Value.Required {
-			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Return2(I("nil"), astbuilder.Call(Sel(I("errors"), "New"), Str(param.Value.Name+" header is required"))))))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(astbuilder.I(varName), astbuilder.Str(""))).WithBody(astbuilder.NewBodyBuilder().
+				AddStmt(astbuilder.Return2(astbuilder.I("nil"), astbuilder.Call(astbuilder.Sel(astbuilder.I("errors"), "New"), astbuilder.Str(param.Value.Name+" header is required"))))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
@@ -128,14 +128,14 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 			for _, stmt := range g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
 				ifBody.AddStatement(stmt)
 			}
-			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Ne(I(varName), Str(""))).WithBody(ifBody))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Ne(astbuilder.I(varName), astbuilder.Str(""))).WithBody(ifBody))
 		}
 	}
 
 	bodyBuilder.
-		AddStmt(astbuilder.DefineCall("err", Sel(Sel(I("h"), "validator"), "Struct"), I("headers"))).
-		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
-		AddStmt(astbuilder.Return2(Amp(I("headers")), I("nil")))
+		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), "validator"), "Struct"), astbuilder.I("headers"))).
+		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil"))).
+		AddStmt(astbuilder.Return2(astbuilder.Amp(astbuilder.I("headers")), astbuilder.I("nil")))
 
 	fn := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"Headers").
@@ -153,7 +153,7 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 
 func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Parameters) error {
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.DeclareVar("cookies", Sel(I(g.GetCurrentModelsPackage()), baseName+"Cookies")))
+		AddStmt(astbuilder.DeclareVar("cookies", astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), baseName+"Cookies")))
 
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
@@ -161,20 +161,20 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 		}
 
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
-		bodyBuilder.AddStmt(astbuilder.DefineCallWithErr(varName, Sel(I("r"), "Cookie"), Str(param.Value.Name)))
+		bodyBuilder.AddStmt(astbuilder.DefineCallWithErr(varName, astbuilder.Sel(astbuilder.I("r"), "Cookie"), astbuilder.Str(param.Value.Name)))
 
 		if param.Value.Required {
-			bodyBuilder.AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
+			bodyBuilder.AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 		} else {
 			bodyBuilder.AddStmt(astbuilder.If(astbuilder.And(
-				astbuilder.Ne(I("err"), I("nil")),
-				astbuilder.Not(astbuilder.Call(Sel(I("errors"), "Is"), I("err"), Sel(I("http"), "ErrNoCookie"))),
-			)).WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return2(I("nil"), I("err")))))
+				astbuilder.Ne(astbuilder.I("err"), astbuilder.I("nil")),
+				astbuilder.Not(astbuilder.Call(astbuilder.Sel(astbuilder.I("errors"), "Is"), astbuilder.I("err"), astbuilder.Sel(astbuilder.I("http"), "ErrNoCookie"))),
+			)).WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return2(astbuilder.I("nil"), astbuilder.I("err")))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 		}
 
 		if param.Value.Required {
-			bodyBuilder.AddStmt(astbuilder.Define(I(varName+"Value"), Sel(I(varName), "Value")))
+			bodyBuilder.AddStmt(astbuilder.Define(astbuilder.I(varName+"Value"), astbuilder.Sel(astbuilder.I(varName), "Value")))
 
 			switch {
 			case param.Value.Schema.Value.Type.Permits("string"):
@@ -186,18 +186,18 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 			}
 		} else {
 			ifBody := astbuilder.NewBodyBuilder().
-				AddStmt(astbuilder.Define(I(varName+"Value"), Sel(I(varName), "Value")))
+				AddStmt(astbuilder.Define(astbuilder.I(varName+"Value"), astbuilder.Sel(astbuilder.I(varName), "Value")))
 			for _, stmt := range g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
 				ifBody.AddStatement(stmt)
 			}
-			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(I("err"), I("nil"))).WithBody(ifBody))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(astbuilder.I("err"), astbuilder.I("nil"))).WithBody(ifBody))
 		}
 	}
 
 	bodyBuilder.
-		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(Sel(Sel(I("h"), "validator"), "Struct"), I("cookies")))).
-		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
-		AddStmt(astbuilder.Return2(Amp(I("cookies")), I("nil")))
+		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), "validator"), "Struct"), astbuilder.I("cookies")))).
+		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil"))).
+		AddStmt(astbuilder.Return2(astbuilder.Amp(astbuilder.I("cookies")), astbuilder.I("nil")))
 
 	fn := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"Cookies").
@@ -217,24 +217,24 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 	bodyBuilder := astbuilder.NewBodyBuilder()
 
 	if !body.Value.Required {
-		bodyBuilder.AddStmt(astbuilder.IfNil(Sel(I("r"), "Body")).WithBody(astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.Return2(I("nil"), I("nil")))))
+		bodyBuilder.AddStmt(astbuilder.IfNil(astbuilder.Sel(astbuilder.I("r"), "Body")).WithBody(astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.Return2(astbuilder.I("nil"), astbuilder.I("nil")))))
 	}
 
 	typeName := baseName + "RequestBody"
 	var bodyType ast.Expr
 	content, ok := body.Value.Content[contentType]
-	bodyType = Sel(I(g.GetCurrentModelsPackage()), typeName)
+	bodyType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), typeName)
 	if ok && content.Schema != nil {
 		if content.Schema.Ref != "" {
 			var importPath string
 			typeName, importPath = g.ParseRefTypeName(content.Schema.Ref)
-			bodyType = Sel(I(g.GetCurrentModelsPackage()), typeName)
+			bodyType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), typeName)
 			if importPath != "" {
 				g.AddHandlersImport(importPath)
 			}
 			if refIsExternal(content.Schema.Ref) {
-				bodyType = I(typeName)
+				bodyType = astbuilder.I(typeName)
 			}
 		}
 	}
@@ -243,25 +243,25 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 	g.AddHandlersImport("encoding/json")
 
 	bodyBuilder.
-		AddStmt(astbuilder.DefineCall("err", Sel(astbuilder.Call(Sel(I("json"), "NewDecoder"), Sel(I("r"), "Body")), "Decode"), Amp(I("bodyJSON")))).
-		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
-		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(g.GetValidateFuncStmt(typeName, content.Schema.Ref), I("bodyJSON")))).
-		AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
+		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.Call(astbuilder.Sel(astbuilder.I("json"), "NewDecoder"), astbuilder.Sel(astbuilder.I("r"), "Body")), "Decode"), astbuilder.Amp(astbuilder.I("bodyJSON")))).
+		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil"))).
+		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(g.GetValidateFuncStmt(typeName, content.Schema.Ref), astbuilder.I("bodyJSON")))).
+		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 
 	bodyBuilder.AddStmt(astbuilder.DeclareVar("body", bodyType))
 
 	bodyBuilder.
-		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(Sel(I("json"), "Unmarshal"), I("bodyJSON"), Amp(I("body"))))).
-		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
-		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(Sel(Sel(I("h"), "validator"), "Struct"), I("body")))).
-		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
-		AddStmt(astbuilder.Return2(Amp(I("body")), I("nil")))
+		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("bodyJSON"), astbuilder.Amp(astbuilder.I("body"))))).
+		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil"))).
+		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), "validator"), "Struct"), astbuilder.I("body")))).
+		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil"))).
+		AddStmt(astbuilder.Return2(astbuilder.Amp(astbuilder.I("body")), astbuilder.I("nil")))
 
 	fn := astbuilder.Function("parse"+baseName+"RequestBody").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
-		AddResultExpr(Star(bodyType)).
-		AddResultExpr(I("error")).
+		AddResultExpr(astbuilder.Star(bodyType)).
+		AddResultExpr(astbuilder.I("error")).
 		WithBody(bodyBuilder).
 		Build()
 
@@ -278,49 +278,49 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 	elts := []ast.Expr{}
 
 	if len(pathParams) > 0 {
-		elts = append(elts, astbuilder.KeyValue(I("Path"), Star(I("pathParams"))))
+		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Path"), astbuilder.Star(astbuilder.I("pathParams"))))
 		bodyBuilder.
-			AddStmt(astbuilder.DefineCallWithErr("pathParams", Sel(I("h"), "parse"+baseName+"PathParams"), I("r"))).
-			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
+			AddStmt(astbuilder.DefineCallWithErr("pathParams", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"PathParams"), astbuilder.I("r"))).
+			AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 	}
 	if len(queryParams) > 0 {
-		elts = append(elts, astbuilder.KeyValue(I("Query"), Star(I("queryParams"))))
+		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Query"), astbuilder.Star(astbuilder.I("queryParams"))))
 		bodyBuilder.
-			AddStmt(astbuilder.DefineCallWithErr("queryParams", Sel(I("h"), "parse"+baseName+"QueryParams"), I("r"))).
-			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
+			AddStmt(astbuilder.DefineCallWithErr("queryParams", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"QueryParams"), astbuilder.I("r"))).
+			AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 	}
 	if len(headers) > 0 {
-		elts = append(elts, astbuilder.KeyValue(I("Headers"), Star(I("headers"))))
+		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Headers"), astbuilder.Star(astbuilder.I("headers"))))
 		bodyBuilder.
-			AddStmt(astbuilder.DefineCallWithErr("headers", Sel(I("h"), "parse"+baseName+"Headers"), I("r"))).
-			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
+			AddStmt(astbuilder.DefineCallWithErr("headers", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"Headers"), astbuilder.I("r"))).
+			AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 	}
 	if len(cookieParams) > 0 {
-		elts = append(elts, astbuilder.KeyValue(I("Cookies"), Star(I("cookieParams"))))
+		elts = append(elts, astbuilder.KeyValue(astbuilder.I("Cookies"), astbuilder.Star(astbuilder.I("cookieParams"))))
 		bodyBuilder.
-			AddStmt(astbuilder.DefineCallWithErr("cookieParams", Sel(I("h"), "parse"+baseName+"Cookies"), I("r"))).
-			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
+			AddStmt(astbuilder.DefineCallWithErr("cookieParams", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"Cookies"), astbuilder.I("r"))).
+			AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 	}
 	if body != nil && body.Value != nil {
 		content, ok := body.Value.Content[contentType]
 		if ok && content.Schema != nil {
 			if body.Value.Required {
-				elts = append(elts, astbuilder.KeyValue(I("Body"), Star(I("body"))))
+				elts = append(elts, astbuilder.KeyValue(astbuilder.I("Body"), astbuilder.Star(astbuilder.I("body"))))
 			} else {
-				elts = append(elts, astbuilder.KeyValue(I("Body"), I("body")))
+				elts = append(elts, astbuilder.KeyValue(astbuilder.I("Body"), astbuilder.I("body")))
 			}
 			bodyBuilder.
-				AddStmt(astbuilder.DefineCallWithErr("body", Sel(I("h"), "parse"+baseName+"RequestBody"), I("r"))).
-				AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
+				AddStmt(astbuilder.DefineCallWithErr("body", astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"RequestBody"), astbuilder.I("r"))).
+				AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil")))
 		}
 	}
 
 	bodyBuilder.AddStmt(astbuilder.Return2(
-		Amp(astbuilder.CompositeLit(
+		astbuilder.Amp(astbuilder.CompositeLit(
 			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Request"),
 			elts...,
 		)),
-		I("nil"),
+		astbuilder.I("nil"),
 	))
 
 	fn := astbuilder.NewFunctionBuilder().

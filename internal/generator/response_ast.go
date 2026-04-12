@@ -12,7 +12,7 @@ import (
 func (g *Generator) AddCreateResponseModel(baseName string, code string, response *openapi3.ResponseRef) error {
 	fnBuilder := astbuilder.NewFunctionBuilder().
 		WithName(baseName + code + "Response").
-		AddResultExpr(Star(Sel(I(g.GetCurrentModelsPackage()), baseName+"Response")))
+		AddResultExpr(astbuilder.Star(astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), baseName+"Response")))
 
 	constructorArgs := []ast.Expr{}
 
@@ -25,34 +25,34 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 		if json.Schema != nil {
 			typeName := baseName + "Response" + code + "Body"
 			var astType ast.Expr
-			astType = Sel(I(g.GetCurrentModelsPackage()), typeName)
+			astType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), typeName)
 			if json.Schema.Ref != "" {
 				var importPath string
 				typeName, importPath = g.ParseRefTypeName(json.Schema.Ref)
 				if refIsExternal(json.Schema.Ref) {
-					astType = I(typeName)
+					astType = astbuilder.I(typeName)
 				} else {
-					astType = Sel(I(g.GetCurrentModelsPackage()), typeName)
+					astType = astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), typeName)
 				}
 				if importPath != "" {
 					g.AddHandlersImport(importPath)
 				}
 			}
 			fnBuilder.AddParamExpr("body", astType)
-			constructorArgs = append(constructorArgs, astbuilder.KeyValue(I("Body"), I("body")))
+			constructorArgs = append(constructorArgs, astbuilder.KeyValue(astbuilder.I("Body"), astbuilder.I("body")))
 		}
 	}
 
 	if len(response.Value.Headers) > 0 {
-		fnBuilder.AddParamExpr("headers", Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code+"Headers"))
-		constructorArgs = append(constructorArgs, astbuilder.KeyValue(I("Headers"), I("headers")))
+		fnBuilder.AddParamExpr("headers", astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), baseName+"Response"+code+"Headers"))
+		constructorArgs = append(constructorArgs, astbuilder.KeyValue(astbuilder.I("Headers"), astbuilder.I("headers")))
 	}
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.Return1(Amp(astbuilder.CompositeLit(
+		AddStmt(astbuilder.Return1(astbuilder.Amp(astbuilder.CompositeLit(
 			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"),
-			astbuilder.KeyValue(I("StatusCode"), astbuilder.IntLit(code)),
-			astbuilder.KeyValue(I("Response"+code), Amp(astbuilder.CompositeLit(
+			astbuilder.KeyValue(astbuilder.I("StatusCode"), astbuilder.IntLit(code)),
+			astbuilder.KeyValue(astbuilder.I("Response"+code), astbuilder.Amp(astbuilder.CompositeLit(
 				astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code),
 				constructorArgs...,
 			))),

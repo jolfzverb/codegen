@@ -3,6 +3,7 @@ package astbuilder
 import (
 	"go/ast"
 	"go/token"
+	"strconv"
 )
 
 // StatementBuilder is an interface for building ast.Stmt
@@ -550,6 +551,31 @@ func Not(x ast.Expr) *ast.UnaryExpr {
 // IntLit creates an integer literal expression
 func IntLit(value string) *ast.BasicLit {
 	return &ast.BasicLit{Kind: token.INT, Value: value}
+}
+
+// I creates an identifier expression
+func I(name string) *ast.Ident {
+	return ast.NewIdent(name)
+}
+
+// Str creates a string literal expression
+func Str(value string) *ast.BasicLit {
+	return &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(value)}
+}
+
+// Sel creates a selector expression: x.sel
+func Sel(x ast.Expr, sel string) *ast.SelectorExpr {
+	return &ast.SelectorExpr{X: x, Sel: ast.NewIdent(sel)}
+}
+
+// Amp creates an address-of expression: &x
+func Amp(x ast.Expr) *ast.UnaryExpr {
+	return &ast.UnaryExpr{Op: token.AND, X: x}
+}
+
+// Star creates a pointer dereference/type expression: *x
+func Star(x ast.Expr) *ast.StarExpr {
+	return &ast.StarExpr{X: x}
 }
 
 // CallStmt creates a function call statement

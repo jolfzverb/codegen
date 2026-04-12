@@ -43,8 +43,8 @@ func (g *Generator) InitHandlerStruct() {
 
 func (g *Generator) InitHandlerConstructor() {
 	initializerComposite := astbuilder.CompositeLit(astbuilder.Ident("Handler"),
-		astbuilder.KeyValue(I("validator"), astbuilder.Call(Sel(I("validator"), "New"),
-			astbuilder.Call(Sel(I("validator"), "WithRequiredStructEnabled")),
+		astbuilder.KeyValue(astbuilder.I("validator"), astbuilder.Call(astbuilder.Sel(astbuilder.I("validator"), "New"),
+			astbuilder.Call(astbuilder.Sel(astbuilder.I("validator"), "WithRequiredStructEnabled")),
 		)),
 	)
 
@@ -52,7 +52,7 @@ func (g *Generator) InitHandlerConstructor() {
 		WithName("NewHandler").
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Ident("Handler").AsPointer(true))).
 		Build()
-	g.HandlersFile.handlerConstructorDecl.Body.List = []ast.Stmt{astbuilder.Return1(Amp(initializerComposite)).Build()}
+	g.HandlersFile.handlerConstructorDecl.Body.List = []ast.Stmt{astbuilder.Return1(astbuilder.Amp(initializerComposite)).Build()}
 
 	g.HandlersFile.handlerConstructorDeclQAArgs = g.HandlersFile.handlerConstructorDecl.Type.Params
 	g.HandlersFile.handlerConstructorDeclQAConstructorComposite = initializerComposite
@@ -67,7 +67,7 @@ func (g *Generator) InitRoutesFunc() {
 }
 
 func (g *Generator) InitHandlerFields(packageName string) {
-	g.HandlersFile.packageName = I(packageName)
+	g.HandlersFile.packageName = astbuilder.I(packageName)
 
 	g.InitHandlerImports()
 
@@ -139,7 +139,7 @@ func (g *Generator) AddDependencyToHandlers(baseName string) {
 
 	g.HandlersFile.handlerConstructorDeclQAConstructorComposite.Elts = append(
 		g.HandlersFile.handlerConstructorDeclQAConstructorComposite.Elts,
-		astbuilder.KeyValue(I(fieldName), I(fieldName)),
+		astbuilder.KeyValue(astbuilder.I(fieldName), astbuilder.I(fieldName)),
 	)
 }
 
@@ -179,9 +179,9 @@ func (g *Generator) GenerateHandlersFile() *ast.File {
 func (g *Generator) AddRouteToRouter(baseName string, method string, pathName string) {
 	g.HandlersFile.addRoutesDecl.Body.List = append(g.HandlersFile.addRoutesDecl.Body.List,
 		astbuilder.CallStmt(
-			Sel(I("router"), method),
-			Str(pathName),
-			Sel(I("h"), "handle"+baseName),
+			astbuilder.Sel(astbuilder.I("router"), method),
+			astbuilder.Str(pathName),
+			astbuilder.Sel(astbuilder.I("h"), "handle"+baseName),
 		).Build())
 }
 
@@ -212,11 +212,11 @@ func (g *Generator) CreateHandler(baseName string) {
 
 	handleFunc.Body.List = []ast.Stmt{
 		astbuilder.NewDefineBuilder().
-						Lhs(I("contentType"), I("_"), I("_")).
-						AddRhs(astbuilder.Call(Sel(I("mime"), "ParseMediaType"),
-				astbuilder.Call(Sel(I("r.Header"), "Get"), Str("Content-Type")),
+						Lhs(astbuilder.I("contentType"), astbuilder.I("_"), astbuilder.I("_")).
+						AddRhs(astbuilder.Call(astbuilder.Sel(astbuilder.I("mime"), "ParseMediaType"),
+				astbuilder.Call(astbuilder.Sel(astbuilder.I("r.Header"), "Get"), astbuilder.Str("Content-Type")),
 			)).Build(),
-		astbuilder.Switch(I("contentType")).Build(),
+		astbuilder.Switch(astbuilder.I("contentType")).Build(),
 	}
 	// Replace the switch body with our tracked one
 	handleFunc.Body.List[1].(*ast.SwitchStmt).Body = switchBody
@@ -245,7 +245,7 @@ func (g *Generator) CreateDirectHandler(baseName string) {
 				WithType(astbuilder.Selector("http", "Request").AsPointer(true)),
 		).
 		WithBody(astbuilder.NewBodyBuilder().
-			Call(Sel(I("h"), "handle"+baseName+"Request"), I("w"), I("r")),
+			Call(astbuilder.Sel(astbuilder.I("h"), "handle"+baseName+"Request"), astbuilder.I("w"), astbuilder.I("r")),
 		).
 		Build()
 
@@ -260,10 +260,10 @@ func (g *Generator) FinalizeHandlerSwitches() {
 		blockStmt.List = append(blockStmt.List,
 			astbuilder.Default().WithBody(astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.CallStmt(
-					Sel(I("http"), "Error"),
-					I("w"),
-					Str("{\"error\":\"Unsupported Content-Type\"}"),
-					Sel(I("http"), "StatusUnsupportedMediaType"),
+					astbuilder.Sel(astbuilder.I("http"), "Error"),
+					astbuilder.I("w"),
+					astbuilder.Str("{\"error\":\"Unsupported Content-Type\"}"),
+					astbuilder.Sel(astbuilder.I("http"), "StatusUnsupportedMediaType"),
 				)).
 				AddStmt(astbuilder.Return()),
 			).Build())
@@ -276,15 +276,15 @@ func (g *Generator) AddContentTypeHandler(baseName string, rawContentType string
 	}
 	if blockStmt, ok := g.HandlersFile.handleDeclQASwitches[baseName]; ok {
 		caseBody := astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.CallStmt(Sel(I("h"), "handle"+baseName+"Request"), I("w"), I("r"))).
+			AddStmt(astbuilder.CallStmt(astbuilder.Sel(astbuilder.I("h"), "handle"+baseName+"Request"), astbuilder.I("w"), astbuilder.I("r"))).
 			AddStmt(astbuilder.Return())
 
 		blockStmt.List = append(blockStmt.List,
-			astbuilder.Case(Str(rawContentType)).WithBody(caseBody).Build())
+			astbuilder.Case(astbuilder.Str(rawContentType)).WithBody(caseBody).Build())
 
 		if rawContentType == applicationJSONCT {
 			blockStmt.List = append(blockStmt.List,
-				astbuilder.Case(Str("")).WithBody(caseBody).Build())
+				astbuilder.Case(astbuilder.Str("")).WithBody(caseBody).Build())
 		}
 	}
 }
@@ -292,34 +292,34 @@ func (g *Generator) AddContentTypeHandler(baseName string, rawContentType string
 func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 	body := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.DefineCallWithErr("request",
-			Sel(I("h"), "parse"+baseName+"Request"), I("r"))).
+			astbuilder.Sel(astbuilder.I("h"), "parse"+baseName+"Request"), astbuilder.I("r"))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.CallStmt(
-				Sel(I("http"), "Error"),
-				I("w"),
-				astbuilder.Call(Sel(I("fmt"), "Sprintf"),
-					Str("{\"error\":%s}"),
-					astbuilder.Call(Sel(I("strconv"), "Quote"),
-						astbuilder.Call(Sel(I("err"), "Error")),
+				astbuilder.Sel(astbuilder.I("http"), "Error"),
+				astbuilder.I("w"),
+				astbuilder.Call(astbuilder.Sel(astbuilder.I("fmt"), "Sprintf"),
+					astbuilder.Str("{\"error\":%s}"),
+					astbuilder.Call(astbuilder.Sel(astbuilder.I("strconv"), "Quote"),
+						astbuilder.Call(astbuilder.Sel(astbuilder.I("err"), "Error")),
 					),
 				),
-				Sel(I("http"), "StatusBadRequest"),
+				astbuilder.Sel(astbuilder.I("http"), "StatusBadRequest"),
 			)).
 			AddStmt(astbuilder.Return()))).
-		AddStmt(astbuilder.DefineCall("ctx", Sel(I("r"), "Context"))).
+		AddStmt(astbuilder.DefineCall("ctx", astbuilder.Sel(astbuilder.I("r"), "Context"))).
 		AddStmt(astbuilder.DefineCallWithErr("response",
-			Sel(Sel(I("h"), GoIdentLowercase(baseName)), "Handle"+baseName),
-			I("ctx"), Star(I("request")))).
-		AddStmt(astbuilder.If(astbuilder.Or(astbuilder.Ne(I("err"), I("nil")), astbuilder.Eq(I("response"), I("nil")))).
+			astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), GoIdentLowercase(baseName)), "Handle"+baseName),
+			astbuilder.I("ctx"), astbuilder.Star(astbuilder.I("request")))).
+		AddStmt(astbuilder.If(astbuilder.Or(astbuilder.Ne(astbuilder.I("err"), astbuilder.I("nil")), astbuilder.Eq(astbuilder.I("response"), astbuilder.I("nil")))).
 			WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.CallStmt(
-				Sel(I("http"), "Error"),
-				I("w"),
-				Str("{\"error\":\"InternalServerError\"}"),
-				Sel(I("http"), "StatusInternalServerError"),
+				astbuilder.Sel(astbuilder.I("http"), "Error"),
+				astbuilder.I("w"),
+				astbuilder.Str("{\"error\":\"InternalServerError\"}"),
+				astbuilder.Sel(astbuilder.I("http"), "StatusInternalServerError"),
 			)).
 			AddStmt(astbuilder.Return()))).
-		AddStmt(astbuilder.CallStmt(Sel(I("h"), "write"+baseName+"Response"), I("w"), I("response"))).
+		AddStmt(astbuilder.CallStmt(astbuilder.Sel(astbuilder.I("h"), "write"+baseName+"Response"), astbuilder.I("w"), astbuilder.I("response"))).
 		AddStmt(astbuilder.Return())
 
 	fn := astbuilder.NewFunctionBuilder().
@@ -336,26 +336,26 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 }
 
 func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []string, operation *openapi3.Operation) error {
-	switchBuilder := astbuilder.Switch(Sel(I("response"), "StatusCode"))
+	switchBuilder := astbuilder.Switch(astbuilder.Sel(astbuilder.I("response"), "StatusCode"))
 
 	for _, code := range codes {
 		response := operation.Responses.Value(code)
 
 		caseBodyBuilder := astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.IfNil(Sel(I("response"), "Response"+code)).WithBody(astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.IfNil(astbuilder.Sel(astbuilder.I("response"), "Response"+code)).WithBody(astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.CallStmt(
-					Sel(I("http"), "Error"),
-					I("w"),
-					Str("{\"error\":\"InternalServerError\"}"),
-					Sel(I("http"), "StatusInternalServerError"),
+					astbuilder.Sel(astbuilder.I("http"), "Error"),
+					astbuilder.I("w"),
+					astbuilder.Str("{\"error\":\"InternalServerError\"}"),
+					astbuilder.Sel(astbuilder.I("http"), "StatusInternalServerError"),
 				)).
 				AddStmt(astbuilder.Return())))
 
 		if len(response.Value.Headers) > 0 {
 			caseBodyBuilder.AddStmt(astbuilder.CallStmt(
-				Sel(I("h"), "write"+baseName+code+"ResponseHeaders"),
-				I("w"),
-				Sel(I("response"), "Response"+code),
+				astbuilder.Sel(astbuilder.I("h"), "write"+baseName+code+"ResponseHeaders"),
+				astbuilder.I("w"),
+				astbuilder.Sel(astbuilder.I("response"), "Response"+code),
 			))
 		}
 
@@ -369,18 +369,18 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 				break
 			}
 			caseBodyBuilder.AddStmt(astbuilder.CallStmt(
-				Sel(astbuilder.Call(Sel(I("w"), "Header")), "Set"),
-				Str("Content-Type"),
-				Str(g.getContentTypeHeadeValue(contentType)),
+				astbuilder.Sel(astbuilder.Call(astbuilder.Sel(astbuilder.I("w"), "Header")), "Set"),
+				astbuilder.Str("Content-Type"),
+				astbuilder.Str(g.getContentTypeHeadeValue(contentType)),
 			))
 		}
 
 		caseBodyBuilder.
-			AddStmt(astbuilder.CallStmt(Sel(I("w"), "WriteHeader"), Sel(I("response"), "StatusCode"))).
+			AddStmt(astbuilder.CallStmt(astbuilder.Sel(astbuilder.I("w"), "WriteHeader"), astbuilder.Sel(astbuilder.I("response"), "StatusCode"))).
 			AddStmt(astbuilder.CallStmt(
-				Sel(I("h"), "write"+baseName+code+"Response"),
-				I("w"),
-				Sel(I("response"), "Response"+code),
+				astbuilder.Sel(astbuilder.I("h"), "write"+baseName+code+"Response"),
+				astbuilder.I("w"),
+				astbuilder.Sel(astbuilder.I("response"), "Response"+code),
 			)).
 			AddStmt(astbuilder.Return())
 
@@ -390,10 +390,10 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 	body := astbuilder.NewBodyBuilder().
 		AddStatement(switchBuilder.Build()).
 		AddStmt(astbuilder.CallStmt(
-			Sel(I("http"), "Error"),
-			I("w"),
-			Str("{\"error\":\"InternalServerError\"}"),
-			Sel(I("http"), "StatusInternalServerError"),
+			astbuilder.Sel(astbuilder.I("http"), "Error"),
+			astbuilder.I("w"),
+			astbuilder.Str("{\"error\":\"InternalServerError\"}"),
+			astbuilder.Sel(astbuilder.I("http"), "StatusInternalServerError"),
 		))
 
 	writeResponseFunc := astbuilder.NewFunctionBuilder().
@@ -429,25 +429,25 @@ func (g *Generator) AddWriteHeadersForResponseCode(baseName string, code string,
 
 	httpErrorBody := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.CallStmt(
-			Sel(I("http"), "Error"),
-			I("w"),
-			Str("{\"error\":\"InternalServerError\"}"),
-			Sel(I("http"), "StatusInternalServerError"),
+			astbuilder.Sel(astbuilder.I("http"), "Error"),
+			astbuilder.I("w"),
+			astbuilder.Str("{\"error\":\"InternalServerError\"}"),
+			astbuilder.Sel(astbuilder.I("http"), "StatusInternalServerError"),
 		)).
 		AddStmt(astbuilder.Return())
 
 	body := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.DefineCallWithErr("headersJSON", Sel(I("json"), "Marshal"), Sel(I("r"), "Headers"))).
+		AddStmt(astbuilder.DefineCallWithErr("headersJSON", astbuilder.Sel(astbuilder.I("json"), "Marshal"), astbuilder.Sel(astbuilder.I("r"), "Headers"))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(httpErrorBody)).
 		AddStmt(astbuilder.DeclareVarWithType("headers", astbuilder.MapOf(astbuilder.String(), astbuilder.String()))).
-		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(Sel(I("json"), "Unmarshal"), I("headersJSON"), Amp(I("headers"))))).
+		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("headersJSON"), astbuilder.Amp(astbuilder.I("headers"))))).
 
 		AddStmt(astbuilder.IfErrNotNil().WithBody(httpErrorBody)).
-		AddStmt(astbuilder.Range("key", "value", I("headers")).WithBody(astbuilder.NewBodyBuilder().
+		AddStmt(astbuilder.Range("key", "value", astbuilder.I("headers")).WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.CallStmt(
-				Sel(astbuilder.Call(Sel(I("w"), "Header")), "Set"),
-				I("key"),
-				I("value"),
+				astbuilder.Sel(astbuilder.Call(astbuilder.Sel(astbuilder.I("w"), "Header")), "Set"),
+				astbuilder.I("key"),
+				astbuilder.I("value"),
 			))))
 
 	writeResponseFunc := astbuilder.NewFunctionBuilder().
@@ -479,16 +479,16 @@ func (g *Generator) AddWriteResponseCode(baseName string, code string, response 
 		if value.Schema != nil {
 			hasContent = true
 			g.AddHandlersImport("encoding/json")
-			bodyBuilder.AddStmt(astbuilder.Assign(I("err"),
-				astbuilder.Call(Sel(astbuilder.Call(Sel(I("json"), "NewEncoder"), I("w")), "Encode"),
-					Sel(I("r"), "Body"),
+			bodyBuilder.AddStmt(astbuilder.Assign(astbuilder.I("err"),
+				astbuilder.Call(astbuilder.Sel(astbuilder.Call(astbuilder.Sel(astbuilder.I("json"), "NewEncoder"), astbuilder.I("w")), "Encode"),
+					astbuilder.Sel(astbuilder.I("r"), "Body"),
 				)))
 			bodyBuilder.AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.CallStmt(
-					Sel(I("http"), "Error"),
-					I("w"),
-					Str("{\"error\":\"InternalServerError\"}"),
-					Sel(I("http"), "StatusInternalServerError"),
+					astbuilder.Sel(astbuilder.I("http"), "Error"),
+					astbuilder.I("w"),
+					astbuilder.Str("{\"error\":\"InternalServerError\"}"),
+					astbuilder.Sel(astbuilder.I("http"), "StatusInternalServerError"),
 				)).
 				AddStmt(astbuilder.Return())))
 		}
@@ -497,7 +497,7 @@ func (g *Generator) AddWriteResponseCode(baseName string, code string, response 
 	// Prepend var err error if we have content
 	finalBody := astbuilder.NewBodyBuilder()
 	if hasContent {
-		finalBody.AddStmt(astbuilder.DeclareVar("err", I("error")))
+		finalBody.AddStmt(astbuilder.DeclareVar("err", astbuilder.I("error")))
 	}
 	for _, stmt := range bodyBuilder.Build().List {
 		finalBody.AddStatement(stmt)
@@ -519,7 +519,7 @@ func (g *Generator) AddWriteResponseCode(baseName string, code string, response 
 
 func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Parameters) error {
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.DeclareVar("pathParams", Sel(I(g.GetCurrentModelsPackage()), baseName+"PathParams")))
+		AddStmt(astbuilder.DeclareVar("pathParams", astbuilder.Sel(astbuilder.I(g.GetCurrentModelsPackage()), baseName+"PathParams")))
 
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
@@ -527,16 +527,16 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 		}
 
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
-		bodyBuilder.AddStmt(astbuilder.DefineCall(varName, Sel(I("chi"), "URLParam"), I("r"), Str(param.Value.Name)))
-		bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.Return2(I("nil"), astbuilder.Call(Sel(I("errors"), "New"), Str(param.Value.Name+" path param is required"))))))
+		bodyBuilder.AddStmt(astbuilder.DefineCall(varName, astbuilder.Sel(astbuilder.I("chi"), "URLParam"), astbuilder.I("r"), astbuilder.Str(param.Value.Name)))
+		bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(astbuilder.I(varName), astbuilder.Str(""))).WithBody(astbuilder.NewBodyBuilder().
+			AddStmt(astbuilder.Return2(astbuilder.I("nil"), astbuilder.Call(astbuilder.Sel(astbuilder.I("errors"), "New"), astbuilder.Str(param.Value.Name+" path param is required"))))))
 
 		g.AddHandlersImport("github.com/go-faster/errors")
 		switch {
 		case param.Value.Schema.Value.Type.Permits("string"):
 			bodyBuilder.AddStmt(astbuilder.Assign(
-				Sel(I("pathParams"), FormatGoLikeIdentifier(param.Value.Name)),
-				I(varName),
+				astbuilder.Sel(astbuilder.I("pathParams"), FormatGoLikeIdentifier(param.Value.Name)),
+				astbuilder.I(varName),
 			))
 		default:
 			return errors.New(fmt.Sprintf("unsupported path parameter type: %v", param.Value.Schema.Value.Type)) //nolint:revive
@@ -544,9 +544,9 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 	}
 
 	bodyBuilder.
-		AddStmt(astbuilder.DefineCall("err", Sel(Sel(I("h"), "validator"), "Struct"), I("pathParams"))).
-		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
-		AddStmt(astbuilder.Return2(Amp(I("pathParams")), I("nil")))
+		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), "validator"), "Struct"), astbuilder.I("pathParams"))).
+		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil"))).
+		AddStmt(astbuilder.Return2(astbuilder.Amp(astbuilder.I("pathParams")), astbuilder.I("nil")))
 
 	parsePathParamsFunc := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"PathParams").

@@ -5,23 +5,13 @@ Each group describes what new builder capability is needed and lists every occur
 
 ---
 
-## 1. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
-
-These three shorthand functions from `ast_helpers.go` are fundamental building blocks used everywhere.
-They could be promoted into `astbuilder` as package-level functions so that `ast_helpers.go`
-(and its `go/ast` import) can eventually be removed from the generator layer.
-
-Used pervasively across all `*_ast.go` files — no single location to pin.
-
----
-
-## 2. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
+## 1. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
 
 - [handler_ast.go:215-217](../../internal/generator/handler_ast.go#L215) — `switchBody := &ast.BlockStmt{List: []ast.Stmt{}}` in `CreateHandler`
 
 ---
 
-## 3. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
+## 2. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
 
 These are at the file-output level and may warrant a dedicated `FileBuilder` or remain as is
 if deemed infrastructural rather than generated code.
