@@ -10,7 +10,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
 
-	"github.com/jolfzverb/codegen/internal/generator/astbuilder"
+	"github.com/sintoniastrategy/validgo-gen/internal/generator/astbuilder"
 )
 
 type HandlersFile struct {
@@ -220,7 +220,7 @@ func (g *Generator) CreateHandler(baseName string) {
 		List: []ast.Stmt{},
 	}
 
-/* TODO:
+	/* TODO:
 	handleFunc := Func(
 		"handle"+baseName,
 		Field("h", Star(I("Handler")), ""),
@@ -258,7 +258,7 @@ func (g *Generator) CreateHandler(baseName string) {
 	)
 	*/
 	handleFunc := astbuilder.NewFunctionBuilder().
-		WithName("handle" + baseName).
+		WithName("handle"+baseName).
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
@@ -384,7 +384,7 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 		AddStmt(astbuilder.Return())
 
 	fn := astbuilder.NewFunctionBuilder().
-		WithName("handle" + baseName + "Request").
+		WithName("handle"+baseName+"Request").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
@@ -458,7 +458,7 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 		))
 
 	writeResponseFunc := astbuilder.NewFunctionBuilder().
-		WithName("write" + baseName + "Response").
+		WithName("write"+baseName+"Response").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("response").WithType(
@@ -524,7 +524,7 @@ func (g *Generator) AddWriteHeadersForResponseCode(baseName string, code string,
 			))))
 
 	writeResponseFunc := astbuilder.NewFunctionBuilder().
-		WithName("write" + baseName + code + "ResponseHeaders").
+		WithName("write"+baseName+code+"ResponseHeaders").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(
@@ -580,7 +580,7 @@ func (g *Generator) AddWriteResponseCode(baseName string, code string, response 
 	}
 
 	writeResponseFunc := astbuilder.NewFunctionBuilder().
-		WithName("write" + baseName + code + "Response").
+		WithName("write"+baseName+code+"Response").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(
@@ -638,7 +638,7 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 		AddStmt(astbuilder.Return2(Amp(I("pathParams")), I("nil")))
 
 	parsePathParamsFunc := astbuilder.NewFunctionBuilder().
-		WithName("parse" + baseName + "PathParams").
+		WithName("parse"+baseName+"PathParams").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"PathParams").AsPointer(true))).

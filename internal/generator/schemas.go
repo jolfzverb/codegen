@@ -5,12 +5,11 @@ import (
 	"go/format"
 	"go/token"
 	"io"
-	"slices"
 	"sort"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
-	"github.com/jolfzverb/codegen/internal/generator/astbuilder"
+	"github.com/sintoniastrategy/validgo-gen/internal/generator/astbuilder"
 )
 
 type SchemasFile struct {
@@ -216,7 +215,7 @@ func (g *Generator) GetIntegerType(format string) string {
 }
 
 func (g *Generator) AddSchemasImport(path string) {
-/* TODO
+	/* TODO
 	if slices.Contains(g.SchemasFile.packageImports, path) {
 		return
 	}

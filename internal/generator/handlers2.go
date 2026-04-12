@@ -10,7 +10,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
 
-	"github.com/jolfzverb/codegen/internal/generator/astbuilder"
+	"github.com/sintoniastrategy/validgo-gen/internal/generator/astbuilder"
 )
 
 func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.Parameters) error {
@@ -71,7 +71,7 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 		AddStmt(astbuilder.Return2(Amp(I("queryParams")), I("nil")))
 
 	fn := astbuilder.NewFunctionBuilder().
-		WithName("parse" + baseName + "QueryParams").
+		WithName("parse"+baseName+"QueryParams").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"QueryParams").AsPointer(true))).
@@ -177,7 +177,7 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 		AddStmt(astbuilder.Return2(Amp(I("headers")), I("nil")))
 
 	fn := astbuilder.NewFunctionBuilder().
-		WithName("parse" + baseName + "Headers").
+		WithName("parse"+baseName+"Headers").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Headers").AsPointer(true))).
@@ -259,7 +259,7 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 		AddStmt(astbuilder.Return2(Amp(I("cookies")), I("nil")))
 
 	fn := astbuilder.NewFunctionBuilder().
-		WithName("parse" + baseName + "Cookies").
+		WithName("parse"+baseName+"Cookies").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Cookies").AsPointer(true))).
@@ -373,7 +373,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		AddStmt(astbuilder.IfErrNotNilReturn(I("nil"))).
 		AddStmt(astbuilder.Return2(Amp(I("body")), I("nil")))
 
-	fn := astbuilder.Function("parse" + baseName + "RequestBody").
+	fn := astbuilder.Function("parse"+baseName+"RequestBody").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.ErrorField()).
@@ -445,7 +445,7 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 	))
 
 	fn := astbuilder.NewFunctionBuilder().
-		WithName("parse" + baseName + "Request").
+		WithName("parse"+baseName+"Request").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Request").AsPointer(true))).
@@ -685,13 +685,13 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	if len(requiredFields) > 0 || len(objectFields) > 0 {
 		bodyBuilder.AddStatement(&ast.DeclStmt{
 			Decl: &ast.GenDecl{
-				Tok: token.VAR,
+				Tok:   token.VAR,
 				Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{I("val")}, Type: Sel(I("json"), "RawMessage")}},
 			},
 		})
 		bodyBuilder.AddStatement(&ast.DeclStmt{
 			Decl: &ast.GenDecl{
-				Tok: token.VAR,
+				Tok:   token.VAR,
 				Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{I("exists")}, Type: I("bool")}},
 			},
 		})
