@@ -15,7 +15,7 @@ import (
 
 type HandlersFile struct {
 	requiredFieldsArePointers bool
-	packageName               *ast.Ident
+	packageName               string
 	interfaceDecls            []*ast.GenDecl
 
 	handlerDeclBuilder *astbuilder.StructBuilder
@@ -67,7 +67,7 @@ func (g *Generator) InitRoutesFunc() {
 }
 
 func (g *Generator) InitHandlerFields(packageName string) {
-	g.HandlersFile.packageName = astbuilder.I(packageName)
+	g.HandlersFile.packageName = packageName
 
 	g.InitHandlerImports()
 
@@ -152,28 +152,19 @@ func (g *Generator) GenerateHandlersFile() *ast.File {
 
 	g.FinalizeHandlerSwitches()
 
-	file := &ast.File{
-		Name:    g.HandlersFile.packageName,
-		Decls:   []ast.Decl{},
-		Imports: importSpecs,
-	}
-
-	file.Decls = append(file.Decls, &ast.GenDecl{
-		Tok:   token.IMPORT,
-		Specs: declSpecs,
-	})
+	fb := astbuilder.NewFileBuilder(g.HandlersFile.packageName).
+		WithImports(importSpecs, declSpecs)
 	for _, d := range g.HandlersFile.interfaceDecls {
-		file.Decls = append(file.Decls, d)
+		fb.AddDecl(d)
 	}
-
-	file.Decls = append(file.Decls, g.HandlersFile.handlerDeclBuilder.BuildAsDeclaration())
-	file.Decls = append(file.Decls, g.HandlersFile.handlerConstructorDecl)
-	file.Decls = append(file.Decls, g.HandlersFile.addRoutesDecl)
+	fb.AddDecl(g.HandlersFile.handlerDeclBuilder.BuildAsDeclaration())
+	fb.AddDecl(g.HandlersFile.handlerConstructorDecl)
+	fb.AddDecl(g.HandlersFile.addRoutesDecl)
 	for _, d := range g.HandlersFile.restDecls {
-		file.Decls = append(file.Decls, d)
+		fb.AddDecl(d)
 	}
 
-	return file
+	return fb.Build()
 }
 
 func (g *Generator) AddRouteToRouter(baseName string, method string, pathName string) {
@@ -199,9 +190,7 @@ func (g *Generator) GetHandler(baseName string) *ast.BlockStmt {
 func (g *Generator) CreateHandler(baseName string) {
 	g.AddHandlersImport("mime")
 
-	switchBody := &ast.BlockStmt{
-		List: []ast.Stmt{},
-	}
+	switchBody := astbuilder.NewBodyBuilder().Build()
 
 	handleFunc := astbuilder.NewFunctionBuilder().
 		WithName("handle"+baseName).

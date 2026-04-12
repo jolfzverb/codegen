@@ -48,24 +48,13 @@ func (g *Generator) WriteSchemasToOutput(output io.Writer) error {
 
 	importSpecs, declSpecs := g.SchemasImportsBuilder.Build()
 
-	file := &ast.File{
-		Name:    ast.NewIdent(g.PackageName + "models"),
-		Imports: importSpecs,
-		Decls:   []ast.Decl{},
-	}
-
-	if len(declSpecs) > 0 {
-		file.Decls = append(file.Decls, &ast.GenDecl{
-			Tok:   token.IMPORT,
-			Specs: declSpecs,
-		})
-	}
-
+	fb := astbuilder.NewFileBuilder(g.PackageName + "models").
+		WithImports(importSpecs, declSpecs)
 	for _, decl := range g.SchemasFile.decls {
-		file.Decls = append(file.Decls, decl)
+		fb.AddDecl(decl)
 	}
 
-	err = format.Node(output, token.NewFileSet(), file)
+	err = format.Node(output, token.NewFileSet(), fb.Build())
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
