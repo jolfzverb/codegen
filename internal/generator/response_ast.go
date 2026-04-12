@@ -50,16 +50,14 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 	}
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.Return1(Amp(&ast.CompositeLit{
-			Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"),
-			Elts: []ast.Expr{
-				astbuilder.KeyValue(I("StatusCode"), &ast.BasicLit{Kind: token.INT, Value: code}),
-				astbuilder.KeyValue(I("Response"+code), Amp(&ast.CompositeLit{
-					Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code),
-					Elts: constructorArgs,
-				})),
-			},
-		})))
+		AddStmt(astbuilder.Return1(Amp(astbuilder.CompositeLit(
+			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"),
+			astbuilder.KeyValue(I("StatusCode"), &ast.BasicLit{Kind: token.INT, Value: code}),
+			astbuilder.KeyValue(I("Response"+code), Amp(astbuilder.CompositeLit(
+				astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code),
+				constructorArgs...,
+			))),
+		))))
 
 	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fnBuilder.WithBody(bodyBuilder).Build())
 

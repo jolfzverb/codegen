@@ -316,10 +316,10 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 	}
 
 	bodyBuilder.AddStmt(astbuilder.Return2(
-		Amp(&ast.CompositeLit{
-			Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Request"),
-			Elts: elts,
-		}),
+		Amp(astbuilder.CompositeLit(
+			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Request"),
+			elts...,
+		)),
 		I("nil"),
 	))
 

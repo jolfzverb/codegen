@@ -42,14 +42,11 @@ func (g *Generator) InitHandlerStruct() {
 }
 
 func (g *Generator) InitHandlerConstructor() {
-	initializerComposite := &ast.CompositeLit{
-		Type: I("Handler"),
-		Elts: []ast.Expr{
-			astbuilder.KeyValue(I("validator"), astbuilder.Call(Sel(I("validator"), "New"),
-				astbuilder.Call(Sel(I("validator"), "WithRequiredStructEnabled")),
-			)),
-		},
-	}
+	initializerComposite := astbuilder.CompositeLit(astbuilder.Ident("Handler"),
+		astbuilder.KeyValue(I("validator"), astbuilder.Call(Sel(I("validator"), "New"),
+			astbuilder.Call(Sel(I("validator"), "WithRequiredStructEnabled")),
+		)),
+	)
 
 	g.HandlersFile.handlerConstructorDecl = astbuilder.NewFunctionBuilder().
 		WithName("NewHandler").

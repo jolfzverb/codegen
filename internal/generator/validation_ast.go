@@ -226,19 +226,17 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 		for _, fieldName := range requiredFields {
 			requiredFieldsElts = append(requiredFieldsElts, astbuilder.KeyValue(Str(fieldName), I("true")))
 		}
-		bodyBuilder.AddStmt(astbuilder.Define(I("requiredFields"), &ast.CompositeLit{
-			Type: &ast.MapType{Key: I("string"), Value: I("bool")},
-			Elts: requiredFieldsElts,
-		}))
+		bodyBuilder.AddStmt(astbuilder.Define(I("requiredFields"),
+			astbuilder.CompositeLit(astbuilder.MapOf(astbuilder.String(), astbuilder.Bool()), requiredFieldsElts...),
+		))
 
 		nullableFieldsElts := make([]ast.Expr, 0, len(nullableFields))
 		for _, fieldName := range nullableFields {
 			nullableFieldsElts = append(nullableFieldsElts, astbuilder.KeyValue(Str(fieldName), I("true")))
 		}
-		bodyBuilder.AddStmt(astbuilder.Define(I("nullableFields"), &ast.CompositeLit{
-			Type: &ast.MapType{Key: I("string"), Value: I("bool")},
-			Elts: nullableFieldsElts,
-		}))
+		bodyBuilder.AddStmt(astbuilder.Define(I("nullableFields"),
+			astbuilder.CompositeLit(astbuilder.MapOf(astbuilder.String(), astbuilder.Bool()), nullableFieldsElts...),
+		))
 	}
 
 	if len(requiredFields) > 0 || len(objectFields) > 0 {

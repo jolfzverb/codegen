@@ -506,6 +506,12 @@ func KeyValue(key, value ast.Expr) *ast.KeyValueExpr {
 	return &ast.KeyValueExpr{Key: key, Value: value}
 }
 
+// CompositeLit creates a composite literal: Type{elts...}
+// The type is built from a TypeExpressionBuilder (Ident, Selector, MapOf, etc.).
+func CompositeLit(tb TypeExpressionBuilder, elts ...ast.Expr) *ast.CompositeLit {
+	return &ast.CompositeLit{Type: tb.Build(), Elts: elts}
+}
+
 // Or creates a logical OR expression: x || y
 func Or(x, y ast.Expr) *ast.BinaryExpr {
 	return &ast.BinaryExpr{X: x, Op: token.LOR, Y: y}
