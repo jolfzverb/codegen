@@ -512,6 +512,11 @@ func CompositeLit(tb TypeExpressionBuilder, elts ...ast.Expr) *ast.CompositeLit 
 	return &ast.CompositeLit{Type: tb.Build(), Elts: elts}
 }
 
+// Index creates an index expression: x[index]
+func Index(x, index ast.Expr) *ast.IndexExpr {
+	return &ast.IndexExpr{X: x, Index: index}
+}
+
 // Or creates a logical OR expression: x || y
 func Or(x, y ast.Expr) *ast.BinaryExpr {
 	return &ast.BinaryExpr{X: x, Op: token.LOR, Y: y}

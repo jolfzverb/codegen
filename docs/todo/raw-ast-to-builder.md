@@ -5,17 +5,7 @@ Each group describes what new builder capability is needed and lists every occur
 
 ---
 
-## 1. `&ast.IndexExpr{}` — add `astbuilder.Index(x, index)` expression builder
-
-Map/slice index expressions used as values.
-
-- [validation_ast.go:289](../../internal/generator/validation_ast.go#L289) — `&ast.IndexExpr{X: I("obj"), Index: I("field")}`
-- [validation_ast.go:300](../../internal/generator/validation_ast.go#L300) — `&ast.IndexExpr{X: I("nullableFields"), Index: I("field")}`
-- [validation_ast.go:326](../../internal/generator/validation_ast.go#L326) — `&ast.IndexExpr{X: I("obj"), Index: Str(fieldName)}`
-
----
-
-## 2. `&ast.MapType{}` / `&ast.ArrayType{}` — extend type builders
+## 1. `&ast.MapType{}` / `&ast.ArrayType{}` — extend type builders
 
 Raw map/array type expressions in variable declarations and composite literals.
 `astbuilder.ArrayTypeBuilder` exists for `[]T` but not for `map[K]V`.
@@ -28,7 +18,7 @@ Raw map/array type expressions in variable declarations and composite literals.
 
 ---
 
-## 3. `&ast.BasicLit{Kind: token.INT}` — add `IntLit(value string)` to `ast_helpers.go`
+## 2. `&ast.BasicLit{Kind: token.INT}` — add `IntLit(value string)` to `ast_helpers.go`
 
 Integer literal expressions.
 
@@ -37,7 +27,7 @@ Integer literal expressions.
 
 ---
 
-## 4. `Ret1()` / `Ret2()` / `Ret()` helpers — replace with `astbuilder.Return*()`
+## 3. `Ret1()` / `Ret2()` / `Ret()` helpers — replace with `astbuilder.Return*()`
 
 These three helpers in `ast_helpers.go` duplicate what `astbuilder.Return1()`, `astbuilder.Return2()`, `astbuilder.Return()` already provide.
 
@@ -45,7 +35,7 @@ These three helpers in `ast_helpers.go` duplicate what `astbuilder.Return1()`, `
 
 ---
 
-## 5. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
+## 4. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
 
 `Ne()` and `Eq()` are defined in `ast_helpers.go`. Since `astbuilder` already has comparison helpers,
 these could either be removed or re-exported from there to avoid dual sources.
@@ -55,7 +45,7 @@ but all follow the pattern `astbuilder.If(Ne(I("err"), I("nil")))`.
 
 ---
 
-## 6. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
+## 5. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
 
 These three shorthand functions from `ast_helpers.go` are fundamental building blocks used everywhere.
 They could be promoted into `astbuilder` as package-level functions so that `ast_helpers.go`
@@ -65,13 +55,13 @@ Used pervasively across all `*_ast.go` files — no single location to pin.
 
 ---
 
-## 7. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
+## 6. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
 
 - [handler_ast.go:215-217](../../internal/generator/handler_ast.go#L215) — `switchBody := &ast.BlockStmt{List: []ast.Stmt{}}` in `CreateHandler`
 
 ---
 
-## 8. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
+## 7. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
 
 These are at the file-output level and may warrant a dedicated `FileBuilder` or remain as is
 if deemed infrastructural rather than generated code.

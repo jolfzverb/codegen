@@ -253,7 +253,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 
 	if len(requiredFields) > 0 {
 		rangeBody := astbuilder.NewBodyBuilder().
-			AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(&ast.IndexExpr{X: I("obj"), Index: I("field")})).
+			AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(astbuilder.Index(I("obj"), I("field")))).
 			AddStmt(
 				astbuilder.If(astbuilder.Not(I("exists"))).WithBody(astbuilder.NewBodyBuilder().
 					AddStmt(
@@ -267,7 +267,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 				),
 			).
 			AddStmt(astbuilder.If(astbuilder.And(
-				astbuilder.Not(&ast.IndexExpr{X: I("nullableFields"), Index: I("field")}),
+				astbuilder.Not(astbuilder.Index(I("nullableFields"), I("field"))),
 				astbuilder.Call(I("containsNull"), I("val")),
 			)).WithBody(
 				astbuilder.NewBodyBuilder().AddStmt(
@@ -294,7 +294,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 
 	for _, fieldName := range objectFieldsNames {
 		fieldValidationFunc := objectFields[fieldName]
-		bodyBuilder.AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(&ast.IndexExpr{X: I("obj"), Index: Str(fieldName)}))
+		bodyBuilder.AddStmt(astbuilder.NewAssignBuilder().Lhs(I("val"), I("exists")).Rhs(astbuilder.Index(I("obj"), Str(fieldName))))
 
 		ifBody := astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(fieldValidationFunc, I("val")))).
