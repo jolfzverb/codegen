@@ -5,28 +5,7 @@ Each group describes what new builder capability is needed and lists every occur
 
 ---
 
-## 1. `&ast.DeclStmt{Decl: &ast.GenDecl{...ValueSpec{}}}` — extend `DeclareVar` builder
-
-`astbuilder.DeclareVar(name, typeExpr)` exists but only handles simple `ast.Expr`.
-All the places below pass raw types not yet covered (selector types, map types, array types).
-Needs either extending `DeclareVar` or adding `DeclareVarWithType(name string, tb TypeExpressionBuilder)`.
-
-- [handler_ast.go:470-477](../../internal/generator/handler_ast.go#L470) — `var headers map[string]string`
-- [handler_ast.go:565-572](../../internal/generator/handler_ast.go#L565) — `var pathParams models.XxxPathParams`
-- [parse_ast.go:16-24](../../internal/generator/parse_ast.go#L16) — `var queryParams models.XxxQueryParams`
-- [parse_ast.go:119-127](../../internal/generator/parse_ast.go#L119) — `var headers models.XxxHeaders`
-- [parse_ast.go:193-201](../../internal/generator/parse_ast.go#L193) — `var cookies models.XxxCookies`
-- [parse_ast.go:299-307](../../internal/generator/parse_ast.go#L299) — `var bodyJSON json.RawMessage`
-- [parse_ast.go:324-329](../../internal/generator/parse_ast.go#L324) — `var body <dynamic type>`
-- [validation_ast.go:163-169](../../internal/generator/validation_ast.go#L163) — `var temp any`
-- [validation_ast.go:256-263](../../internal/generator/validation_ast.go#L256) — `var obj map[string]json.RawMessage`
-- [validation_ast.go:273-277](../../internal/generator/validation_ast.go#L273) — `var val json.RawMessage`
-- [validation_ast.go:279-283](../../internal/generator/validation_ast.go#L279) — `var exists bool`
-- [validation_ast.go:387-394](../../internal/generator/validation_ast.go#L387) — `var arr []json.RawMessage`
-
----
-
-## 2. `&ast.KeyValueExpr{}` in composite literals — add `astbuilder.KeyValue(k, v)` helper
+## 1. `&ast.KeyValueExpr{}` in composite literals — add `astbuilder.KeyValue(k, v)` helper
 
 Used to build struct/map literal fields.
 

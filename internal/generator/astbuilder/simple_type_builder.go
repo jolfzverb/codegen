@@ -467,3 +467,76 @@ func CustomAlias(name string, typeBuilder TypeExpressionBuilder) *TypeAliasBuild
 		WithName(name).
 		WithType(typeBuilder)
 }
+
+// MapTypeBuilder provides a fluent interface for building map types like map[K]V
+type MapTypeBuilder struct {
+	key   TypeExpressionBuilder
+	value TypeExpressionBuilder
+}
+
+// NewMapTypeBuilder creates a new MapTypeBuilder
+func NewMapTypeBuilder() *MapTypeBuilder {
+	return &MapTypeBuilder{}
+}
+
+// WithKey sets the map key type
+func (mtb *MapTypeBuilder) WithKey(key TypeExpressionBuilder) *MapTypeBuilder {
+	if key == nil {
+		panic("key cannot be nil")
+	}
+	mtb.key = key
+	return mtb
+}
+
+// WithValue sets the map value type
+func (mtb *MapTypeBuilder) WithValue(value TypeExpressionBuilder) *MapTypeBuilder {
+	if value == nil {
+		panic("value cannot be nil")
+	}
+	mtb.value = value
+	return mtb
+}
+
+// Build creates the ast.Expr for the map type
+func (mtb *MapTypeBuilder) Build() ast.Expr {
+	if mtb.key == nil {
+		panic("map type must have a key type")
+	}
+	if mtb.value == nil {
+		panic("map type must have a value type")
+	}
+	return &ast.MapType{
+		Key:   mtb.key.Build(),
+		Value: mtb.value.Build(),
+	}
+}
+
+// Clone creates a copy of the MapTypeBuilder
+func (mtb *MapTypeBuilder) Clone() *MapTypeBuilder {
+	clone := &MapTypeBuilder{}
+	if mtb.key != nil {
+		clone.key = cloneTypeExpressionBuilder(mtb.key)
+	}
+	if mtb.value != nil {
+		clone.value = cloneTypeExpressionBuilder(mtb.value)
+	}
+	return clone
+}
+
+func cloneTypeExpressionBuilder(tb TypeExpressionBuilder) TypeExpressionBuilder {
+	switch v := tb.(type) {
+	case *SimpleTypeBuilder:
+		return v.Clone()
+	case *ArrayTypeBuilder:
+		return v.Clone()
+	case *MapTypeBuilder:
+		return v.Clone()
+	default:
+		panic("cannot clone unknown TypeExpressionBuilder type")
+	}
+}
+
+// MapOf creates a MapTypeBuilder for map[K]V
+func MapOf(key, value TypeExpressionBuilder) *MapTypeBuilder {
+	return NewMapTypeBuilder().WithKey(key).WithValue(value)
+}

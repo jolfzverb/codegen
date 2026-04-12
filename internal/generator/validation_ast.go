@@ -3,7 +3,6 @@ package generator
 import (
 	"fmt"
 	"go/ast"
-	"go/token"
 	"log/slog"
 	"sort"
 	"strconv"
@@ -160,17 +159,7 @@ func (g *Generator) AddContainsNullIfNeeded() {
 	g.HandlersFile.hasContainsNullMethod = true
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("temp")},
-						Type:  I("any"),
-					},
-				},
-			},
-		}).
+		AddStmt(astbuilder.DeclareVar("temp", I("any"))).
 		AddStmt(astbuilder.DefineCall("err", Sel(I("json"), "Unmarshal"), I("data"), Amp(I("temp")))).
 		AddStmt(astbuilder.If(Ne(I("err"), I("nil"))).WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.Return1(I("false"))))).
@@ -253,35 +242,15 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	}
 
 	if len(requiredFields) > 0 || len(objectFields) > 0 {
-		bodyBuilder.AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("obj")},
-						Type:  &ast.MapType{Key: I("string"), Value: Sel(I("json"), "RawMessage")},
-					},
-				},
-			},
-		})
+		bodyBuilder.AddStmt(astbuilder.DeclareVarWithType("obj", astbuilder.MapOf(astbuilder.String(), astbuilder.Selector("json", "RawMessage"))))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCall("err", Sel(I("json"), "Unmarshal"), I("jsonData"), Amp(I("obj")))).
 			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(I("err")))))
 	}
 
 	if len(requiredFields) > 0 || len(objectFields) > 0 {
-		bodyBuilder.AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok:   token.VAR,
-				Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{I("val")}, Type: Sel(I("json"), "RawMessage")}},
-			},
-		})
-		bodyBuilder.AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok:   token.VAR,
-				Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{I("exists")}, Type: I("bool")}},
-			},
-		})
+		bodyBuilder.AddStmt(astbuilder.DeclareVarWithType("val", astbuilder.Selector("json", "RawMessage")))
+		bodyBuilder.AddStmt(astbuilder.DeclareVarWithType("exists", astbuilder.Bool()))
 	}
 
 	if len(requiredFields) > 0 {
@@ -378,17 +347,7 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 		AddStmt(astbuilder.If(astbuilder.Not(astbuilder.Call(I("containsNull"), I("obj")))).WithBody(rangeIfBody))
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("arr")},
-						Type:  &ast.ArrayType{Elt: Sel(I("json"), "RawMessage")},
-					},
-				},
-			},
-		}).
+		AddStmt(astbuilder.DeclareVarWithType("arr", astbuilder.SelectorSlice("json", "RawMessage"))).
 		AddStmt(astbuilder.DefineCall("err", Sel(I("json"), "Unmarshal"), I("jsonData"), Amp(I("arr")))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(I("err"))))).
 		AddStmt(astbuilder.Range("index", "obj", I("arr")).WithBody(rangeBody)).

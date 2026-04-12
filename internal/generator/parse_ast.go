@@ -3,7 +3,6 @@ package generator
 import (
 	"fmt"
 	"go/ast"
-	"go/token"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
@@ -13,17 +12,7 @@ import (
 
 func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.Parameters) error {
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("queryParams")},
-						Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"QueryParams"),
-					},
-				},
-			},
-		})
+		AddStmt(astbuilder.DeclareVar("queryParams", Sel(I(g.GetCurrentModelsPackage()), baseName+"QueryParams")))
 
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
@@ -105,17 +94,7 @@ func (g *Generator) AssignStringField(paramsName string, varName string, fieldNa
 
 func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Parameters) error {
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("headers")},
-						Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"Headers"),
-					},
-				},
-			},
-		})
+		AddStmt(astbuilder.DeclareVar("headers", Sel(I(g.GetCurrentModelsPackage()), baseName+"Headers")))
 
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
@@ -174,17 +153,7 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 
 func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Parameters) error {
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("cookies")},
-						Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"Cookies"),
-					},
-				},
-			},
-		})
+		AddStmt(astbuilder.DeclareVar("cookies", Sel(I(g.GetCurrentModelsPackage()), baseName+"Cookies")))
 
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {
@@ -270,17 +239,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		}
 	}
 
-	bodyBuilder.AddStatement(&ast.DeclStmt{
-		Decl: &ast.GenDecl{
-			Tok: token.VAR,
-			Specs: []ast.Spec{
-				&ast.ValueSpec{
-					Names: []*ast.Ident{I("bodyJSON")},
-					Type:  Sel(I("json"), "RawMessage"),
-				},
-			},
-		},
-	})
+	bodyBuilder.AddStmt(astbuilder.DeclareVarWithType("bodyJSON", astbuilder.Selector("json", "RawMessage")))
 	g.AddHandlersImport("encoding/json")
 
 	bodyBuilder.
@@ -289,17 +248,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(g.GetValidateFuncStmt(typeName, content.Schema.Ref), I("bodyJSON")))).
 		AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 
-	bodyBuilder.AddStatement(&ast.DeclStmt{
-		Decl: &ast.GenDecl{
-			Tok: token.VAR,
-			Specs: []ast.Spec{
-				&ast.ValueSpec{
-					Names: []*ast.Ident{I("body")},
-					Type:  bodyType,
-				},
-			},
-		},
-	})
+	bodyBuilder.AddStmt(astbuilder.DeclareVar("body", bodyType))
 
 	bodyBuilder.
 		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(Sel(I("json"), "Unmarshal"), I("bodyJSON"), Amp(I("body"))))).

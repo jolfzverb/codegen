@@ -447,17 +447,7 @@ func (g *Generator) AddWriteHeadersForResponseCode(baseName string, code string,
 	body := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.DefineCallWithErr("headersJSON", Sel(I("json"), "Marshal"), Sel(I("r"), "Headers"))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(httpErrorBody)).
-		AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("headers")},
-						Type:  &ast.MapType{Key: I("string"), Value: I("string")},
-					},
-				},
-			},
-		}).
+		AddStmt(astbuilder.DeclareVarWithType("headers", astbuilder.MapOf(astbuilder.String(), astbuilder.String()))).
 		AddStmt(astbuilder.Assign(I("err"), astbuilder.Call(Sel(I("json"), "Unmarshal"), I("headersJSON"), Amp(I("headers"))))).
 
 		AddStmt(astbuilder.IfErrNotNil().WithBody(httpErrorBody)).
@@ -537,17 +527,7 @@ func (g *Generator) AddWriteResponseCode(baseName string, code string, response 
 
 func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Parameters) error {
 	bodyBuilder := astbuilder.NewBodyBuilder().
-		AddStatement(&ast.DeclStmt{
-			Decl: &ast.GenDecl{
-				Tok: token.VAR,
-				Specs: []ast.Spec{
-					&ast.ValueSpec{
-						Names: []*ast.Ident{I("pathParams")},
-						Type:  Sel(I(g.GetCurrentModelsPackage()), baseName+"PathParams"),
-					},
-				},
-			},
-		})
+		AddStmt(astbuilder.DeclareVar("pathParams", Sel(I(g.GetCurrentModelsPackage()), baseName+"PathParams")))
 
 	for _, param := range params {
 		if param.Value.Schema == nil || param.Value.Schema.Value == nil {

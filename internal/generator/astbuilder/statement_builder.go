@@ -297,6 +297,11 @@ func DeclareVarWithValue(name string, typeExpr, value ast.Expr) *VarDeclBuilder 
 	return NewVarDeclBuilder().WithName(name).WithType(typeExpr).WithValue(value)
 }
 
+// DeclareVarWithType creates a variable declaration using a TypeExpressionBuilder: var name Type
+func DeclareVarWithType(name string, tb TypeExpressionBuilder) *VarDeclBuilder {
+	return NewVarDeclBuilder().WithName(name).WithTypeBuilder(tb)
+}
+
 // IfBuilder builds if statements
 type IfBuilder struct {
 	init     ast.Stmt
