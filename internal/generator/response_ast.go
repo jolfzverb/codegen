@@ -58,7 +58,8 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 			))),
 		))))
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fnBuilder.WithBody(bodyBuilder).Build())
+	fnBuilder.WithBody(bodyBuilder)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fnBuilder)
 
 	return nil
 }

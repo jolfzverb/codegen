@@ -16,21 +16,21 @@ import (
 type HandlersFile struct {
 	requiredFieldsArePointers bool
 	packageName               string
-	interfaceDecls            []*ast.GenDecl
+	interfaceBuilders         []*astbuilder.InterfaceBuilder
 
 	handlerDeclBuilder *astbuilder.StructBuilder
 
 	handlerConstructorBuilder *astbuilder.FunctionBuilder
-	handlerConstructorElts    []ast.Expr
+	handlerConstructorLit     *astbuilder.CompositeLitBuilder
 
 	addRoutesBodyBuilder *astbuilder.BodyBuilder
 
 	handleFuncBuilders   map[string]*astbuilder.FunctionBuilder
 	handleSwitchBuilders map[string]*astbuilder.SwitchBuilder
 	handleFuncOrder      []string
-	handleFuncSlots      map[string]int // index of the nil placeholder in restDecls
+	handleFuncSlots      map[string]int // index of the nil placeholder in restBuilders
 
-	restDecls             []*ast.FuncDecl
+	restBuilders          []*astbuilder.FunctionBuilder
 	hasContainsNullMethod bool
 }
 
@@ -46,12 +46,11 @@ func (g *Generator) InitHandlerStruct() {
 }
 
 func (g *Generator) InitHandlerConstructor() {
-	g.HandlersFile.handlerConstructorElts = []ast.Expr{
-		astbuilder.KeyValue(astbuilder.I("validator"), astbuilder.Call(
+	g.HandlersFile.handlerConstructorLit = astbuilder.NewCompositeLitBuilder(astbuilder.I("Handler")).
+		AddKeyValue("validator", astbuilder.Call(
 			astbuilder.Sel(astbuilder.I("validator"), "New"),
 			astbuilder.Call(astbuilder.Sel(astbuilder.I("validator"), "WithRequiredStructEnabled")),
-		)),
-	}
+		))
 	g.HandlersFile.handlerConstructorBuilder = astbuilder.NewFunctionBuilder().
 		WithName("NewHandler").
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Ident("Handler").AsPointer(true)))
@@ -119,7 +118,7 @@ func (g *Generator) AddHandlersInterface(name string, methodName string, request
 			),
 	)
 
-	g.HandlersFile.interfaceDecls = append(g.HandlersFile.interfaceDecls, interfaceBuilder.Build())
+	g.HandlersFile.interfaceBuilders = append(g.HandlersFile.interfaceBuilders, interfaceBuilder)
 }
 
 func (g *Generator) AddDependencyToHandlers(baseName string) {
@@ -131,8 +130,7 @@ func (g *Generator) AddDependencyToHandlers(baseName string) {
 
 	g.HandlersFile.handlerConstructorBuilder.AddParam(astbuilder.IdentField(fieldName, baseName+"Handler"))
 
-	g.HandlersFile.handlerConstructorElts = append(g.HandlersFile.handlerConstructorElts,
-		astbuilder.KeyValue(astbuilder.I(fieldName), astbuilder.I(fieldName)))
+	g.HandlersFile.handlerConstructorLit.AddKeyValue(fieldName, astbuilder.I(fieldName))
 }
 
 func (g *Generator) AddHandlersImport(path string) {
@@ -145,9 +143,7 @@ func (g *Generator) GenerateHandlersFile() *ast.File {
 	g.FinalizeHandlerSwitches()
 
 	constructorBody := astbuilder.NewBodyBuilder().
-		AddStmt(astbuilder.Return1(astbuilder.Amp(
-			astbuilder.CompositeLit(astbuilder.Ident("Handler"), g.HandlersFile.handlerConstructorElts...),
-		)))
+		AddStmt(astbuilder.Return1(astbuilder.Amp(g.HandlersFile.handlerConstructorLit.Build())))
 	constructorDecl := g.HandlersFile.handlerConstructorBuilder.
 		WithBody(constructorBody).
 		Build()
@@ -161,14 +157,16 @@ func (g *Generator) GenerateHandlersFile() *ast.File {
 
 	fb := astbuilder.NewFileBuilder(g.HandlersFile.packageName).
 		WithImports(importSpecs, declSpecs)
-	for _, d := range g.HandlersFile.interfaceDecls {
-		fb.AddDecl(d)
+	for _, b := range g.HandlersFile.interfaceBuilders {
+		fb.AddDecl(b.Build())
 	}
 	fb.AddDecl(g.HandlersFile.handlerDeclBuilder.BuildAsDeclaration())
 	fb.AddDecl(constructorDecl)
 	fb.AddDecl(addRoutesDecl)
-	for _, d := range g.HandlersFile.restDecls {
-		fb.AddDecl(d)
+	for _, b := range g.HandlersFile.restBuilders {
+		if b != nil {
+			fb.AddDecl(b.Build())
+		}
 	}
 
 	return fb.Build()
@@ -208,8 +206,8 @@ func (g *Generator) CreateHandler(baseName string) {
 	g.HandlersFile.handleSwitchBuilders[baseName] = astbuilder.Switch(astbuilder.I("contentType"))
 	g.HandlersFile.handleFuncOrder = append(g.HandlersFile.handleFuncOrder, baseName)
 	// Reserve a slot in restDecls at the current position
-	g.HandlersFile.handleFuncSlots[baseName] = len(g.HandlersFile.restDecls)
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, nil)
+	g.HandlersFile.handleFuncSlots[baseName] = len(g.HandlersFile.restBuilders)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, nil)
 }
 
 // CreateDirectHandler generates a handler that directly delegates to the request handler
@@ -229,10 +227,9 @@ func (g *Generator) CreateDirectHandler(baseName string) {
 		).
 		WithBody(astbuilder.NewBodyBuilder().
 			Call(astbuilder.Sel(astbuilder.I("h"), "handle"+baseName+"Request"), astbuilder.I("w"), astbuilder.I("r")),
-		).
-		Build()
+		)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, handleFunc)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, handleFunc)
 }
 
 func (g *Generator) FinalizeHandlerSwitches() {
@@ -257,11 +254,9 @@ func (g *Generator) FinalizeHandlerSwitches() {
 					astbuilder.Call(astbuilder.Sel(astbuilder.I("r.Header"), "Get"), astbuilder.Str("Content-Type")),
 				))).
 			AddStmt(switchBuilder)
-		fn := g.HandlersFile.handleFuncBuilders[baseName].
-			WithBody(bodyBuilder).
-			Build()
-		// Fill the reserved slot in restDecls
-		g.HandlersFile.restDecls[g.HandlersFile.handleFuncSlots[baseName]] = fn
+		g.HandlersFile.handleFuncBuilders[baseName].WithBody(bodyBuilder)
+		// Fill the reserved slot in restBuilders
+		g.HandlersFile.restBuilders[g.HandlersFile.handleFuncSlots[baseName]] = g.HandlersFile.handleFuncBuilders[baseName]
 	}
 }
 
@@ -322,10 +317,9 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
-		WithBody(body).
-		Build()
+		WithBody(body)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 	g.AddHandlersImport("fmt")
 	g.AddHandlersImport("strconv")
 }
@@ -397,10 +391,9 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("response").WithType(
 			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response").AsPointer(true))).
-		WithBody(body).
-		Build()
+		WithBody(body)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, writeResponseFunc)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, writeResponseFunc)
 	return nil
 }
 
@@ -451,10 +444,9 @@ func (g *Generator) AddWriteHeadersForResponseCode(baseName string, code string,
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(
 			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code).AsPointer(true))).
-		WithBody(body).
-		Build()
+		WithBody(body)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, writeResponseFunc)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, writeResponseFunc)
 
 	return nil
 }
@@ -502,10 +494,9 @@ func (g *Generator) AddWriteResponseCode(baseName string, code string, response 
 		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(
 			astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code).AsPointer(true))).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, writeResponseFunc)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, writeResponseFunc)
 
 	return nil
 }
@@ -547,10 +538,9 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"PathParams").AsPointer(true))).
 		AddResult(astbuilder.ErrorField()).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, parsePathParamsFunc)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, parsePathParamsFunc)
 
 	return nil
 }

@@ -51,10 +51,9 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"QueryParams").AsPointer(true))).
 		AddResult(astbuilder.ErrorField()).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 
 	return nil
 }
@@ -133,10 +132,9 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Headers").AsPointer(true))).
 		AddResult(astbuilder.ErrorField()).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 
 	return nil
 }
@@ -191,10 +189,9 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Cookies").AsPointer(true))).
 		AddResult(astbuilder.ErrorField()).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 
 	return nil
 }
@@ -248,10 +245,9 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResultExpr(astbuilder.Star(bodyType)).
 		AddResultExpr(astbuilder.I("error")).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 
 	return nil
 }
@@ -315,8 +311,7 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Request").AsPointer(true))).
 		AddResult(astbuilder.ErrorField()).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 }

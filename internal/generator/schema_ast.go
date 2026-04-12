@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"go/ast"
 	"go/format"
 	"go/token"
 	"io"
@@ -14,7 +13,7 @@ import (
 
 type SchemasFile struct {
 	requiredFieldsArePointers bool
-	decls                     []*ast.GenDecl
+	fileBuilder               *astbuilder.FileBuilder
 	generatedModels           map[string]bool
 }
 
@@ -35,6 +34,7 @@ func (g *Generator) NewSchemasFile() {
 	g.SchemasFile = &SchemasFile{
 		requiredFieldsArePointers: g.Opts.RequiredFieldsArePointers,
 		generatedModels:           make(map[string]bool),
+		fileBuilder:               astbuilder.NewFileBuilder(g.PackageName + "models"),
 	}
 }
 
@@ -47,14 +47,9 @@ func (g *Generator) WriteSchemasToOutput(output io.Writer) error {
 	}
 
 	importSpecs, declSpecs := g.SchemasImportsBuilder.Build()
+	g.SchemasFile.fileBuilder.WithImports(importSpecs, declSpecs)
 
-	fb := astbuilder.NewFileBuilder(g.PackageName + "models").
-		WithImports(importSpecs, declSpecs)
-	for _, decl := range g.SchemasFile.decls {
-		fb.AddDecl(decl)
-	}
-
-	err = format.Node(output, token.NewFileSet(), fb.Build())
+	err = format.Node(output, token.NewFileSet(), g.SchemasFile.fileBuilder.Build())
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
@@ -75,23 +70,20 @@ func (g *Generator) AddSchema(model SchemaStruct) {
 		}
 		structBuilder.AddField(fieldBuilder)
 	}
-	decl := structBuilder.BuildAsDeclaration()
-	g.SchemasFile.decls = append(g.SchemasFile.decls, decl)
+	g.SchemasFile.fileBuilder.AddDecl(structBuilder.BuildAsDeclaration())
 }
 
 func (g *Generator) AddTypeAlias(name string, typeName string) {
 	typeAliasBuilder := astbuilder.NewTypeAliasBuilder().WithName(name).WithType(
 		astbuilder.NewSimpleTypeBuilder().AddElement(typeName))
-	decl := typeAliasBuilder.BuildAsDeclaration()
-	g.SchemasFile.decls = append(g.SchemasFile.decls, decl)
+	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder.BuildAsDeclaration())
 }
 
 func (g *Generator) AddSliceAlias(name string, typeName string) {
 	typeAliasBuilder := astbuilder.NewTypeAliasBuilder().WithName(name).WithType(
 		astbuilder.NewArrayTypeBuilder().WithElement(
 			astbuilder.NewSimpleTypeBuilder().AddElement(typeName)))
-	decl := typeAliasBuilder.BuildAsDeclaration()
-	g.SchemasFile.decls = append(g.SchemasFile.decls, decl)
+	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder.BuildAsDeclaration())
 }
 
 func (g *Generator) AddParamsModel(baseName string, paramType string, params openapi3.Parameters) error {

@@ -856,3 +856,25 @@ func Case(exprs ...ast.Expr) *CaseBuilder {
 func Default() *CaseBuilder {
 	return NewCaseBuilder()
 }
+
+// CompositeLitBuilder accumulates key-value pairs for a composite literal.
+type CompositeLitBuilder struct {
+	typeExpr ast.Expr
+	elts     []ast.Expr
+}
+
+// NewCompositeLitBuilder creates a CompositeLitBuilder for the given type expression.
+func NewCompositeLitBuilder(typeExpr ast.Expr) *CompositeLitBuilder {
+	return &CompositeLitBuilder{typeExpr: typeExpr}
+}
+
+// AddKeyValue adds a key-value pair to the composite literal.
+func (b *CompositeLitBuilder) AddKeyValue(key string, value ast.Expr) *CompositeLitBuilder {
+	b.elts = append(b.elts, KeyValue(I(key), value))
+	return b
+}
+
+// Build creates the *ast.CompositeLit.
+func (b *CompositeLitBuilder) Build() *ast.CompositeLit {
+	return &ast.CompositeLit{Type: b.typeExpr, Elts: b.elts}
+}

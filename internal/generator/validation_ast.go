@@ -168,10 +168,9 @@ func (g *Generator) AddContainsNullIfNeeded() {
 	fn := astbuilder.Function("containsNull").
 		AddParam(astbuilder.SelectorField("data", "json", "RawMessage")).
 		AddResult(astbuilder.BoolField("")).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 	g.AddHandlersImport("encoding/json")
 }
 
@@ -320,10 +319,9 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	fn := astbuilder.Function("Validate" + modelName + "JSON").
 		AddParam(astbuilder.SelectorField(paramName, "json", "RawMessage")).
 		AddResult(astbuilder.ErrorField()).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 	return nil
 }
 
@@ -354,10 +352,9 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 	fn := astbuilder.Function("Validate" + modelName + "JSON").
 		AddParam(astbuilder.SelectorField("jsonData", "json", "RawMessage")).
 		AddResult(astbuilder.ErrorField()).
-		WithBody(bodyBuilder).
-		Build()
+		WithBody(bodyBuilder)
 
-	g.HandlersFile.restDecls = append(g.HandlersFile.restDecls, fn)
+	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
 	g.AddHandlersImport("github.com/go-faster/errors")
 
 	return nil
