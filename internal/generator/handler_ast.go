@@ -18,10 +18,6 @@ type HandlersFile struct {
 	packageName               *ast.Ident
 	interfaceDecls            []*ast.GenDecl
 
-	/*
-		handlerDecl            *ast.GenDecl
-		handlerDeclQAFieldList *ast.FieldList // quick access to handler struct field list
-	*/
 	handlerDeclBuilder *astbuilder.StructBuilder
 
 	handlerConstructorDecl                       *ast.FuncDecl
