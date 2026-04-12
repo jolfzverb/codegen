@@ -40,30 +40,24 @@ func (g *Generator) AddCreateResponseModel(baseName string, code string, respons
 				}
 			}
 			fnBuilder.AddParamExpr("body", astType)
-			constructorArgs = append(constructorArgs, &ast.KeyValueExpr{Key: I("Body"), Value: I("body")})
+			constructorArgs = append(constructorArgs, astbuilder.KeyValue(I("Body"), I("body")))
 		}
 	}
 
 	if len(response.Value.Headers) > 0 {
 		fnBuilder.AddParamExpr("headers", Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code+"Headers"))
-		constructorArgs = append(constructorArgs, &ast.KeyValueExpr{Key: I("Headers"), Value: I("headers")})
+		constructorArgs = append(constructorArgs, astbuilder.KeyValue(I("Headers"), I("headers")))
 	}
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.Return1(Amp(&ast.CompositeLit{
 			Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"),
 			Elts: []ast.Expr{
-				&ast.KeyValueExpr{
-					Key:   I("StatusCode"),
-					Value: &ast.BasicLit{Kind: token.INT, Value: code},
-				},
-				&ast.KeyValueExpr{
-					Key: I("Response" + code),
-					Value: Amp(&ast.CompositeLit{
-						Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code),
-						Elts: constructorArgs,
-					}),
-				},
+				astbuilder.KeyValue(I("StatusCode"), &ast.BasicLit{Kind: token.INT, Value: code}),
+				astbuilder.KeyValue(I("Response"+code), Amp(&ast.CompositeLit{
+					Type: Sel(I(g.GetCurrentModelsPackage()), baseName+"Response"+code),
+					Elts: constructorArgs,
+				})),
 			},
 		})))
 

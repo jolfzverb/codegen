@@ -278,25 +278,25 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 	elts := []ast.Expr{}
 
 	if len(pathParams) > 0 {
-		elts = append(elts, &ast.KeyValueExpr{Key: I("Path"), Value: Star(I("pathParams"))})
+		elts = append(elts, astbuilder.KeyValue(I("Path"), Star(I("pathParams"))))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("pathParams", Sel(I("h"), "parse"+baseName+"PathParams"), I("r"))).
 			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 	}
 	if len(queryParams) > 0 {
-		elts = append(elts, &ast.KeyValueExpr{Key: I("Query"), Value: Star(I("queryParams"))})
+		elts = append(elts, astbuilder.KeyValue(I("Query"), Star(I("queryParams"))))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("queryParams", Sel(I("h"), "parse"+baseName+"QueryParams"), I("r"))).
 			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 	}
 	if len(headers) > 0 {
-		elts = append(elts, &ast.KeyValueExpr{Key: I("Headers"), Value: Star(I("headers"))})
+		elts = append(elts, astbuilder.KeyValue(I("Headers"), Star(I("headers"))))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("headers", Sel(I("h"), "parse"+baseName+"Headers"), I("r"))).
 			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 	}
 	if len(cookieParams) > 0 {
-		elts = append(elts, &ast.KeyValueExpr{Key: I("Cookies"), Value: Star(I("cookieParams"))})
+		elts = append(elts, astbuilder.KeyValue(I("Cookies"), Star(I("cookieParams"))))
 		bodyBuilder.
 			AddStmt(astbuilder.DefineCallWithErr("cookieParams", Sel(I("h"), "parse"+baseName+"Cookies"), I("r"))).
 			AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
@@ -305,9 +305,9 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 		content, ok := body.Value.Content[contentType]
 		if ok && content.Schema != nil {
 			if body.Value.Required {
-				elts = append(elts, &ast.KeyValueExpr{Key: I("Body"), Value: Star(I("body"))})
+				elts = append(elts, astbuilder.KeyValue(I("Body"), Star(I("body"))))
 			} else {
-				elts = append(elts, &ast.KeyValueExpr{Key: I("Body"), Value: I("body")})
+				elts = append(elts, astbuilder.KeyValue(I("Body"), I("body")))
 			}
 			bodyBuilder.
 				AddStmt(astbuilder.DefineCallWithErr("body", Sel(I("h"), "parse"+baseName+"RequestBody"), I("r"))).

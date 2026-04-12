@@ -224,7 +224,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	if len(requiredFields) > 0 {
 		requiredFieldsElts := make([]ast.Expr, 0, len(requiredFields))
 		for _, fieldName := range requiredFields {
-			requiredFieldsElts = append(requiredFieldsElts, &ast.KeyValueExpr{Key: Str(fieldName), Value: I("true")})
+			requiredFieldsElts = append(requiredFieldsElts, astbuilder.KeyValue(Str(fieldName), I("true")))
 		}
 		bodyBuilder.AddStmt(astbuilder.Define(I("requiredFields"), &ast.CompositeLit{
 			Type: &ast.MapType{Key: I("string"), Value: I("bool")},
@@ -233,7 +233,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 
 		nullableFieldsElts := make([]ast.Expr, 0, len(nullableFields))
 		for _, fieldName := range nullableFields {
-			nullableFieldsElts = append(nullableFieldsElts, &ast.KeyValueExpr{Key: Str(fieldName), Value: I("true")})
+			nullableFieldsElts = append(nullableFieldsElts, astbuilder.KeyValue(Str(fieldName), I("true")))
 		}
 		bodyBuilder.AddStmt(astbuilder.Define(I("nullableFields"), &ast.CompositeLit{
 			Type: &ast.MapType{Key: I("string"), Value: I("bool")},

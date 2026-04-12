@@ -45,12 +45,9 @@ func (g *Generator) InitHandlerConstructor() {
 	initializerComposite := &ast.CompositeLit{
 		Type: I("Handler"),
 		Elts: []ast.Expr{
-			&ast.KeyValueExpr{
-				Key: I("validator"),
-				Value: astbuilder.Call(Sel(I("validator"), "New"),
-					astbuilder.Call(Sel(I("validator"), "WithRequiredStructEnabled")),
-				),
-			},
+			astbuilder.KeyValue(I("validator"), astbuilder.Call(Sel(I("validator"), "New"),
+				astbuilder.Call(Sel(I("validator"), "WithRequiredStructEnabled")),
+			)),
 		},
 	}
 
@@ -144,10 +141,8 @@ func (g *Generator) AddDependencyToHandlers(baseName string) {
 		astbuilder.IdentField(fieldName, baseName+"Handler").Build())
 
 	g.HandlersFile.handlerConstructorDeclQAConstructorComposite.Elts = append(
-		g.HandlersFile.handlerConstructorDeclQAConstructorComposite.Elts, &ast.KeyValueExpr{
-			Key:   I(fieldName),
-			Value: I(fieldName),
-		},
+		g.HandlersFile.handlerConstructorDeclQAConstructorComposite.Elts,
+		astbuilder.KeyValue(I(fieldName), I(fieldName)),
 	)
 }
 

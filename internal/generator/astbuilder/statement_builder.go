@@ -500,6 +500,12 @@ func Call(fun ast.Expr, args ...ast.Expr) *ast.CallExpr {
 	return &ast.CallExpr{Fun: fun, Args: args}
 }
 
+// KeyValue creates a key-value expression: key: value
+// Used in composite literals for struct and map fields.
+func KeyValue(key, value ast.Expr) *ast.KeyValueExpr {
+	return &ast.KeyValueExpr{Key: key, Value: value}
+}
+
 // Or creates a logical OR expression: x || y
 func Or(x, y ast.Expr) *ast.BinaryExpr {
 	return &ast.BinaryExpr{X: x, Op: token.LOR, Y: y}
