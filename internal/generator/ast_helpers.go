@@ -51,20 +51,3 @@ func Eq(left, right ast.Expr) *ast.BinaryExpr {
 	}
 }
 
-func Ret() *ast.ReturnStmt {
-	return &ast.ReturnStmt{
-		Results: []ast.Expr{},
-	}
-}
-
-func Ret1(expr ast.Expr) *ast.ReturnStmt {
-	return &ast.ReturnStmt{
-		Results: []ast.Expr{expr},
-	}
-}
-
-func Ret2(expr1, expr2 ast.Expr) *ast.ReturnStmt {
-	return &ast.ReturnStmt{
-		Results: []ast.Expr{expr1, expr2},
-	}
-}

@@ -52,7 +52,7 @@ func (g *Generator) InitHandlerConstructor() {
 		WithName("NewHandler").
 		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Ident("Handler").AsPointer(true))).
 		Build()
-	g.HandlersFile.handlerConstructorDecl.Body.List = []ast.Stmt{Ret1(Amp(initializerComposite))}
+	g.HandlersFile.handlerConstructorDecl.Body.List = []ast.Stmt{astbuilder.Return1(Amp(initializerComposite)).Build()}
 
 	g.HandlersFile.handlerConstructorDeclQAArgs = g.HandlersFile.handlerConstructorDecl.Type.Params
 	g.HandlersFile.handlerConstructorDeclQAConstructorComposite = initializerComposite

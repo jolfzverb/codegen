@@ -5,15 +5,7 @@ Each group describes what new builder capability is needed and lists every occur
 
 ---
 
-## 1. `Ret1()` / `Ret2()` / `Ret()` helpers — replace with `astbuilder.Return*()`
-
-These three helpers in `ast_helpers.go` duplicate what `astbuilder.Return1()`, `astbuilder.Return2()`, `astbuilder.Return()` already provide.
-
-- [handler_ast.go:66](../../internal/generator/handler_ast.go#L66) — `Ret1(Amp(initializerComposite))` in `InitHandlerConstructor`
-
----
-
-## 2. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
+## 1. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
 
 `Ne()` and `Eq()` are defined in `ast_helpers.go`. Since `astbuilder` already has comparison helpers,
 these could either be removed or re-exported from there to avoid dual sources.
@@ -23,7 +15,7 @@ but all follow the pattern `astbuilder.If(Ne(I("err"), I("nil")))`.
 
 ---
 
-## 3. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
+## 2. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
 
 These three shorthand functions from `ast_helpers.go` are fundamental building blocks used everywhere.
 They could be promoted into `astbuilder` as package-level functions so that `ast_helpers.go`
@@ -33,13 +25,13 @@ Used pervasively across all `*_ast.go` files — no single location to pin.
 
 ---
 
-## 4. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
+## 3. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
 
 - [handler_ast.go:215-217](../../internal/generator/handler_ast.go#L215) — `switchBody := &ast.BlockStmt{List: []ast.Stmt{}}` in `CreateHandler`
 
 ---
 
-## 5. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
+## 4. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
 
 These are at the file-output level and may warrant a dedicated `FileBuilder` or remain as is
 if deemed infrastructural rather than generated code.
