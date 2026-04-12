@@ -215,12 +215,6 @@ func (g *Generator) GetIntegerType(format string) string {
 }
 
 func (g *Generator) AddSchemasImport(path string) {
-	/* TODO
-	if slices.Contains(g.SchemasFile.packageImports, path) {
-		return
-	}
-	g.SchemasFile.packageImports = append(g.SchemasFile.packageImports, path)
-	*/
 	g.SchemasImportsBuilder.AddImport(path)
 }
 
