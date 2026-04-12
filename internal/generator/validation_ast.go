@@ -161,9 +161,9 @@ func (g *Generator) AddContainsNullIfNeeded() {
 	bodyBuilder := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.DeclareVar("temp", I("any"))).
 		AddStmt(astbuilder.DefineCall("err", Sel(I("json"), "Unmarshal"), I("data"), Amp(I("temp")))).
-		AddStmt(astbuilder.If(Ne(I("err"), I("nil"))).WithBody(astbuilder.NewBodyBuilder().
+		AddStmt(astbuilder.If(astbuilder.Ne(I("err"), I("nil"))).WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.Return1(I("false"))))).
-		AddStmt(astbuilder.Return1(Eq(I("temp"), I("nil"))))
+		AddStmt(astbuilder.Return1(astbuilder.Eq(I("temp"), I("nil"))))
 
 	fn := astbuilder.Function("containsNull").
 		AddParam(astbuilder.SelectorField("data", "json", "RawMessage")).

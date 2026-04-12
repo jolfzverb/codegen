@@ -310,7 +310,7 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 		AddStmt(astbuilder.DefineCallWithErr("response",
 			Sel(Sel(I("h"), GoIdentLowercase(baseName)), "Handle"+baseName),
 			I("ctx"), Star(I("request")))).
-		AddStmt(astbuilder.If(astbuilder.Or(Ne(I("err"), I("nil")), Eq(I("response"), I("nil")))).
+		AddStmt(astbuilder.If(astbuilder.Or(astbuilder.Ne(I("err"), I("nil")), astbuilder.Eq(I("response"), I("nil")))).
 			WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.CallStmt(
 				Sel(I("http"), "Error"),
@@ -528,7 +528,7 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 
 		varName := GoIdentLowercase(FormatGoLikeIdentifier(param.Value.Name))
 		bodyBuilder.AddStmt(astbuilder.DefineCall(varName, Sel(I("chi"), "URLParam"), I("r"), Str(param.Value.Name)))
-		bodyBuilder.AddStmt(astbuilder.If(Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
+		bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.Return2(I("nil"), astbuilder.Call(Sel(I("errors"), "New"), Str(param.Value.Name+" path param is required"))))))
 
 		g.AddHandlersImport("github.com/go-faster/errors")

@@ -532,6 +532,16 @@ func Add(x, y ast.Expr) *ast.BinaryExpr {
 	return &ast.BinaryExpr{X: x, Op: token.ADD, Y: y}
 }
 
+// Ne creates an inequality expression: x != y
+func Ne(x, y ast.Expr) *ast.BinaryExpr {
+	return &ast.BinaryExpr{X: x, Op: token.NEQ, Y: y}
+}
+
+// Eq creates an equality expression: x == y
+func Eq(x, y ast.Expr) *ast.BinaryExpr {
+	return &ast.BinaryExpr{X: x, Op: token.EQL, Y: y}
+}
+
 // Not creates a logical NOT expression: !x
 func Not(x ast.Expr) *ast.UnaryExpr {
 	return &ast.UnaryExpr{Op: token.NOT, X: x}

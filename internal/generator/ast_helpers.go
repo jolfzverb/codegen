@@ -35,19 +35,4 @@ func Str(value string) *ast.BasicLit {
 	}
 }
 
-func Ne(left, right ast.Expr) *ast.BinaryExpr {
-	return &ast.BinaryExpr{
-		X:  left,
-		Op: token.NEQ,
-		Y:  right,
-	}
-}
-
-func Eq(left, right ast.Expr) *ast.BinaryExpr {
-	return &ast.BinaryExpr{
-		X:  left,
-		Op: token.EQL,
-		Y:  right,
-	}
-}
 

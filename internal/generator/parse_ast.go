@@ -24,7 +24,7 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 			astbuilder.Call(Sel(astbuilder.Call(Sel(Sel(I("r"), "URL"), "Query")), "Get"), Str(param.Value.Name))))
 
 		if param.Value.Required {
-			bodyBuilder.AddStmt(astbuilder.If(Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.Return2(I("nil"), astbuilder.Call(Sel(I("errors"), "New"), Str(param.Value.Name+" query param is required"))))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
@@ -40,7 +40,7 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 			for _, stmt := range g.AssignStringField("queryParams", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
 				ifBody.AddStatement(stmt)
 			}
-			bodyBuilder.AddStmt(astbuilder.If(Ne(I(varName), Str(""))).WithBody(ifBody))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Ne(I(varName), Str(""))).WithBody(ifBody))
 		}
 	}
 
@@ -112,7 +112,7 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 			astbuilder.Call(Sel(Sel(I("r"), "Header"), "Get"), Str(param.Value.Name))))
 
 		if param.Value.Required {
-			bodyBuilder.AddStmt(astbuilder.If(Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(I(varName), Str(""))).WithBody(astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.Return2(I("nil"), astbuilder.Call(Sel(I("errors"), "New"), Str(param.Value.Name+" header is required"))))))
 			g.AddHandlersImport("github.com/go-faster/errors")
 			switch {
@@ -128,7 +128,7 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 			for _, stmt := range g.AssignStringField("headers", varName, FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
 				ifBody.AddStatement(stmt)
 			}
-			bodyBuilder.AddStmt(astbuilder.If(Ne(I(varName), Str(""))).WithBody(ifBody))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Ne(I(varName), Str(""))).WithBody(ifBody))
 		}
 	}
 
@@ -167,7 +167,7 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 			bodyBuilder.AddStmt(astbuilder.IfErrNotNilReturn(I("nil")))
 		} else {
 			bodyBuilder.AddStmt(astbuilder.If(astbuilder.And(
-				Ne(I("err"), I("nil")),
+				astbuilder.Ne(I("err"), I("nil")),
 				astbuilder.Not(astbuilder.Call(Sel(I("errors"), "Is"), I("err"), Sel(I("http"), "ErrNoCookie"))),
 			)).WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return2(I("nil"), I("err")))))
 			g.AddHandlersImport("github.com/go-faster/errors")
@@ -190,7 +190,7 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 			for _, stmt := range g.AssignStringField("cookies", varName+"Value", FormatGoLikeIdentifier(param.Value.Name), param.Value.Schema, param.Value.Required) {
 				ifBody.AddStatement(stmt)
 			}
-			bodyBuilder.AddStmt(astbuilder.If(Eq(I("err"), I("nil"))).WithBody(ifBody))
+			bodyBuilder.AddStmt(astbuilder.If(astbuilder.Eq(I("err"), I("nil"))).WithBody(ifBody))
 		}
 	}
 

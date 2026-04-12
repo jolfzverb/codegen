@@ -5,17 +5,7 @@ Each group describes what new builder capability is needed and lists every occur
 
 ---
 
-## 1. `Ne()` / `Eq()` helpers — replace with `astbuilder` equivalents or consolidate
-
-`Ne()` and `Eq()` are defined in `ast_helpers.go`. Since `astbuilder` already has comparison helpers,
-these could either be removed or re-exported from there to avoid dual sources.
-
-Used throughout `handler_ast.go` and `parse_ast.go` in `If()` conditions — too many sites to list individually,
-but all follow the pattern `astbuilder.If(Ne(I("err"), I("nil")))`.
-
----
-
-## 2. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
+## 1. `Star()` / `Amp()` / `Sel()` helpers — consolidate into `astbuilder`
 
 These three shorthand functions from `ast_helpers.go` are fundamental building blocks used everywhere.
 They could be promoted into `astbuilder` as package-level functions so that `ast_helpers.go`
@@ -25,13 +15,13 @@ Used pervasively across all `*_ast.go` files — no single location to pin.
 
 ---
 
-## 3. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
+## 2. `&ast.BlockStmt{}` empty initial block — replace with `astbuilder.NewBodyBuilder().Build()`
 
 - [handler_ast.go:215-217](../../internal/generator/handler_ast.go#L215) — `switchBody := &ast.BlockStmt{List: []ast.Stmt{}}` in `CreateHandler`
 
 ---
 
-## 4. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
+## 3. `&ast.File{}` / top-level `&ast.GenDecl{Tok: token.IMPORT}` — consider a `FileBuilder`
 
 These are at the file-output level and may warrant a dedicated `FileBuilder` or remain as is
 if deemed infrastructural rather than generated code.
