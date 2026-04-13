@@ -216,7 +216,7 @@ func TestIfBuilder_NotNil(t *testing.T) {
 
 func TestIfBuilder_WithInit(t *testing.T) {
 	stmt := NewIfBuilder().
-		WithInitBuilder(Define(I("x"), Call(I("getValue")))).
+		WithInit(Define(I("x"), Call(I("getValue")))).
 		WithCond(Ne(I("x"), I("nil"))).
 		Build()
 	result := formatStmt(t, stmt)

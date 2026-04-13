@@ -315,13 +315,7 @@ func NewIfBuilder() *IfBuilder {
 }
 
 // WithInit sets the init statement (e.g., if x := foo(); x != nil)
-func (ib *IfBuilder) WithInit(init ast.Stmt) *IfBuilder {
-	ib.init = init
-	return ib
-}
-
-// WithInitBuilder sets the init statement using a StatementBuilder
-func (ib *IfBuilder) WithInitBuilder(sb StatementBuilder) *IfBuilder {
+func (ib *IfBuilder) WithInit(sb StatementBuilder) *IfBuilder {
 	ib.init = sb.Build()
 	return ib
 }
@@ -841,8 +835,8 @@ func NewSwitchBuilder() *SwitchBuilder {
 }
 
 // WithInit sets the init statement
-func (sb *SwitchBuilder) WithInit(init ast.Stmt) *SwitchBuilder {
-	sb.init = init
+func (sb *SwitchBuilder) WithInit(init StatementBuilder) *SwitchBuilder {
+	sb.init = init.Build()
 	return sb
 }
 
