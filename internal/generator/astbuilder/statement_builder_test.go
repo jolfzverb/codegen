@@ -29,13 +29,13 @@ func TestReturnBuilder_Empty(t *testing.T) {
 }
 
 func TestReturnBuilder_SingleValue(t *testing.T) {
-	stmt := Return1(ast.NewIdent("result")).Build()
+	stmt := Return1(I("result")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "return result", result)
 }
 
 func TestReturnBuilder_TwoValues(t *testing.T) {
-	stmt := Return2(ast.NewIdent("result"), ast.NewIdent("err")).Build()
+	stmt := Return2(I("result"), I("err")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "return result, err", result)
 }
@@ -59,9 +59,9 @@ func TestReturnBuilder_NilErr(t *testing.T) {
 }
 
 func TestReturnBuilder_Clone(t *testing.T) {
-	original := Return1(ast.NewIdent("a"))
+	original := Return1(I("a"))
 	clone := original.Clone()
-	clone.AddResult(ast.NewIdent("b"))
+	clone.AddResult(I("b"))
 
 	assert.Equal(t, "return a", formatStmt(t, original.Build()))
 	assert.Equal(t, "return a, b", formatStmt(t, clone.Build()))
@@ -70,22 +70,22 @@ func TestReturnBuilder_Clone(t *testing.T) {
 // AssignBuilder tests
 
 func TestAssignBuilder_Simple(t *testing.T) {
-	stmt := Assign(ast.NewIdent("x"), ast.NewIdent("y")).Build()
+	stmt := Assign(I("x"), I("y")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "x = y", result)
 }
 
 func TestAssignBuilder_Define(t *testing.T) {
-	stmt := Define(ast.NewIdent("x"), ast.NewIdent("y")).Build()
+	stmt := Define(I("x"), I("y")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "x := y", result)
 }
 
 func TestAssignBuilder_Define2(t *testing.T) {
 	stmt := Define2(
-		ast.NewIdent("result"),
-		ast.NewIdent("err"),
-		&ast.CallExpr{Fun: ast.NewIdent("doWork")},
+		I("result"),
+		I("err"),
+		Call(I("doWork")),
 	).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "result, err := doWork()", result)
@@ -104,7 +104,7 @@ func TestAssignBuilder_DefineCallWithErr(t *testing.T) {
 }
 
 func TestAssignBuilder_Clone(t *testing.T) {
-	original := Assign(ast.NewIdent("x"), ast.NewIdent("y"))
+	original := Assign(I("x"), I("y"))
 	clone := original.Clone()
 
 	assert.Equal(t, "x = y", formatStmt(t, original.Build()))
@@ -113,41 +113,41 @@ func TestAssignBuilder_Clone(t *testing.T) {
 
 func TestAssignBuilder_PanicsOnEmptyLhs(t *testing.T) {
 	assert.Panics(t, func() {
-		NewAssignBuilder().AddRhs(ast.NewIdent("x")).Build()
+		NewAssignBuilder().AddRhs(I("x")).Build()
 	})
 }
 
 func TestAssignBuilder_PanicsOnEmptyRhs(t *testing.T) {
 	assert.Panics(t, func() {
-		NewAssignBuilder().AddLhs(ast.NewIdent("x")).Build()
+		NewAssignBuilder().AddLhs(I("x")).Build()
 	})
 }
 
 // VarDeclBuilder tests
 
 func TestVarDeclBuilder_Simple(t *testing.T) {
-	stmt := DeclareVar("x", ast.NewIdent("int")).Build()
+	stmt := DeclareVar("x", I("int")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "var x int", result)
 }
 
 func TestVarDeclBuilder_WithValue(t *testing.T) {
-	stmt := DeclareVarWithValue("x", ast.NewIdent("int"), &ast.BasicLit{Kind: token.INT, Value: "42"}).Build()
+	stmt := DeclareVarWithValue("x", I("int"), IntLit("42")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "var x int = 42", result)
 }
 
-func TestVarDeclBuilder_WithTypeBuilder(t *testing.T) {
+func TestVarDeclBuilder_WithType(t *testing.T) {
 	stmt := NewVarDeclBuilder().
 		WithName("items").
-		WithTypeBuilder(StringSlice()).
+		WithType(StringSlice()).
 		Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "var items []string", result)
 }
 
 func TestVarDeclBuilder_Clone(t *testing.T) {
-	original := DeclareVar("x", ast.NewIdent("int"))
+	original := DeclareVar("x", I("int"))
 	clone := original.Clone()
 
 	assert.Equal(t, "var x int", formatStmt(t, original.Build()))
@@ -156,7 +156,7 @@ func TestVarDeclBuilder_Clone(t *testing.T) {
 
 func TestVarDeclBuilder_PanicsOnMissingName(t *testing.T) {
 	assert.Panics(t, func() {
-		NewVarDeclBuilder().WithType(ast.NewIdent("int")).Build()
+		NewVarDeclBuilder().WithType(I("int")).Build()
 	})
 }
 
@@ -169,33 +169,22 @@ func TestVarDeclBuilder_PanicsOnMissingTypeAndValue(t *testing.T) {
 // IfBuilder tests
 
 func TestIfBuilder_Simple(t *testing.T) {
-	stmt := If(&ast.BinaryExpr{
-		X:  ast.NewIdent("x"),
-		Op: token.GTR,
-		Y:  &ast.BasicLit{Kind: token.INT, Value: "0"},
-	}).Build()
+	stmt := If(Gt(I("x"), IntLit("0"))).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "if x > 0 {\n}", result)
 }
 
 func TestIfBuilder_WithBody(t *testing.T) {
-	stmt := If(&ast.BinaryExpr{
-		X:  ast.NewIdent("x"),
-		Op: token.GTR,
-		Y:  &ast.BasicLit{Kind: token.INT, Value: "0"},
-	}).WithBody(NewBodyBuilder().Return1(ast.NewIdent("x"))).Build()
+	stmt := If(Gt(I("x"), IntLit("0"))).
+		WithBody(NewBodyBuilder().Return1(I("x"))).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "if x > 0 {\n\treturn x\n}", result)
 }
 
 func TestIfBuilder_WithElse(t *testing.T) {
-	stmt := If(&ast.BinaryExpr{
-		X:  ast.NewIdent("x"),
-		Op: token.GTR,
-		Y:  &ast.BasicLit{Kind: token.INT, Value: "0"},
-	}).
-		WithBody(NewBodyBuilder().Return1(ast.NewIdent("x"))).
-		WithElse(NewBodyBuilder().Return1(&ast.UnaryExpr{Op: token.SUB, X: ast.NewIdent("x")})).
+	stmt := If(Gt(I("x"), IntLit("0"))).
+		WithBody(NewBodyBuilder().Return1(I("x"))).
+		WithElse(NewBodyBuilder().Return1(Neg(I("x")))).
 		Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "if x > 0 {\n\treturn x\n} else {\n\treturn -x\n}", result)
@@ -208,41 +197,41 @@ func TestIfBuilder_ErrNotNil(t *testing.T) {
 }
 
 func TestIfBuilder_ErrNotNilReturn(t *testing.T) {
-	stmt := IfErrNotNilReturn(ast.NewIdent("nil")).Build()
+	stmt := IfErrNotNilReturn(I("nil")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "if err != nil {\n\treturn nil, err\n}", result)
 }
 
 func TestIfBuilder_Nil(t *testing.T) {
-	stmt := IfNil(ast.NewIdent("result")).Build()
+	stmt := IfNil(I("result")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "if result == nil {\n}", result)
 }
 
 func TestIfBuilder_NotNil(t *testing.T) {
-	stmt := IfNotNil(ast.NewIdent("result")).Build()
+	stmt := IfNotNil(I("result")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "if result != nil {\n}", result)
 }
 
 func TestIfBuilder_WithInit(t *testing.T) {
 	stmt := NewIfBuilder().
-		WithInitBuilder(Define(ast.NewIdent("x"), &ast.CallExpr{Fun: ast.NewIdent("getValue")})).
-		WithCond(&ast.BinaryExpr{X: ast.NewIdent("x"), Op: token.NEQ, Y: ast.NewIdent("nil")}).
+		WithInitBuilder(Define(I("x"), Call(I("getValue")))).
+		WithCond(Ne(I("x"), I("nil"))).
 		Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "if x := getValue(); x != nil {\n}", result)
 }
 
 func TestIfBuilder_DirectBodyManipulation(t *testing.T) {
-	ib := If(&ast.BinaryExpr{X: ast.NewIdent("x"), Op: token.GTR, Y: &ast.BasicLit{Kind: token.INT, Value: "0"}})
-	ib.Body().Return1(ast.NewIdent("x"))
+	ib := If(Gt(I("x"), IntLit("0")))
+	ib.Body().Return1(I("x"))
 	result := formatStmt(t, ib.Build())
 	assert.Equal(t, "if x > 0 {\n\treturn x\n}", result)
 }
 
 func TestIfBuilder_Clone(t *testing.T) {
-	original := IfErrNotNil().WithBody(NewBodyBuilder().Return1(ast.NewIdent("err")))
+	original := IfErrNotNil().WithBody(NewBodyBuilder().Return1(I("err")))
 	clone := original.Clone()
 
 	assert.Equal(t, "if err != nil {\n\treturn err\n}", formatStmt(t, original.Build()))
@@ -258,7 +247,7 @@ func TestIfBuilder_PanicsOnMissingCond(t *testing.T) {
 // ExprStmtBuilder tests
 
 func TestExprStmtBuilder_Simple(t *testing.T) {
-	stmt := ExprStmt(&ast.CallExpr{Fun: ast.NewIdent("doWork")}).Build()
+	stmt := ExprStmt(Call(I("doWork"))).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "doWork()", result)
 }
@@ -292,25 +281,25 @@ func TestExprStmtBuilder_PanicsOnMissingExpr(t *testing.T) {
 // RangeBuilder tests
 
 func TestRangeBuilder_Simple(t *testing.T) {
-	stmt := Range("i", "v", ast.NewIdent("items")).Build()
+	stmt := Range("i", "v", I("items")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "for i, v := range items {\n}", result)
 }
 
 func TestRangeBuilder_ValueOnly(t *testing.T) {
-	stmt := RangeValue("item", ast.NewIdent("items")).Build()
+	stmt := RangeValue("item", I("items")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "for _, item := range items {\n}", result)
 }
 
 func TestRangeBuilder_IndexOnly(t *testing.T) {
-	stmt := RangeIndex("i", ast.NewIdent("items")).Build()
+	stmt := RangeIndex("i", I("items")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "for i := range items {\n}", result)
 }
 
 func TestRangeBuilder_WithBody(t *testing.T) {
-	stmt := RangeValue("item", ast.NewIdent("items")).
+	stmt := RangeValue("item", I("items")).
 		WithBody(NewBodyBuilder().Call(I("process"), I("item"))).
 		Build()
 	result := formatStmt(t, stmt)
@@ -318,20 +307,20 @@ func TestRangeBuilder_WithBody(t *testing.T) {
 }
 
 func TestRangeBuilder_DirectBodyManipulation(t *testing.T) {
-	rb := RangeValue("item", ast.NewIdent("items"))
+	rb := RangeValue("item", I("items"))
 	rb.Body().Call(I("process"), I("item"))
 	result := formatStmt(t, rb.Build())
 	assert.Equal(t, "for _, item := range items {\n\tprocess(item)\n}", result)
 }
 
 func TestRangeBuilder_AsAssign(t *testing.T) {
-	stmt := Range("i", "v", ast.NewIdent("items")).AsAssign().Build()
+	stmt := Range("i", "v", I("items")).AsAssign().Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "for i, v = range items {\n}", result)
 }
 
 func TestRangeBuilder_Clone(t *testing.T) {
-	original := RangeValue("item", ast.NewIdent("items"))
+	original := RangeValue("item", I("items"))
 	clone := original.Clone()
 
 	assert.Equal(t, "for _, item := range items {\n}", formatStmt(t, original.Build()))
@@ -340,26 +329,26 @@ func TestRangeBuilder_Clone(t *testing.T) {
 
 func TestRangeBuilder_PanicsOnMissingX(t *testing.T) {
 	assert.Panics(t, func() {
-		NewRangeBuilder().WithKey(ast.NewIdent("i")).Build()
+		NewRangeBuilder().WithKey(I("i")).Build()
 	})
 }
 
 // SwitchBuilder tests
 
 func TestSwitchBuilder_Simple(t *testing.T) {
-	stmt := Switch(ast.NewIdent("x")).Build()
+	stmt := Switch(I("x")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "switch x {\n}", result)
 }
 
 func TestSwitchBuilder_WithCases(t *testing.T) {
-	stmt := Switch(ast.NewIdent("x")).
-		AddCase(Case(&ast.BasicLit{Kind: token.INT, Value: "1"}).
-			WithBody(NewBodyBuilder().Return1(&ast.BasicLit{Kind: token.STRING, Value: `"one"`}))).
-		AddCase(Case(&ast.BasicLit{Kind: token.INT, Value: "2"}).
-			WithBody(NewBodyBuilder().Return1(&ast.BasicLit{Kind: token.STRING, Value: `"two"`}))).
+	stmt := Switch(I("x")).
+		AddCase(Case(IntLit("1")).
+			WithBody(NewBodyBuilder().Return1(Str("one")))).
+		AddCase(Case(IntLit("2")).
+			WithBody(NewBodyBuilder().Return1(Str("two")))).
 		AddCase(Default().
-			WithBody(NewBodyBuilder().Return1(&ast.BasicLit{Kind: token.STRING, Value: `"other"`}))).
+			WithBody(NewBodyBuilder().Return1(Str("other")))).
 		Build()
 	result := formatStmt(t, stmt)
 	expected := "switch x {\ncase 1:\n\treturn \"one\"\ncase 2:\n\treturn \"two\"\ndefault:\n\treturn \"other\"\n}"
@@ -367,9 +356,9 @@ func TestSwitchBuilder_WithCases(t *testing.T) {
 }
 
 func TestSwitchBuilder_CaseWithMultipleExprs(t *testing.T) {
-	stmt := Switch(ast.NewIdent("x")).
-		AddCase(Case(&ast.BasicLit{Kind: token.INT, Value: "1"}, &ast.BasicLit{Kind: token.INT, Value: "2"}).
-			WithBody(NewBodyBuilder().Return1(&ast.BasicLit{Kind: token.STRING, Value: `"small"`}))).
+	stmt := Switch(I("x")).
+		AddCase(Case(IntLit("1"), IntLit("2")).
+			WithBody(NewBodyBuilder().Return1(Str("small")))).
 		Build()
 	result := formatStmt(t, stmt)
 	expected := "switch x {\ncase 1, 2:\n\treturn \"small\"\n}"
@@ -377,8 +366,8 @@ func TestSwitchBuilder_CaseWithMultipleExprs(t *testing.T) {
 }
 
 func TestSwitchBuilder_Clone(t *testing.T) {
-	original := Switch(ast.NewIdent("x")).
-		AddCase(Case(&ast.BasicLit{Kind: token.INT, Value: "1"}))
+	original := Switch(I("x")).
+		AddCase(Case(IntLit("1")))
 	clone := original.Clone()
 
 	assert.Equal(t, "switch x {\ncase 1:\n}", formatStmt(t, original.Build()))
@@ -389,10 +378,10 @@ func TestSwitchBuilder_Clone(t *testing.T) {
 
 func TestBodyBuilder_WithStatementBuilders(t *testing.T) {
 	body := NewBodyBuilder().
-		AddStmt(DeclareVar("result", ast.NewIdent("string"))).
-		AddStmt(Define(ast.NewIdent("err"), &ast.CallExpr{Fun: ast.NewIdent("doWork")})).
-		AddStmt(IfErrNotNilReturn(ast.NewIdent("result"))).
-		AddStmt(Return1(ast.NewIdent("result"))).
+		AddStmt(DeclareVar("result", I("string"))).
+		AddStmt(Define(I("err"), Call(I("doWork")))).
+		AddStmt(IfErrNotNilReturn(I("result"))).
+		AddStmt(Return1(I("result"))).
 		Build()
 
 	fset := token.NewFileSet()
@@ -411,10 +400,10 @@ func TestFunctionBuilder_WithStatementBuilders(t *testing.T) {
 		AddErrorResult()
 
 	fn.Body().
-		AddStmt(DeclareVar("result", ast.NewIdent("string"))).
+		AddStmt(DeclareVar("result", I("string"))).
 		AddStmt(DefineCallWithErr("data", Sel(I("h"), "fetch"), I("input"))).
-		AddStmt(IfErrNotNilReturn(&ast.BasicLit{Kind: token.STRING, Value: `""`})).
-		AddStmt(Return2(ast.NewIdent("data"), ast.NewIdent("nil")))
+		AddStmt(IfErrNotNilReturn(Str(""))).
+		AddStmt(Return2(I("data"), I("nil")))
 
 	fset := token.NewFileSet()
 	var buf strings.Builder

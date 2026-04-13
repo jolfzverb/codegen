@@ -88,11 +88,10 @@ func (fb *FunctionBuilder) AddResults(results ...*FieldBuilder) *FunctionBuilder
 	return fb
 }
 
-// AddParamExpr adds a parameter with a raw ast.Expr type.
-// Use this when the type cannot be expressed via TypeExpressionBuilder (e.g. dynamically computed types).
+// AddParamExpr adds a parameter using a TypeExpressionBuilder for the type.
 // Returns the builder for method chaining
-func (fb *FunctionBuilder) AddParamExpr(name string, typeExpr ast.Expr) *FunctionBuilder {
-	field := &ast.Field{Type: typeExpr}
+func (fb *FunctionBuilder) AddParamExpr(name string, typeExpr TypeExpressionBuilder) *FunctionBuilder {
+	field := &ast.Field{Type: typeExpr.Build()}
 	if name != "" {
 		field.Names = []*ast.Ident{ast.NewIdent(name)}
 	}
@@ -300,17 +299,17 @@ func (bb *BodyBuilder) Return() *BodyBuilder {
 }
 
 // Return1 adds a return statement with one value
-func (bb *BodyBuilder) Return1(expr ast.Expr) *BodyBuilder {
+func (bb *BodyBuilder) Return1(expr TypeExpressionBuilder) *BodyBuilder {
 	return bb.AddStmt(Return1(expr))
 }
 
 // Return2 adds a return statement with two values
-func (bb *BodyBuilder) Return2(expr1, expr2 ast.Expr) *BodyBuilder {
+func (bb *BodyBuilder) Return2(expr1, expr2 TypeExpressionBuilder) *BodyBuilder {
 	return bb.AddStmt(Return2(expr1, expr2))
 }
 
 // ReturnN adds a return statement with multiple values
-func (bb *BodyBuilder) ReturnN(exprs ...ast.Expr) *BodyBuilder {
+func (bb *BodyBuilder) ReturnN(exprs ...TypeExpressionBuilder) *BodyBuilder {
 	rb := NewReturnBuilder()
 	for _, expr := range exprs {
 		rb.AddResult(expr)
@@ -319,32 +318,32 @@ func (bb *BodyBuilder) ReturnN(exprs ...ast.Expr) *BodyBuilder {
 }
 
 // Assign adds an assignment statement (=)
-func (bb *BodyBuilder) Assign(lhs, rhs ast.Expr) *BodyBuilder {
+func (bb *BodyBuilder) Assign(lhs, rhs TypeExpressionBuilder) *BodyBuilder {
 	return bb.AddStmt(Assign(lhs, rhs))
 }
 
 // Define adds a short variable declaration (:=)
-func (bb *BodyBuilder) Define(lhs, rhs ast.Expr) *BodyBuilder {
+func (bb *BodyBuilder) Define(lhs, rhs TypeExpressionBuilder) *BodyBuilder {
 	return bb.AddStmt(Define(lhs, rhs))
 }
 
 // DeclareVar adds a variable declaration statement
-func (bb *BodyBuilder) DeclareVar(name string, typeExpr ast.Expr) *BodyBuilder {
-	return bb.AddStmt(DeclareVar(name, typeExpr))
+func (bb *BodyBuilder) DeclareVar(name string, tb TypeExpressionBuilder) *BodyBuilder {
+	return bb.AddStmt(DeclareVar(name, tb))
 }
 
 // If adds an if statement
-func (bb *BodyBuilder) If(cond ast.Expr, body *BodyBuilder) *BodyBuilder {
+func (bb *BodyBuilder) If(cond TypeExpressionBuilder, body *BodyBuilder) *BodyBuilder {
 	return bb.AddStmt(NewIfBuilder().WithCond(cond).WithBody(body))
 }
 
 // IfElse adds an if-else statement
-func (bb *BodyBuilder) IfElse(cond ast.Expr, body *BodyBuilder, elseBody *BodyBuilder) *BodyBuilder {
+func (bb *BodyBuilder) IfElse(cond TypeExpressionBuilder, body *BodyBuilder, elseBody *BodyBuilder) *BodyBuilder {
 	return bb.AddStmt(NewIfBuilder().WithCond(cond).WithBody(body).WithElse(elseBody))
 }
 
 // ExprStmt adds an expression statement (typically a function call)
-func (bb *BodyBuilder) ExprStmt(expr ast.Expr) *BodyBuilder {
+func (bb *BodyBuilder) ExprStmt(expr TypeExpressionBuilder) *BodyBuilder {
 	return bb.AddStmt(NewExprStmtBuilder().WithExpr(expr))
 }
 

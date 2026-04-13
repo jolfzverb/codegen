@@ -158,7 +158,7 @@ func TestBodyBuilder_Return(t *testing.T) {
 
 func TestBodyBuilder_Return1(t *testing.T) {
 	body := NewBodyBuilder().
-		Return1(ast.NewIdent("nil")).
+		Return1(I("nil")).
 		Build()
 
 	result := formatBlockStmt(t, body)
@@ -167,7 +167,7 @@ func TestBodyBuilder_Return1(t *testing.T) {
 
 func TestBodyBuilder_Return2(t *testing.T) {
 	body := NewBodyBuilder().
-		Return2(ast.NewIdent("result"), ast.NewIdent("nil")).
+		Return2(I("result"), I("nil")).
 		Build()
 
 	result := formatBlockStmt(t, body)
@@ -176,7 +176,7 @@ func TestBodyBuilder_Return2(t *testing.T) {
 
 func TestBodyBuilder_DeclareVar(t *testing.T) {
 	body := NewBodyBuilder().
-		DeclareVar("err", ast.NewIdent("error")).
+		DeclareVar("err", I("error")).
 		Build()
 
 	result := formatBlockStmt(t, body)
@@ -186,9 +186,9 @@ func TestBodyBuilder_DeclareVar(t *testing.T) {
 func TestBodyBuilder_Define(t *testing.T) {
 	body := NewBodyBuilder().
 		AddStmt(Define2(
-			ast.NewIdent("result"),
-			ast.NewIdent("err"),
-			&ast.CallExpr{Fun: ast.NewIdent("doWork")},
+			I("result"),
+			I("err"),
+			Call(I("doWork")),
 		)).
 		Build()
 
@@ -199,8 +199,8 @@ func TestBodyBuilder_Define(t *testing.T) {
 func TestBodyBuilder_If(t *testing.T) {
 	body := NewBodyBuilder().
 		If(
-			&ast.BinaryExpr{X: ast.NewIdent("err"), Op: token.NEQ, Y: ast.NewIdent("nil")},
-			NewBodyBuilder().Return1(ast.NewIdent("err")),
+			Ne(I("err"), I("nil")),
+			NewBodyBuilder().Return1(I("err")),
 		).
 		Build()
 
@@ -212,9 +212,9 @@ func TestBodyBuilder_If(t *testing.T) {
 func TestBodyBuilder_IfElse(t *testing.T) {
 	body := NewBodyBuilder().
 		IfElse(
-			&ast.BinaryExpr{X: ast.NewIdent("x"), Op: token.GTR, Y: &ast.BasicLit{Kind: token.INT, Value: "0"}},
-			NewBodyBuilder().Return1(ast.NewIdent("x")),
-			NewBodyBuilder().Return1(&ast.UnaryExpr{Op: token.SUB, X: ast.NewIdent("x")}),
+			Gt(I("x"), IntLit("0")),
+			NewBodyBuilder().Return1(I("x")),
+			NewBodyBuilder().Return1(Neg(I("x"))),
 		).
 		Build()
 
@@ -251,7 +251,7 @@ func TestBodyBuilder_UtilityMethods(t *testing.T) {
 func TestBodyBuilder_Clone(t *testing.T) {
 	original := NewBodyBuilder().Return()
 	clone := original.Clone()
-	clone.Return1(ast.NewIdent("nil"))
+	clone.Return1(I("nil"))
 
 	assert.Equal(t, 1, original.StatementCount())
 	assert.Equal(t, 2, clone.StatementCount())
@@ -259,8 +259,8 @@ func TestBodyBuilder_Clone(t *testing.T) {
 
 func TestFunctionBuilder_WithBody(t *testing.T) {
 	body := NewBodyBuilder().
-		DeclareVar("result", ast.NewIdent("string")).
-		Return1(ast.NewIdent("result"))
+		DeclareVar("result", I("string")).
+		Return1(I("result"))
 
 	fn := NewFunctionBuilder().
 		WithName("GetResult").
@@ -279,8 +279,8 @@ func TestFunctionBuilder_DirectBodyManipulation(t *testing.T) {
 		AddResult(ErrorField())
 
 	fn.Body().
-		DeclareVar("err", ast.NewIdent("error")).
-		Return1(ast.NewIdent("err"))
+		DeclareVar("err", I("error")).
+		Return1(I("err"))
 
 	result := formatFuncDecl(t, fn.Build())
 	expected := "func Process() error {\n\tvar err error\n\treturn err\n}"

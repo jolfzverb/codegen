@@ -24,21 +24,21 @@ func NewReturnBuilder() *ReturnBuilder {
 }
 
 // AddResult adds a return value expression
-func (rb *ReturnBuilder) AddResult(expr ast.Expr) *ReturnBuilder {
+func (rb *ReturnBuilder) AddResult(expr TypeExpressionBuilder) *ReturnBuilder {
 	if expr == nil {
 		panic("result expression cannot be nil")
 	}
-	rb.results = append(rb.results, expr)
+	rb.results = append(rb.results, expr.Build())
 	return rb
 }
 
 // AddResults adds multiple return value expressions
-func (rb *ReturnBuilder) AddResults(exprs ...ast.Expr) *ReturnBuilder {
+func (rb *ReturnBuilder) AddResults(exprs ...TypeExpressionBuilder) *ReturnBuilder {
 	for _, expr := range exprs {
 		if expr == nil {
 			panic("result expression cannot be nil")
 		}
-		rb.results = append(rb.results, expr)
+		rb.results = append(rb.results, expr.Build())
 	}
 	return rb
 }
@@ -65,28 +65,28 @@ func Return() *ReturnBuilder {
 }
 
 // Return1 creates a return statement with one value
-func Return1(expr ast.Expr) *ReturnBuilder {
+func Return1(expr TypeExpressionBuilder) *ReturnBuilder {
 	return NewReturnBuilder().AddResult(expr)
 }
 
 // Return2 creates a return statement with two values
-func Return2(expr1, expr2 ast.Expr) *ReturnBuilder {
+func Return2(expr1, expr2 TypeExpressionBuilder) *ReturnBuilder {
 	return NewReturnBuilder().AddResults(expr1, expr2)
 }
 
 // ReturnNil creates a return statement returning nil
 func ReturnNil() *ReturnBuilder {
-	return Return1(ast.NewIdent("nil"))
+	return Return1(I("nil"))
 }
 
 // ReturnErr creates a return statement returning err
 func ReturnErr() *ReturnBuilder {
-	return Return1(ast.NewIdent("err"))
+	return Return1(I("err"))
 }
 
 // ReturnNilErr creates a return statement returning nil, err
 func ReturnNilErr() *ReturnBuilder {
-	return Return2(ast.NewIdent("nil"), ast.NewIdent("err"))
+	return Return2(I("nil"), I("err"))
 }
 
 // AssignBuilder builds assignment statements
@@ -115,43 +115,43 @@ func NewDefineBuilder() *AssignBuilder {
 }
 
 // AddLhs adds a left-hand side expression
-func (ab *AssignBuilder) AddLhs(expr ast.Expr) *AssignBuilder {
+func (ab *AssignBuilder) AddLhs(expr TypeExpressionBuilder) *AssignBuilder {
 	if expr == nil {
 		panic("lhs expression cannot be nil")
 	}
-	ab.lhs = append(ab.lhs, expr)
+	ab.lhs = append(ab.lhs, expr.Build())
 	return ab
 }
 
 // AddRhs adds a right-hand side expression
-func (ab *AssignBuilder) AddRhs(expr ast.Expr) *AssignBuilder {
+func (ab *AssignBuilder) AddRhs(expr TypeExpressionBuilder) *AssignBuilder {
 	if expr == nil {
 		panic("rhs expression cannot be nil")
 	}
-	ab.rhs = append(ab.rhs, expr)
+	ab.rhs = append(ab.rhs, expr.Build())
 	return ab
 }
 
 // Lhs sets the left-hand side expressions (replaces existing)
-func (ab *AssignBuilder) Lhs(exprs ...ast.Expr) *AssignBuilder {
+func (ab *AssignBuilder) Lhs(exprs ...TypeExpressionBuilder) *AssignBuilder {
 	ab.lhs = make([]ast.Expr, 0, len(exprs))
 	for _, expr := range exprs {
 		if expr == nil {
 			panic("lhs expression cannot be nil")
 		}
-		ab.lhs = append(ab.lhs, expr)
+		ab.lhs = append(ab.lhs, expr.Build())
 	}
 	return ab
 }
 
 // Rhs sets the right-hand side expressions (replaces existing)
-func (ab *AssignBuilder) Rhs(exprs ...ast.Expr) *AssignBuilder {
+func (ab *AssignBuilder) Rhs(exprs ...TypeExpressionBuilder) *AssignBuilder {
 	ab.rhs = make([]ast.Expr, 0, len(exprs))
 	for _, expr := range exprs {
 		if expr == nil {
 			panic("rhs expression cannot be nil")
 		}
-		ab.rhs = append(ab.rhs, expr)
+		ab.rhs = append(ab.rhs, expr.Build())
 	}
 	return ab
 }
@@ -186,32 +186,32 @@ func (ab *AssignBuilder) Clone() *AssignBuilder {
 // Helper functions for AssignBuilder
 
 // Assign creates an assignment statement: lhs = rhs
-func Assign(lhs, rhs ast.Expr) *AssignBuilder {
+func Assign(lhs, rhs TypeExpressionBuilder) *AssignBuilder {
 	return NewAssignBuilder().AddLhs(lhs).AddRhs(rhs)
 }
 
 // Define creates a short variable declaration: lhs := rhs
-func Define(lhs, rhs ast.Expr) *AssignBuilder {
+func Define(lhs, rhs TypeExpressionBuilder) *AssignBuilder {
 	return NewDefineBuilder().AddLhs(lhs).AddRhs(rhs)
 }
 
 // Define2 creates a short variable declaration with two lhs: lhs1, lhs2 := rhs
-func Define2(lhs1, lhs2, rhs ast.Expr) *AssignBuilder {
+func Define2(lhs1, lhs2, rhs TypeExpressionBuilder) *AssignBuilder {
 	return NewDefineBuilder().Lhs(lhs1, lhs2).AddRhs(rhs)
 }
 
 // DefineCall creates: result := funcCall(args...)
 func DefineCall(result string, fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *AssignBuilder {
 	return NewDefineBuilder().
-		AddLhs(ast.NewIdent(result)).
-		AddRhs(Call(fun, args...).Build())
+		AddLhs(I(result)).
+		AddRhs(Call(fun, args...))
 }
 
 // DefineCallWithErr creates: result, err := funcCall(args...)
 func DefineCallWithErr(result string, fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *AssignBuilder {
 	return NewDefineBuilder().
-		Lhs(ast.NewIdent(result), ast.NewIdent("err")).
-		AddRhs(Call(fun, args...).Build())
+		Lhs(I(result), I("err")).
+		AddRhs(Call(fun, args...))
 }
 
 // VarDeclBuilder builds variable declaration statements
@@ -232,21 +232,15 @@ func (vdb *VarDeclBuilder) WithName(name string) *VarDeclBuilder {
 	return vdb
 }
 
-// WithType sets the variable type
-func (vdb *VarDeclBuilder) WithType(typeExpr ast.Expr) *VarDeclBuilder {
-	vdb.typeExpr = typeExpr
-	return vdb
-}
-
-// WithTypeBuilder sets the variable type using a TypeExpressionBuilder
-func (vdb *VarDeclBuilder) WithTypeBuilder(tb TypeExpressionBuilder) *VarDeclBuilder {
+// WithType sets the variable type using a TypeExpressionBuilder
+func (vdb *VarDeclBuilder) WithType(tb TypeExpressionBuilder) *VarDeclBuilder {
 	vdb.typeExpr = tb.Build()
 	return vdb
 }
 
-// WithValue sets the initial value
-func (vdb *VarDeclBuilder) WithValue(value ast.Expr) *VarDeclBuilder {
-	vdb.value = value
+// WithValue sets the initial value using a TypeExpressionBuilder
+func (vdb *VarDeclBuilder) WithValue(tb TypeExpressionBuilder) *VarDeclBuilder {
+	vdb.value = tb.Build()
 	return vdb
 }
 
@@ -289,18 +283,19 @@ func (vdb *VarDeclBuilder) Clone() *VarDeclBuilder {
 // Helper functions for VarDeclBuilder
 
 // DeclareVar creates a variable declaration: var name Type
-func DeclareVar(name string, typeExpr ast.Expr) *VarDeclBuilder {
-	return NewVarDeclBuilder().WithName(name).WithType(typeExpr)
+func DeclareVar(name string, tb TypeExpressionBuilder) *VarDeclBuilder {
+	return NewVarDeclBuilder().WithName(name).WithType(tb)
 }
 
 // DeclareVarWithValue creates a variable declaration with value: var name Type = value
-func DeclareVarWithValue(name string, typeExpr, value ast.Expr) *VarDeclBuilder {
+func DeclareVarWithValue(name string, typeExpr, value TypeExpressionBuilder) *VarDeclBuilder {
 	return NewVarDeclBuilder().WithName(name).WithType(typeExpr).WithValue(value)
 }
 
 // DeclareVarWithType creates a variable declaration using a TypeExpressionBuilder: var name Type
+// Deprecated: use DeclareVar instead.
 func DeclareVarWithType(name string, tb TypeExpressionBuilder) *VarDeclBuilder {
-	return NewVarDeclBuilder().WithName(name).WithTypeBuilder(tb)
+	return DeclareVar(name, tb)
 }
 
 // IfBuilder builds if statements
@@ -332,8 +327,8 @@ func (ib *IfBuilder) WithInitBuilder(sb StatementBuilder) *IfBuilder {
 }
 
 // WithCond sets the condition expression
-func (ib *IfBuilder) WithCond(cond ast.Expr) *IfBuilder {
-	ib.cond = cond
+func (ib *IfBuilder) WithCond(cond TypeExpressionBuilder) *IfBuilder {
+	ib.cond = cond.Build()
 	return ib
 }
 
@@ -418,45 +413,33 @@ func (ib *IfBuilder) Clone() *IfBuilder {
 // Helper functions for IfBuilder
 
 // If creates an if statement
-func If(cond ast.Expr) *IfBuilder {
+func If(cond TypeExpressionBuilder) *IfBuilder {
 	return NewIfBuilder().WithCond(cond)
 }
 
 // IfErrNotNil creates: if err != nil { ... }
 func IfErrNotNil() *IfBuilder {
-	return If(&ast.BinaryExpr{
-		X:  ast.NewIdent("err"),
-		Op: token.NEQ,
-		Y:  ast.NewIdent("nil"),
-	})
+	return If(Ne(I("err"), I("nil")))
 }
 
 // IfErrNotNilReturn creates: if err != nil { return ..., err }
-func IfErrNotNilReturn(returnValues ...ast.Expr) *IfBuilder {
+func IfErrNotNilReturn(returnValues ...TypeExpressionBuilder) *IfBuilder {
 	rb := NewReturnBuilder()
 	for _, v := range returnValues {
 		rb.AddResult(v)
 	}
-	rb.AddResult(ast.NewIdent("err"))
+	rb.AddResult(I("err"))
 	return IfErrNotNil().WithBody(NewBodyBuilder().AddStmt(rb))
 }
 
 // IfNil creates: if expr == nil { ... }
-func IfNil(expr ast.Expr) *IfBuilder {
-	return If(&ast.BinaryExpr{
-		X:  expr,
-		Op: token.EQL,
-		Y:  ast.NewIdent("nil"),
-	})
+func IfNil(expr TypeExpressionBuilder) *IfBuilder {
+	return If(Eq(expr, I("nil")))
 }
 
 // IfNotNil creates: if expr != nil { ... }
-func IfNotNil(expr ast.Expr) *IfBuilder {
-	return If(&ast.BinaryExpr{
-		X:  expr,
-		Op: token.NEQ,
-		Y:  ast.NewIdent("nil"),
-	})
+func IfNotNil(expr TypeExpressionBuilder) *IfBuilder {
+	return If(Ne(expr, I("nil")))
 }
 
 // ExprStmtBuilder builds expression statements
@@ -470,8 +453,8 @@ func NewExprStmtBuilder() *ExprStmtBuilder {
 }
 
 // WithExpr sets the expression
-func (esb *ExprStmtBuilder) WithExpr(expr ast.Expr) *ExprStmtBuilder {
-	esb.expr = expr
+func (esb *ExprStmtBuilder) WithExpr(expr TypeExpressionBuilder) *ExprStmtBuilder {
+	esb.expr = expr.Build()
 	return esb
 }
 
@@ -491,7 +474,7 @@ func (esb *ExprStmtBuilder) Clone() *ExprStmtBuilder {
 // Helper functions for ExprStmtBuilder
 
 // ExprStmt creates an expression statement
-func ExprStmt(expr ast.Expr) *ExprStmtBuilder {
+func ExprStmt(expr TypeExpressionBuilder) *ExprStmtBuilder {
 	return NewExprStmtBuilder().WithExpr(expr)
 }
 
@@ -515,16 +498,31 @@ func Call(fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *CallBuilder
 	return &CallBuilder{fun: fun, args: args}
 }
 
+// KeyValueBuilder builds a key-value expression: key: value
+type KeyValueBuilder struct {
+	key   TypeExpressionBuilder
+	value TypeExpressionBuilder
+}
+
+// Build creates the key: value expression.
+func (b *KeyValueBuilder) Build() ast.Expr {
+	return &ast.KeyValueExpr{Key: b.key.Build(), Value: b.value.Build()}
+}
+
 // KeyValue creates a key-value expression: key: value
 // Used in composite literals for struct and map fields.
-func KeyValue(key, value ast.Expr) *ast.KeyValueExpr {
-	return &ast.KeyValueExpr{Key: key, Value: value}
+func KeyValue(key, value TypeExpressionBuilder) *KeyValueBuilder {
+	return &KeyValueBuilder{key: key, value: value}
 }
 
 // CompositeLit creates a composite literal: Type{elts...}
 // The type is built from a TypeExpressionBuilder (Ident, Selector, MapOf, etc.).
-func CompositeLit(tb TypeExpressionBuilder, elts ...ast.Expr) *CompositeLitBuilder {
-	return &CompositeLitBuilder{typeExpr: tb, elts: elts}
+func CompositeLit(tb TypeExpressionBuilder, elts ...TypeExpressionBuilder) *CompositeLitBuilder {
+	builtElts := make([]ast.Expr, len(elts))
+	for i, elt := range elts {
+		builtElts[i] = elt.Build()
+	}
+	return &CompositeLitBuilder{typeExpr: tb, elts: builtElts}
 }
 
 // IndexBuilder builds an index expression: x[index]
@@ -593,6 +591,17 @@ func (b *EqBuilder) Build() ast.Expr {
 // Eq creates an equality expression: x == y
 func Eq(x, y TypeExpressionBuilder) *EqBuilder { return &EqBuilder{x, y} }
 
+// GtBuilder builds a greater-than expression: x > y
+type GtBuilder struct{ x, y TypeExpressionBuilder }
+
+// Build creates the x > y expression.
+func (b *GtBuilder) Build() ast.Expr {
+	return &ast.BinaryExpr{X: b.x.Build(), Op: token.GTR, Y: b.y.Build()}
+}
+
+// Gt creates a greater-than expression: x > y
+func Gt(x, y TypeExpressionBuilder) *GtBuilder { return &GtBuilder{x, y} }
+
 // NotBuilder builds a logical NOT expression: !x
 type NotBuilder struct{ x TypeExpressionBuilder }
 
@@ -601,6 +610,15 @@ func (b *NotBuilder) Build() ast.Expr { return &ast.UnaryExpr{Op: token.NOT, X: 
 
 // Not creates a logical NOT expression: !x
 func Not(x TypeExpressionBuilder) *NotBuilder { return &NotBuilder{x} }
+
+// NegBuilder builds a negation expression: -x
+type NegBuilder struct{ x TypeExpressionBuilder }
+
+// Build creates the -x expression.
+func (b *NegBuilder) Build() ast.Expr { return &ast.UnaryExpr{Op: token.SUB, X: b.x.Build()} }
+
+// Neg creates a negation expression: -x
+func Neg(x TypeExpressionBuilder) *NegBuilder { return &NegBuilder{x} }
 
 // IntLitBuilder builds an integer literal expression
 type IntLitBuilder struct{ value string }
@@ -679,7 +697,7 @@ func Star(x TypeExpressionBuilder) *StarBuilder {
 
 // CallStmt creates a function call statement
 func CallStmt(fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *ExprStmtBuilder {
-	return ExprStmt(Call(fun, args...).Build())
+	return ExprStmt(Call(fun, args...))
 }
 
 // MethodCallStmt creates a method call statement: receiver.method(args...)
@@ -708,20 +726,20 @@ func NewRangeBuilder() *RangeBuilder {
 }
 
 // WithKey sets the key variable
-func (rb *RangeBuilder) WithKey(key ast.Expr) *RangeBuilder {
-	rb.key = key
+func (rb *RangeBuilder) WithKey(key TypeExpressionBuilder) *RangeBuilder {
+	rb.key = key.Build()
 	return rb
 }
 
 // WithValue sets the value variable
-func (rb *RangeBuilder) WithValue(value ast.Expr) *RangeBuilder {
-	rb.value = value
+func (rb *RangeBuilder) WithValue(value TypeExpressionBuilder) *RangeBuilder {
+	rb.value = value.Build()
 	return rb
 }
 
 // Over sets the expression to range over
-func (rb *RangeBuilder) Over(x ast.Expr) *RangeBuilder {
-	rb.x = x
+func (rb *RangeBuilder) Over(x TypeExpressionBuilder) *RangeBuilder {
+	rb.x = x.Build()
 	return rb
 }
 
@@ -783,28 +801,28 @@ func (rb *RangeBuilder) Clone() *RangeBuilder {
 // Helper functions for RangeBuilder
 
 // Range creates a range statement: for key, value := range x
-func Range(key, value string, x ast.Expr) *RangeBuilder {
+func Range(key, value string, x TypeExpressionBuilder) *RangeBuilder {
 	rb := NewRangeBuilder().Over(x)
 	if key != "" && key != "_" {
-		rb.WithKey(ast.NewIdent(key))
+		rb.WithKey(I(key))
 	} else if key == "_" {
-		rb.WithKey(ast.NewIdent("_"))
+		rb.WithKey(I("_"))
 	}
 	if value != "" && value != "_" {
-		rb.WithValue(ast.NewIdent(value))
+		rb.WithValue(I(value))
 	} else if value == "_" {
-		rb.WithValue(ast.NewIdent("_"))
+		rb.WithValue(I("_"))
 	}
 	return rb
 }
 
 // RangeValue creates a range statement: for _, value := range x
-func RangeValue(value string, x ast.Expr) *RangeBuilder {
+func RangeValue(value string, x TypeExpressionBuilder) *RangeBuilder {
 	return Range("_", value, x)
 }
 
 // RangeIndex creates a range statement: for i := range x
-func RangeIndex(index string, x ast.Expr) *RangeBuilder {
+func RangeIndex(index string, x TypeExpressionBuilder) *RangeBuilder {
 	return Range(index, "", x)
 }
 
@@ -829,8 +847,8 @@ func (sb *SwitchBuilder) WithInit(init ast.Stmt) *SwitchBuilder {
 }
 
 // WithTag sets the switch tag expression
-func (sb *SwitchBuilder) WithTag(tag ast.Expr) *SwitchBuilder {
-	sb.tag = tag
+func (sb *SwitchBuilder) WithTag(tag TypeExpressionBuilder) *SwitchBuilder {
+	sb.tag = tag.Build()
 	return sb
 }
 
@@ -885,11 +903,11 @@ func NewCaseBuilder() *CaseBuilder {
 }
 
 // AddExpr adds a case expression
-func (cb *CaseBuilder) AddExpr(expr ast.Expr) *CaseBuilder {
+func (cb *CaseBuilder) AddExpr(expr TypeExpressionBuilder) *CaseBuilder {
 	if expr == nil {
 		panic("case expression cannot be nil")
 	}
-	cb.exprs = append(cb.exprs, expr)
+	cb.exprs = append(cb.exprs, expr.Build())
 	return cb
 }
 
@@ -935,12 +953,12 @@ func (cb *CaseBuilder) Clone() *CaseBuilder {
 // Helper functions for SwitchBuilder
 
 // Switch creates a switch statement with a tag
-func Switch(tag ast.Expr) *SwitchBuilder {
+func Switch(tag TypeExpressionBuilder) *SwitchBuilder {
 	return NewSwitchBuilder().WithTag(tag)
 }
 
 // Case creates a case clause with expressions
-func Case(exprs ...ast.Expr) *CaseBuilder {
+func Case(exprs ...TypeExpressionBuilder) *CaseBuilder {
 	cb := NewCaseBuilder()
 	for _, expr := range exprs {
 		cb.AddExpr(expr)
@@ -965,8 +983,8 @@ func NewCompositeLitBuilder(typeExpr TypeExpressionBuilder) *CompositeLitBuilder
 }
 
 // AddKeyValue adds a key-value pair to the composite literal.
-func (b *CompositeLitBuilder) AddKeyValue(key string, value ast.Expr) *CompositeLitBuilder {
-	b.elts = append(b.elts, KeyValue(I(key).Build(), value))
+func (b *CompositeLitBuilder) AddKeyValue(key string, value TypeExpressionBuilder) *CompositeLitBuilder {
+	b.elts = append(b.elts, KeyValue(I(key), value).Build())
 	return b
 }
 
