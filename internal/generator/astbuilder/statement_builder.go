@@ -201,17 +201,17 @@ func Define2(lhs1, lhs2, rhs ast.Expr) *AssignBuilder {
 }
 
 // DefineCall creates: result := funcCall(args...)
-func DefineCall(result string, fun ast.Expr, args ...ast.Expr) *AssignBuilder {
+func DefineCall(result string, fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *AssignBuilder {
 	return NewDefineBuilder().
 		AddLhs(ast.NewIdent(result)).
-		AddRhs(Call(fun, args...))
+		AddRhs(Call(fun, args...).Build())
 }
 
 // DefineCallWithErr creates: result, err := funcCall(args...)
-func DefineCallWithErr(result string, fun ast.Expr, args ...ast.Expr) *AssignBuilder {
+func DefineCallWithErr(result string, fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *AssignBuilder {
 	return NewDefineBuilder().
 		Lhs(ast.NewIdent(result), ast.NewIdent("err")).
-		AddRhs(Call(fun, args...))
+		AddRhs(Call(fun, args...).Build())
 }
 
 // VarDeclBuilder builds variable declaration statements
@@ -495,10 +495,24 @@ func ExprStmt(expr ast.Expr) *ExprStmtBuilder {
 	return NewExprStmtBuilder().WithExpr(expr)
 }
 
+// CallBuilder builds a function call expression: fun(args...)
+type CallBuilder struct {
+	fun  TypeExpressionBuilder
+	args []TypeExpressionBuilder
+}
+
+// Build creates the fun(args...) expression.
+func (b *CallBuilder) Build() ast.Expr {
+	args := make([]ast.Expr, len(b.args))
+	for i, a := range b.args {
+		args[i] = a.Build()
+	}
+	return &ast.CallExpr{Fun: b.fun.Build(), Args: args}
+}
+
 // Call creates a function call expression: fun(args...)
-// Returns *ast.CallExpr which implements ast.Expr, for use as a sub-expression.
-func Call(fun ast.Expr, args ...ast.Expr) *ast.CallExpr {
-	return &ast.CallExpr{Fun: fun, Args: args}
+func Call(fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *CallBuilder {
+	return &CallBuilder{fun: fun, args: args}
 }
 
 // KeyValue creates a key-value expression: key: value
@@ -513,44 +527,92 @@ func CompositeLit(tb TypeExpressionBuilder, elts ...ast.Expr) *CompositeLitBuild
 	return &CompositeLitBuilder{typeExpr: tb, elts: elts}
 }
 
+// IndexBuilder builds an index expression: x[index]
+type IndexBuilder struct{ x, index TypeExpressionBuilder }
+
+// Build creates the x[index] expression.
+func (b *IndexBuilder) Build() ast.Expr {
+	return &ast.IndexExpr{X: b.x.Build(), Index: b.index.Build()}
+}
+
 // Index creates an index expression: x[index]
-func Index(x, index ast.Expr) *ast.IndexExpr {
-	return &ast.IndexExpr{X: x, Index: index}
+func Index(x, index TypeExpressionBuilder) *IndexBuilder { return &IndexBuilder{x, index} }
+
+// OrBuilder builds a logical OR expression: x || y
+type OrBuilder struct{ x, y TypeExpressionBuilder }
+
+// Build creates the x || y expression.
+func (b *OrBuilder) Build() ast.Expr {
+	return &ast.BinaryExpr{X: b.x.Build(), Op: token.LOR, Y: b.y.Build()}
 }
 
 // Or creates a logical OR expression: x || y
-func Or(x, y ast.Expr) *ast.BinaryExpr {
-	return &ast.BinaryExpr{X: x, Op: token.LOR, Y: y}
+func Or(x, y TypeExpressionBuilder) *OrBuilder { return &OrBuilder{x, y} }
+
+// AndBuilder builds a logical AND expression: x && y
+type AndBuilder struct{ x, y TypeExpressionBuilder }
+
+// Build creates the x && y expression.
+func (b *AndBuilder) Build() ast.Expr {
+	return &ast.BinaryExpr{X: b.x.Build(), Op: token.LAND, Y: b.y.Build()}
 }
 
 // And creates a logical AND expression: x && y
-func And(x, y ast.Expr) *ast.BinaryExpr {
-	return &ast.BinaryExpr{X: x, Op: token.LAND, Y: y}
+func And(x, y TypeExpressionBuilder) *AndBuilder { return &AndBuilder{x, y} }
+
+// AddBuilder builds an addition expression: x + y
+type AddBuilder struct{ x, y TypeExpressionBuilder }
+
+// Build creates the x + y expression.
+func (b *AddBuilder) Build() ast.Expr {
+	return &ast.BinaryExpr{X: b.x.Build(), Op: token.ADD, Y: b.y.Build()}
 }
 
 // Add creates an addition expression: x + y
-func Add(x, y ast.Expr) *ast.BinaryExpr {
-	return &ast.BinaryExpr{X: x, Op: token.ADD, Y: y}
+func Add(x, y TypeExpressionBuilder) *AddBuilder { return &AddBuilder{x, y} }
+
+// NeBuilder builds an inequality expression: x != y
+type NeBuilder struct{ x, y TypeExpressionBuilder }
+
+// Build creates the x != y expression.
+func (b *NeBuilder) Build() ast.Expr {
+	return &ast.BinaryExpr{X: b.x.Build(), Op: token.NEQ, Y: b.y.Build()}
 }
 
 // Ne creates an inequality expression: x != y
-func Ne(x, y ast.Expr) *ast.BinaryExpr {
-	return &ast.BinaryExpr{X: x, Op: token.NEQ, Y: y}
+func Ne(x, y TypeExpressionBuilder) *NeBuilder { return &NeBuilder{x, y} }
+
+// EqBuilder builds an equality expression: x == y
+type EqBuilder struct{ x, y TypeExpressionBuilder }
+
+// Build creates the x == y expression.
+func (b *EqBuilder) Build() ast.Expr {
+	return &ast.BinaryExpr{X: b.x.Build(), Op: token.EQL, Y: b.y.Build()}
 }
 
 // Eq creates an equality expression: x == y
-func Eq(x, y ast.Expr) *ast.BinaryExpr {
-	return &ast.BinaryExpr{X: x, Op: token.EQL, Y: y}
-}
+func Eq(x, y TypeExpressionBuilder) *EqBuilder { return &EqBuilder{x, y} }
+
+// NotBuilder builds a logical NOT expression: !x
+type NotBuilder struct{ x TypeExpressionBuilder }
+
+// Build creates the !x expression.
+func (b *NotBuilder) Build() ast.Expr { return &ast.UnaryExpr{Op: token.NOT, X: b.x.Build()} }
 
 // Not creates a logical NOT expression: !x
-func Not(x ast.Expr) *ast.UnaryExpr {
-	return &ast.UnaryExpr{Op: token.NOT, X: x}
+func Not(x TypeExpressionBuilder) *NotBuilder { return &NotBuilder{x} }
+
+// IntLitBuilder builds an integer literal expression
+type IntLitBuilder struct{ value string }
+
+// Build creates the integer literal expression.
+func (b *IntLitBuilder) Build() ast.Expr {
+	return &ast.BasicLit{Kind: token.INT, Value: b.value}
 }
 
 // IntLit creates an integer literal expression
-func IntLit(value string) *ast.BasicLit {
-	return &ast.BasicLit{Kind: token.INT, Value: value}
+func IntLit(value string) *IntLitBuilder {
+	return &IntLitBuilder{value: value}
 }
 
 // I creates an identifier expression
@@ -558,15 +620,32 @@ func I(name string) *SimpleTypeBuilder {
 	return Ident(name)
 }
 
+// StrBuilder builds a string literal expression
+type StrBuilder struct{ value string }
+
+// Build creates the string literal expression.
+func (b *StrBuilder) Build() ast.Expr {
+	return &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(b.value)}
+}
+
 // Str creates a string literal expression
-func Str(value string) *ast.BasicLit {
-	return &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(value)}
+func Str(value string) *StrBuilder {
+	return &StrBuilder{value: value}
+}
+
+// SelBuilder builds a selector expression: x.sel
+type SelBuilder struct {
+	x   TypeExpressionBuilder
+	sel string
+}
+
+// Build creates the x.sel expression.
+func (b *SelBuilder) Build() ast.Expr {
+	return &ast.SelectorExpr{X: b.x.Build(), Sel: ast.NewIdent(b.sel)}
 }
 
 // Sel creates a selector expression: x.sel
-func Sel(x ast.Expr, sel string) *ast.SelectorExpr {
-	return &ast.SelectorExpr{X: x, Sel: ast.NewIdent(sel)}
-}
+func Sel(x TypeExpressionBuilder, sel string) *SelBuilder { return &SelBuilder{x, sel} }
 
 // AmpBuilder builds an address-of expression: &x
 type AmpBuilder struct {
@@ -599,17 +678,14 @@ func Star(x TypeExpressionBuilder) *StarBuilder {
 }
 
 // CallStmt creates a function call statement
-func CallStmt(fun ast.Expr, args ...ast.Expr) *ExprStmtBuilder {
-	return ExprStmt(Call(fun, args...))
+func CallStmt(fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *ExprStmtBuilder {
+	return ExprStmt(Call(fun, args...).Build())
 }
 
 // MethodCallStmt creates a method call statement: receiver.method(args...)
-func MethodCallStmt(receiver, method string, args ...ast.Expr) *ExprStmtBuilder {
+func MethodCallStmt(receiver, method string, args ...TypeExpressionBuilder) *ExprStmtBuilder {
 	return CallStmt(
-		&ast.SelectorExpr{
-			X:   ast.NewIdent(receiver),
-			Sel: ast.NewIdent(method),
-		},
+		Sel(I(receiver), method),
 		args...,
 	)
 }

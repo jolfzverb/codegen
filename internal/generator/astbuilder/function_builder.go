@@ -349,7 +349,7 @@ func (bb *BodyBuilder) ExprStmt(expr ast.Expr) *BodyBuilder {
 }
 
 // Call adds a function/method call as a statement
-func (bb *BodyBuilder) Call(fun ast.Expr, args ...ast.Expr) *BodyBuilder {
+func (bb *BodyBuilder) Call(fun TypeExpressionBuilder, args ...TypeExpressionBuilder) *BodyBuilder {
 	return bb.AddStmt(CallStmt(fun, args...))
 }
 

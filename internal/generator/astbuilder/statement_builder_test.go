@@ -92,13 +92,13 @@ func TestAssignBuilder_Define2(t *testing.T) {
 }
 
 func TestAssignBuilder_DefineCall(t *testing.T) {
-	stmt := DefineCall("result", ast.NewIdent("getValue")).Build()
+	stmt := DefineCall("result", I("getValue")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "result := getValue()", result)
 }
 
 func TestAssignBuilder_DefineCallWithErr(t *testing.T) {
-	stmt := DefineCallWithErr("result", ast.NewIdent("getValue")).Build()
+	stmt := DefineCallWithErr("result", I("getValue")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "result, err := getValue()", result)
 }
@@ -264,19 +264,19 @@ func TestExprStmtBuilder_Simple(t *testing.T) {
 }
 
 func TestExprStmtBuilder_CallStmt(t *testing.T) {
-	stmt := CallStmt(ast.NewIdent("print"), &ast.BasicLit{Kind: token.STRING, Value: `"hello"`}).Build()
+	stmt := CallStmt(I("print"), Str("hello")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, `print("hello")`, result)
 }
 
 func TestExprStmtBuilder_MethodCallStmt(t *testing.T) {
-	stmt := MethodCallStmt("fmt", "Println", &ast.BasicLit{Kind: token.STRING, Value: `"hello"`}).Build()
+	stmt := MethodCallStmt("fmt", "Println", Str("hello")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, `fmt.Println("hello")`, result)
 }
 
 func TestExprStmtBuilder_Clone(t *testing.T) {
-	original := CallStmt(ast.NewIdent("foo"))
+	original := CallStmt(I("foo"))
 	clone := original.Clone()
 
 	assert.Equal(t, "foo()", formatStmt(t, original.Build()))
@@ -311,7 +311,7 @@ func TestRangeBuilder_IndexOnly(t *testing.T) {
 
 func TestRangeBuilder_WithBody(t *testing.T) {
 	stmt := RangeValue("item", ast.NewIdent("items")).
-		WithBody(NewBodyBuilder().Call(ast.NewIdent("process"), ast.NewIdent("item"))).
+		WithBody(NewBodyBuilder().Call(I("process"), I("item"))).
 		Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "for _, item := range items {\n\tprocess(item)\n}", result)
@@ -319,7 +319,7 @@ func TestRangeBuilder_WithBody(t *testing.T) {
 
 func TestRangeBuilder_DirectBodyManipulation(t *testing.T) {
 	rb := RangeValue("item", ast.NewIdent("items"))
-	rb.Body().Call(ast.NewIdent("process"), ast.NewIdent("item"))
+	rb.Body().Call(I("process"), I("item"))
 	result := formatStmt(t, rb.Build())
 	assert.Equal(t, "for _, item := range items {\n\tprocess(item)\n}", result)
 }
@@ -412,7 +412,7 @@ func TestFunctionBuilder_WithStatementBuilders(t *testing.T) {
 
 	fn.Body().
 		AddStmt(DeclareVar("result", ast.NewIdent("string"))).
-		AddStmt(DefineCallWithErr("data", &ast.SelectorExpr{X: ast.NewIdent("h"), Sel: ast.NewIdent("fetch")}, ast.NewIdent("input"))).
+		AddStmt(DefineCallWithErr("data", Sel(I("h"), "fetch"), I("input"))).
 		AddStmt(IfErrNotNilReturn(&ast.BasicLit{Kind: token.STRING, Value: `""`})).
 		AddStmt(Return2(ast.NewIdent("data"), ast.NewIdent("nil")))
 

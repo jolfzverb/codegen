@@ -226,8 +226,8 @@ func TestBodyBuilder_IfElse(t *testing.T) {
 func TestBodyBuilder_Call(t *testing.T) {
 	body := NewBodyBuilder().
 		Call(
-			&ast.SelectorExpr{X: ast.NewIdent("fmt"), Sel: ast.NewIdent("Println")},
-			&ast.BasicLit{Kind: token.STRING, Value: `"hello"`},
+			Sel(I("fmt"), "Println"),
+			Str("hello"),
 		).
 		Build()
 
