@@ -333,9 +333,9 @@ func TestSimpleTypeBuilder_HelperMethods(t *testing.T) {
 
 func TestSimpleTypeBuilder_Pointer(t *testing.T) {
 	builder := NewSimpleTypeBuilder().AddElement("string")
-	ptrExpr := builder.Pointer()
+	ptrBuilder := builder.Pointer()
 
-	if starExpr, ok := ptrExpr.(*ast.StarExpr); ok {
+	if starExpr, ok := ptrBuilder.Build().(*ast.StarExpr); ok {
 		if ident, ok := starExpr.X.(*ast.Ident); ok {
 			if ident.Name != "string" {
 				t.Errorf("Expected pointer target to be 'string', got %s", ident.Name)
@@ -350,9 +350,9 @@ func TestSimpleTypeBuilder_Pointer(t *testing.T) {
 
 func TestSimpleTypeBuilder_Slice(t *testing.T) {
 	builder := NewSimpleTypeBuilder().AddElement("string")
-	sliceExpr := builder.Slice()
+	sliceBuilder := builder.Slice()
 
-	if arrayType, ok := sliceExpr.(*ast.ArrayType); ok {
+	if arrayType, ok := sliceBuilder.Build().(*ast.ArrayType); ok {
 		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
 			if ident.Name != "string" {
 				t.Errorf("Expected slice element type to be 'string', got %s", ident.Name)

@@ -90,6 +90,9 @@ func (ib *InterfaceBuilder) BuildAsDeclaration() ast.Decl {
 	return ib.Build()
 }
 
+// BuildDecl implements DeclBuilder.
+func (ib *InterfaceBuilder) BuildDecl() ast.Decl { return ib.Build() }
+
 // WithName sets the method name
 // Returns the method builder for method chaining
 func (imb *InterfaceMethodBuilder) WithName(name string) *InterfaceMethodBuilder {

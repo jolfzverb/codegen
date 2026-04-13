@@ -162,6 +162,9 @@ func (fb *FunctionBuilder) Build() *ast.FuncDecl {
 
 // Utility methods
 
+// BuildDecl implements DeclBuilder.
+func (fb *FunctionBuilder) BuildDecl() ast.Decl { return fb.Build() }
+
 // HasName returns true if the function has a name
 func (fb *FunctionBuilder) HasName() bool {
 	return fb.name != ""
@@ -271,24 +274,24 @@ func (bb *BodyBuilder) AddStmts(sbs ...StatementBuilder) *BodyBuilder {
 	return bb
 }
 
-// AddStatement adds a raw statement (for compatibility)
+// AddStatement adds a statement using a StatementBuilder.
 // Returns the builder for method chaining
-func (bb *BodyBuilder) AddStatement(stmt ast.Stmt) *BodyBuilder {
-	if stmt == nil {
+func (bb *BodyBuilder) AddStatement(sb StatementBuilder) *BodyBuilder {
+	if sb == nil {
 		panic("statement cannot be nil")
 	}
-	bb.statements = append(bb.statements, stmt)
+	bb.statements = append(bb.statements, sb.Build())
 	return bb
 }
 
-// AddStatements adds multiple raw statements (for compatibility)
+// AddStatements adds multiple statements using StatementBuilders.
 // Returns the builder for method chaining
-func (bb *BodyBuilder) AddStatements(stmts ...ast.Stmt) *BodyBuilder {
-	for _, stmt := range stmts {
-		if stmt == nil {
+func (bb *BodyBuilder) AddStatements(sbs ...StatementBuilder) *BodyBuilder {
+	for _, sb := range sbs {
+		if sb == nil {
 			panic("statement cannot be nil")
 		}
-		bb.statements = append(bb.statements, stmt)
+		bb.statements = append(bb.statements, sb.Build())
 	}
 	return bb
 }

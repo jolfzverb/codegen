@@ -135,34 +135,30 @@ func (g *Generator) AddHandlersImport(path string) {
 }
 
 func (g *Generator) GenerateHandlersFile() *ast.File {
-	importSpecs, declSpecs := g.HandlerImportsBuilder.Build()
-
 	g.FinalizeHandlerSwitches()
 
 	constructorBody := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.Return1(astbuilder.Amp(g.HandlersFile.handlerConstructorLit)))
-	constructorDecl := g.HandlersFile.handlerConstructorBuilder.
-		WithBody(constructorBody).
-		Build()
+	constructorBuilder := g.HandlersFile.handlerConstructorBuilder.
+		WithBody(constructorBody)
 
-	addRoutesDecl := astbuilder.NewFunctionBuilder().
+	addRoutesBuilder := astbuilder.NewFunctionBuilder().
 		WithName("AddRoutes").
 		WithPointerReceiver("h", "Handler").
 		AddParam(astbuilder.NewFieldBuilder().WithName("router").WithType(astbuilder.Selector("chi", "Router"))).
-		WithBody(g.HandlersFile.addRoutesBodyBuilder).
-		Build()
+		WithBody(g.HandlersFile.addRoutesBodyBuilder)
 
 	fb := astbuilder.NewFileBuilder(g.HandlersFile.packageName).
-		WithImports(importSpecs, declSpecs)
+		WithImports(g.HandlerImportsBuilder)
 	for _, b := range g.HandlersFile.interfaceBuilders {
-		fb.AddDecl(b.Build())
+		fb.AddDecl(b)
 	}
-	fb.AddDecl(g.HandlersFile.handlerDeclBuilder.BuildAsDeclaration())
-	fb.AddDecl(constructorDecl)
-	fb.AddDecl(addRoutesDecl)
+	fb.AddDecl(g.HandlersFile.handlerDeclBuilder)
+	fb.AddDecl(constructorBuilder)
+	fb.AddDecl(addRoutesBuilder)
 	for _, b := range g.HandlersFile.restBuilders {
 		if b != nil {
-			fb.AddDecl(b.Build())
+			fb.AddDecl(b)
 		}
 	}
 
@@ -328,7 +324,7 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 	}
 
 	body := astbuilder.NewBodyBuilder().
-		AddStatement(switchBuilder.Build()).
+		AddStatement(switchBuilder).
 		AddStmt(astbuilder.CallStmt(astbuilder.Sel(astbuilder.I("http"),   "Error"), astbuilder.I("w"), astbuilder.Str("{\"error\":\"InternalServerError\"}"), astbuilder.Sel(astbuilder.I("http"),   "StatusInternalServerError")))
 
 	writeResponseFunc := astbuilder.NewFunctionBuilder().

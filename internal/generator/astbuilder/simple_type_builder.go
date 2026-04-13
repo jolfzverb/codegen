@@ -170,21 +170,13 @@ func Selector(packageName, typeName string) *SimpleTypeBuilder {
 }
 
 // Pointer creates a pointer to the type built by this builder
-func (stb *SimpleTypeBuilder) Pointer() ast.Expr {
-	return &ast.StarExpr{X: stb.Build()}
+func (stb *SimpleTypeBuilder) Pointer() *SimpleTypeBuilder {
+	return stb.Clone().AsPointer(true)
 }
 
 // Slice creates a slice of the type built by this builder
-func (stb *SimpleTypeBuilder) Slice() ast.Expr {
-	return &ast.ArrayType{Elt: stb.Build()}
-}
-
-// Array creates an array of the type built by this builder
-func (stb *SimpleTypeBuilder) Array(length int) ast.Expr {
-	return &ast.ArrayType{
-		Len: &ast.BasicLit{Kind: 0, Value: string(rune(length + '0'))}, // This is simplified
-		Elt: stb.Build(),
-	}
+func (stb *SimpleTypeBuilder) Slice() *ArrayTypeBuilder {
+	return SliceOf(stb.Clone())
 }
 
 // TypeExpressionBuilder is an interface that can build ast.Expr types
@@ -348,6 +340,9 @@ func (tab *TypeAliasBuilder) BuildAsDeclaration() *ast.GenDecl {
 		Specs: []ast.Spec{tab.Build()},
 	}
 }
+
+// BuildDecl implements DeclBuilder.
+func (tab *TypeAliasBuilder) BuildDecl() ast.Decl { return tab.BuildAsDeclaration() }
 
 // Utility methods for TypeAliasBuilder
 

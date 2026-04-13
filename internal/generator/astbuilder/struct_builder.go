@@ -77,6 +77,9 @@ func (sb *StructBuilder) BuildAsDeclaration() *ast.GenDecl {
 	}
 }
 
+// BuildDecl implements DeclBuilder.
+func (sb *StructBuilder) BuildDecl() ast.Decl { return sb.BuildAsDeclaration() }
+
 // Utility methods
 
 // HasName returns true if the struct has a name

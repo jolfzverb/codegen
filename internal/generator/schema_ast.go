@@ -46,8 +46,7 @@ func (g *Generator) WriteSchemasToOutput(output io.Writer) error {
 		return errors.Wrap(err, op)
 	}
 
-	importSpecs, declSpecs := g.SchemasImportsBuilder.Build()
-	g.SchemasFile.fileBuilder.WithImports(importSpecs, declSpecs)
+	g.SchemasFile.fileBuilder.WithImports(g.SchemasImportsBuilder)
 
 	err = format.Node(output, token.NewFileSet(), g.SchemasFile.fileBuilder.Build())
 	if err != nil {
@@ -70,20 +69,20 @@ func (g *Generator) AddSchema(model SchemaStruct) {
 		}
 		structBuilder.AddField(fieldBuilder)
 	}
-	g.SchemasFile.fileBuilder.AddDecl(structBuilder.BuildAsDeclaration())
+	g.SchemasFile.fileBuilder.AddDecl(structBuilder)
 }
 
 func (g *Generator) AddTypeAlias(name string, typeName string) {
 	typeAliasBuilder := astbuilder.NewTypeAliasBuilder().WithName(name).WithType(
 		astbuilder.NewSimpleTypeBuilder().AddElement(typeName))
-	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder.BuildAsDeclaration())
+	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder)
 }
 
 func (g *Generator) AddSliceAlias(name string, typeName string) {
 	typeAliasBuilder := astbuilder.NewTypeAliasBuilder().WithName(name).WithType(
 		astbuilder.NewArrayTypeBuilder().WithElement(
 			astbuilder.NewSimpleTypeBuilder().AddElement(typeName)))
-	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder.BuildAsDeclaration())
+	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder)
 }
 
 func (g *Generator) AddParamsModel(baseName string, paramType string, params openapi3.Parameters) error {
