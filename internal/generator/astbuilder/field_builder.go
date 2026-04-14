@@ -36,15 +36,7 @@ func (fb *FieldBuilder) WithType(typeBuilder TypeExpressionBuilder) *FieldBuilde
 	if typeBuilder == nil {
 		panic("type builder cannot be nil")
 	}
-
-	// Clone the type builder based on its type
-	if stb, ok := typeBuilder.(*SimpleTypeBuilder); ok {
-		fb.typeBuilder = stb.Clone()
-	} else if atb, ok := typeBuilder.(*ArrayTypeBuilder); ok {
-		fb.typeBuilder = atb.Clone()
-	} else {
-		panic("unknown TypeExpressionBuilder type")
-	}
+	fb.typeBuilder = typeBuilder
 	return fb
 }
 
@@ -261,28 +253,6 @@ func (fb *FieldBuilder) ClearAllTags() *FieldBuilder {
 	fb.jsonTags = make([]string, 0)
 	fb.validateTags = make([]string, 0)
 	return fb
-}
-
-// Clone creates a copy of the FieldBuilder
-func (fb *FieldBuilder) Clone() *FieldBuilder {
-	clone := &FieldBuilder{
-		name:         fb.name,
-		jsonTags:     make([]string, len(fb.jsonTags)),
-		validateTags: make([]string, len(fb.validateTags)),
-	}
-	copy(clone.jsonTags, fb.jsonTags)
-	copy(clone.validateTags, fb.validateTags)
-	if fb.typeBuilder != nil {
-		// Clone the type builder based on its type
-		if stb, ok := fb.typeBuilder.(*SimpleTypeBuilder); ok {
-			clone.typeBuilder = stb.Clone()
-		} else if atb, ok := fb.typeBuilder.(*ArrayTypeBuilder); ok {
-			clone.typeBuilder = atb.Clone()
-		} else {
-			panic("unknown TypeExpressionBuilder type in Clone")
-		}
-	}
-	return clone
 }
 
 // Helper methods for array field types

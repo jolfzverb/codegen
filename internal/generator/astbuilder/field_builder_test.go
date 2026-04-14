@@ -56,11 +56,6 @@ func TestFieldBuilder_WithType(t *testing.T) {
 		t.Fatal("typeBuilder should not be nil")
 	}
 
-	// Verify it's a clone, not the same instance
-	if builder.typeBuilder == typeBuilder {
-		t.Error("typeBuilder should be a clone, not the same instance")
-	}
-
 	// Test with nil type builder
 	defer func() {
 		if r := recover(); r == nil {
@@ -327,48 +322,6 @@ func TestFieldBuilder_UtilityMethods(t *testing.T) {
 	validateTags := builder.GetValidateTags()
 	if len(validateTags) != 1 || validateTags[0] != "required" {
 		t.Errorf("Expected GetValidateTags to return ['required'], got %v", validateTags)
-	}
-}
-
-func TestFieldBuilder_Clone(t *testing.T) {
-	builder := NewFieldBuilder().
-		WithName("test").
-		WithType(String()).
-		AddJSONTag("test").
-		AddValidateTag("required")
-
-	clone := builder.Clone()
-
-	if clone == builder {
-		t.Error("Clone should return a different instance")
-	}
-
-	if clone.GetName() != "test" {
-		t.Error("Clone should have the same name")
-	}
-
-	// Verify tags are cloned
-	jsonTags := clone.GetJSONTags()
-	if len(jsonTags) != 1 || jsonTags[0] != "test" {
-		t.Error("Clone should have the same JSON tags")
-	}
-
-	validateTags := clone.GetValidateTags()
-	if len(validateTags) != 1 || validateTags[0] != "required" {
-		t.Error("Clone should have the same validate tags")
-	}
-
-	// Verify type builder is cloned
-	if clone.typeBuilder == builder.typeBuilder {
-		t.Error("Clone should have a different type builder instance")
-	}
-
-	// Modify original
-	builder.WithName("modified")
-
-	// Clone should be unaffected
-	if clone.GetName() != "test" {
-		t.Error("Clone should be unaffected by original modifications")
 	}
 }
 

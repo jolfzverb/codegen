@@ -55,11 +55,6 @@ func TestStructBuilder_AddField(t *testing.T) {
 		t.Errorf("Expected 1 field, got %d", len(builder.fields))
 	}
 
-	// Test that the field was cloned (not the same reference)
-	if builder.fields[0] == fieldBuilder {
-		t.Error("Field should be cloned, not the same reference")
-	}
-
 	// Test adding another field
 	builder.AddField(IntField("age"))
 	if len(builder.fields) != 2 {
@@ -94,17 +89,6 @@ func TestStructBuilder_AddFields(t *testing.T) {
 
 	if len(builder.fields) != 3 {
 		t.Errorf("Expected 3 fields, got %d", len(builder.fields))
-	}
-
-	// Test that fields were cloned
-	if builder.fields[0] == field1 {
-		t.Error("First field should be cloned")
-	}
-	if builder.fields[1] == field2 {
-		t.Error("Second field should be cloned")
-	}
-	if builder.fields[2] == field3 {
-		t.Error("Third field should be cloned")
 	}
 }
 
@@ -245,17 +229,6 @@ func TestStructBuilder_GetFields(t *testing.T) {
 	if len(fields) != 2 {
 		t.Errorf("Expected 2 fields, got %d", len(fields))
 	}
-
-	// Test that returned fields are clones
-	if fields[0] == builder.fields[0] {
-		t.Error("Returned fields should be clones")
-	}
-
-	// Test that modifying returned fields doesn't affect builder
-	fields[0].WithName("modified")
-	if builder.fields[0].GetName() == "modified" {
-		t.Error("Modifying returned fields should not affect builder")
-	}
 }
 
 func TestStructBuilder_GetField(t *testing.T) {
@@ -388,43 +361,6 @@ func TestStructBuilder_Clear(t *testing.T) {
 
 	if builder.HasFields() {
 		t.Error("HasFields should return false after clear")
-	}
-}
-
-func TestStructBuilder_Clone(t *testing.T) {
-	original := NewStructBuilder().
-		WithName("Person").
-		AddField(StringField("name")).
-		AddField(IntField("age"))
-
-	clone := original.Clone()
-
-	// Test that clone has the same values
-	if clone.GetName() != original.GetName() {
-		t.Error("Clone should have the same name")
-	}
-
-	if clone.FieldCount() != original.FieldCount() {
-		t.Error("Clone should have the same number of fields")
-	}
-
-	// Test that clone has different field references
-	for i := range original.fields {
-		if clone.fields[i] == original.fields[i] {
-			t.Error("Clone should have different field references")
-		}
-	}
-
-	// Test that modifying clone doesn't affect original
-	clone.WithName("ModifiedPerson")
-	clone.AddField(BoolField("active"))
-
-	if original.GetName() == "ModifiedPerson" {
-		t.Error("Modifying clone name should not affect original")
-	}
-
-	if original.FieldCount() == 3 {
-		t.Error("Modifying clone fields should not affect original")
 	}
 }
 

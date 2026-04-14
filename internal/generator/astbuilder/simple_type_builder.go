@@ -122,16 +122,6 @@ func (stb *SimpleTypeBuilder) Clear() *SimpleTypeBuilder {
 	return stb
 }
 
-// Clone creates a copy of the SimpleTypeBuilder
-func (stb *SimpleTypeBuilder) Clone() *SimpleTypeBuilder {
-	clone := &SimpleTypeBuilder{
-		elements:  make([]string, len(stb.elements)),
-		asPointer: stb.asPointer,
-	}
-	copy(clone.elements, stb.elements)
-	return clone
-}
-
 // Helper methods for common types
 
 // String creates a simple type builder for "string"
@@ -171,12 +161,12 @@ func Selector(packageName, typeName string) *SimpleTypeBuilder {
 
 // Pointer creates a pointer to the type built by this builder
 func (stb *SimpleTypeBuilder) Pointer() *SimpleTypeBuilder {
-	return stb.Clone().AsPointer(true)
+	return stb.AsPointer(true)
 }
 
 // Slice creates a slice of the type built by this builder
 func (stb *SimpleTypeBuilder) Slice() *ArrayTypeBuilder {
-	return SliceOf(stb.Clone())
+	return SliceOf(stb)
 }
 
 // TypeExpressionBuilder is an interface that can build ast.Expr types
@@ -225,23 +215,6 @@ func (atb *ArrayTypeBuilder) HasElement() bool {
 // GetElement returns the element TypeExpressionBuilder
 func (atb *ArrayTypeBuilder) GetElement() TypeExpressionBuilder {
 	return atb.element
-}
-
-// Clone creates a copy of the ArrayTypeBuilder
-func (atb *ArrayTypeBuilder) Clone() *ArrayTypeBuilder {
-	clone := &ArrayTypeBuilder{}
-	if atb.element != nil {
-		// Clone the element if it's a SimpleTypeBuilder
-		if stb, ok := atb.element.(*SimpleTypeBuilder); ok {
-			clone.element = stb.Clone()
-		} else if atb, ok := atb.element.(*ArrayTypeBuilder); ok {
-			clone.element = atb.Clone()
-		} else {
-			// For other types, we can't clone, so we'll panic
-			panic("cannot clone unknown TypeExpressionBuilder type")
-		}
-	}
-	return clone
 }
 
 // Helper functions for creating arrays
@@ -366,26 +339,6 @@ func (tab *TypeAliasBuilder) GetType() TypeExpressionBuilder {
 	return tab.typeBuilder
 }
 
-// Clone creates a copy of the TypeAliasBuilder
-func (tab *TypeAliasBuilder) Clone() *TypeAliasBuilder {
-	clone := &TypeAliasBuilder{
-		name: tab.name,
-	}
-
-	if tab.typeBuilder != nil {
-		// Clone the type builder based on its type
-		if stb, ok := tab.typeBuilder.(*SimpleTypeBuilder); ok {
-			clone.typeBuilder = stb.Clone()
-		} else if atb, ok := tab.typeBuilder.(*ArrayTypeBuilder); ok {
-			clone.typeBuilder = atb.Clone()
-		} else {
-			panic("cannot clone unknown TypeExpressionBuilder type")
-		}
-	}
-
-	return clone
-}
-
 // Helper functions for creating type aliases
 
 // StringSliceAlias creates a TypeAliasBuilder for "type AliasName []string"
@@ -503,31 +456,6 @@ func (mtb *MapTypeBuilder) Build() ast.Expr {
 	return &ast.MapType{
 		Key:   mtb.key.Build(),
 		Value: mtb.value.Build(),
-	}
-}
-
-// Clone creates a copy of the MapTypeBuilder
-func (mtb *MapTypeBuilder) Clone() *MapTypeBuilder {
-	clone := &MapTypeBuilder{}
-	if mtb.key != nil {
-		clone.key = cloneTypeExpressionBuilder(mtb.key)
-	}
-	if mtb.value != nil {
-		clone.value = cloneTypeExpressionBuilder(mtb.value)
-	}
-	return clone
-}
-
-func cloneTypeExpressionBuilder(tb TypeExpressionBuilder) TypeExpressionBuilder {
-	switch v := tb.(type) {
-	case *SimpleTypeBuilder:
-		return v.Clone()
-	case *ArrayTypeBuilder:
-		return v.Clone()
-	case *MapTypeBuilder:
-		return v.Clone()
-	default:
-		panic("cannot clone unknown TypeExpressionBuilder type")
 	}
 }
 

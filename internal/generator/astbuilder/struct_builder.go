@@ -31,7 +31,7 @@ func (sb *StructBuilder) AddField(fieldBuilder *FieldBuilder) *StructBuilder {
 	if fieldBuilder == nil {
 		panic("field builder cannot be nil")
 	}
-	sb.fields = append(sb.fields, fieldBuilder.Clone())
+	sb.fields = append(sb.fields, fieldBuilder)
 	return sb
 }
 
@@ -42,7 +42,7 @@ func (sb *StructBuilder) AddFields(fieldBuilders ...*FieldBuilder) *StructBuilde
 		if fieldBuilder == nil {
 			panic("field builder cannot be nil")
 		}
-		sb.fields = append(sb.fields, fieldBuilder.Clone())
+		sb.fields = append(sb.fields, fieldBuilder)
 	}
 	return sb
 }
@@ -102,13 +102,9 @@ func (sb *StructBuilder) HasFields() bool {
 	return len(sb.fields) > 0
 }
 
-// GetFields returns a copy of the fields slice
+// GetFields returns the fields slice
 func (sb *StructBuilder) GetFields() []*FieldBuilder {
-	fields := make([]*FieldBuilder, len(sb.fields))
-	for i, field := range sb.fields {
-		fields[i] = field.Clone()
-	}
-	return fields
+	return sb.fields
 }
 
 // GetField returns the field at the specified index
@@ -117,7 +113,7 @@ func (sb *StructBuilder) GetField(index int) *FieldBuilder {
 	if index < 0 || index >= len(sb.fields) {
 		return nil
 	}
-	return sb.fields[index].Clone()
+	return sb.fields[index]
 }
 
 // GetFieldByName returns the first field with the specified name
@@ -125,7 +121,7 @@ func (sb *StructBuilder) GetField(index int) *FieldBuilder {
 func (sb *StructBuilder) GetFieldByName(name string) *FieldBuilder {
 	for _, field := range sb.fields {
 		if field.GetName() == name {
-			return field.Clone()
+			return field
 		}
 	}
 	return nil
@@ -158,18 +154,6 @@ func (sb *StructBuilder) RemoveFieldByName(name string) *StructBuilder {
 func (sb *StructBuilder) Clear() *StructBuilder {
 	sb.fields = make([]*FieldBuilder, 0)
 	return sb
-}
-
-// Clone creates a copy of the StructBuilder
-func (sb *StructBuilder) Clone() *StructBuilder {
-	clone := &StructBuilder{
-		name:   sb.name,
-		fields: make([]*FieldBuilder, len(sb.fields)),
-	}
-	for i, field := range sb.fields {
-		clone.fields[i] = field.Clone()
-	}
-	return clone
 }
 
 // Helper methods for common field types

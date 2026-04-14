@@ -48,15 +48,6 @@ func (rb *ReturnBuilder) Build() ast.Stmt {
 	return &ast.ReturnStmt{Results: rb.results}
 }
 
-// Clone creates a copy of the ReturnBuilder
-func (rb *ReturnBuilder) Clone() *ReturnBuilder {
-	clone := &ReturnBuilder{
-		results: make([]ast.Expr, len(rb.results)),
-	}
-	copy(clone.results, rb.results)
-	return clone
-}
-
 // Helper functions for ReturnBuilder
 
 // Return creates an empty return statement
@@ -171,18 +162,6 @@ func (ab *AssignBuilder) Build() ast.Stmt {
 	}
 }
 
-// Clone creates a copy of the AssignBuilder
-func (ab *AssignBuilder) Clone() *AssignBuilder {
-	clone := &AssignBuilder{
-		lhs: make([]ast.Expr, len(ab.lhs)),
-		rhs: make([]ast.Expr, len(ab.rhs)),
-		tok: ab.tok,
-	}
-	copy(clone.lhs, ab.lhs)
-	copy(clone.rhs, ab.rhs)
-	return clone
-}
-
 // Helper functions for AssignBuilder
 
 // Assign creates an assignment statement: lhs = rhs
@@ -271,15 +250,6 @@ func (vdb *VarDeclBuilder) Build() ast.Stmt {
 	}
 }
 
-// Clone creates a copy of the VarDeclBuilder
-func (vdb *VarDeclBuilder) Clone() *VarDeclBuilder {
-	return &VarDeclBuilder{
-		name:     vdb.name,
-		typeExpr: vdb.typeExpr,
-		value:    vdb.value,
-	}
-}
-
 // Helper functions for VarDeclBuilder
 
 // DeclareVar creates a variable declaration: var name Type
@@ -332,7 +302,7 @@ func (ib *IfBuilder) WithBody(body *BodyBuilder) *IfBuilder {
 		ib.body = NewBodyBuilder()
 		return ib
 	}
-	ib.body = body.Clone()
+	ib.body = body
 	return ib
 }
 
@@ -343,11 +313,7 @@ func (ib *IfBuilder) Body() *BodyBuilder {
 
 // WithElse sets the else body
 func (ib *IfBuilder) WithElse(elseBody *BodyBuilder) *IfBuilder {
-	if elseBody == nil {
-		ib.elseBody = nil
-		return ib
-	}
-	ib.elseBody = elseBody.Clone()
+	ib.elseBody = elseBody
 	return ib
 }
 
@@ -384,24 +350,6 @@ func (ib *IfBuilder) Build() ast.Stmt {
 	}
 
 	return stmt
-}
-
-// Clone creates a copy of the IfBuilder
-func (ib *IfBuilder) Clone() *IfBuilder {
-	clone := &IfBuilder{
-		init: ib.init,
-		cond: ib.cond,
-	}
-	if ib.body != nil {
-		clone.body = ib.body.Clone()
-	}
-	if ib.elseBody != nil {
-		clone.elseBody = ib.elseBody.Clone()
-	}
-	if ib.elseIf != nil {
-		clone.elseIf = ib.elseIf.Clone()
-	}
-	return clone
 }
 
 // Helper functions for IfBuilder
@@ -458,11 +406,6 @@ func (esb *ExprStmtBuilder) Build() ast.Stmt {
 		panic("expression statement must have an expression")
 	}
 	return &ast.ExprStmt{X: esb.expr}
-}
-
-// Clone creates a copy of the ExprStmtBuilder
-func (esb *ExprStmtBuilder) Clone() *ExprStmtBuilder {
-	return &ExprStmtBuilder{expr: esb.expr}
 }
 
 // Helper functions for ExprStmtBuilder
@@ -743,7 +686,7 @@ func (rb *RangeBuilder) WithBody(body *BodyBuilder) *RangeBuilder {
 		rb.body = NewBodyBuilder()
 		return rb
 	}
-	rb.body = body.Clone()
+	rb.body = body
 	return rb
 }
 
@@ -776,20 +719,6 @@ func (rb *RangeBuilder) Build() ast.Stmt {
 		X:     rb.x,
 		Body:  rb.body.Build(),
 	}
-}
-
-// Clone creates a copy of the RangeBuilder
-func (rb *RangeBuilder) Clone() *RangeBuilder {
-	clone := &RangeBuilder{
-		key:      rb.key,
-		value:    rb.value,
-		x:        rb.x,
-		isDefine: rb.isDefine,
-	}
-	if rb.body != nil {
-		clone.body = rb.body.Clone()
-	}
-	return clone
 }
 
 // Helper functions for RangeBuilder
@@ -869,19 +798,6 @@ func (sb *SwitchBuilder) Build() ast.Stmt {
 	}
 }
 
-// Clone creates a copy of the SwitchBuilder
-func (sb *SwitchBuilder) Clone() *SwitchBuilder {
-	clone := &SwitchBuilder{
-		init:  sb.init,
-		tag:   sb.tag,
-		cases: make([]*CaseBuilder, len(sb.cases)),
-	}
-	for i, c := range sb.cases {
-		clone.cases[i] = c.Clone()
-	}
-	return clone
-}
-
 // CaseBuilder builds case clauses
 type CaseBuilder struct {
 	exprs []ast.Expr
@@ -911,7 +827,7 @@ func (cb *CaseBuilder) WithBody(body *BodyBuilder) *CaseBuilder {
 		cb.body = NewBodyBuilder()
 		return cb
 	}
-	cb.body = body.Clone()
+	cb.body = body
 	return cb
 }
 
@@ -930,18 +846,6 @@ func (cb *CaseBuilder) Build() ast.Stmt {
 		List: list,
 		Body: cb.body.Build().List,
 	}
-}
-
-// Clone creates a copy of the CaseBuilder
-func (cb *CaseBuilder) Clone() *CaseBuilder {
-	clone := &CaseBuilder{
-		exprs: make([]ast.Expr, len(cb.exprs)),
-	}
-	copy(clone.exprs, cb.exprs)
-	if cb.body != nil {
-		clone.body = cb.body.Clone()
-	}
-	return clone
 }
 
 // Helper functions for SwitchBuilder

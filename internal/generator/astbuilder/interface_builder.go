@@ -106,7 +106,7 @@ func (imb *InterfaceMethodBuilder) AddArgField(fieldBuilder *FieldBuilder) *Inte
 	if fieldBuilder == nil {
 		panic("field builder cannot be nil")
 	}
-	imb.params = append(imb.params, fieldBuilder.Clone())
+	imb.params = append(imb.params, fieldBuilder)
 	return imb
 }
 
@@ -116,7 +116,7 @@ func (imb *InterfaceMethodBuilder) AddRetvalField(fieldBuilder *FieldBuilder) *I
 	if fieldBuilder == nil {
 		panic("field builder cannot be nil")
 	}
-	imb.results = append(imb.results, fieldBuilder.Clone())
+	imb.results = append(imb.results, fieldBuilder)
 	return imb
 }
 

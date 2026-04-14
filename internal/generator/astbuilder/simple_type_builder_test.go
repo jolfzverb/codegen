@@ -249,32 +249,6 @@ func TestSimpleTypeBuilder_UtilityMethods(t *testing.T) {
 	}
 }
 
-func TestSimpleTypeBuilder_Clone(t *testing.T) {
-	builder := NewSimpleTypeBuilder().AddElements("context", "Context")
-	clone := builder.Clone()
-
-	if clone == builder {
-		t.Error("Clone should return a different instance")
-	}
-
-	if clone.ElementCount() != 2 {
-		t.Errorf("Expected clone to have 2 elements, got %d", clone.ElementCount())
-	}
-
-	elements := clone.GetElements()
-	if elements[0] != "context" || elements[1] != "Context" {
-		t.Error("Clone should have the same elements")
-	}
-
-	// Modify original
-	builder.AddElement("Type")
-
-	// Clone should be unaffected
-	if clone.ElementCount() != 2 {
-		t.Errorf("Expected clone to still have 2 elements, got %d", clone.ElementCount())
-	}
-}
-
 func TestSimpleTypeBuilder_HelperMethods(t *testing.T) {
 	// Test String()
 	builder := String()
@@ -458,39 +432,6 @@ func TestSimpleTypeBuilder_AsPointerMethodChaining(t *testing.T) {
 	}
 }
 
-func TestSimpleTypeBuilder_AsPointerClone(t *testing.T) {
-	original := NewSimpleTypeBuilder().
-		AddElement("string").
-		AsPointer(true)
-
-	clone := original.Clone()
-
-	// Test that clone has the same asPointer setting
-	originalExpr := original.Build()
-	cloneExpr := clone.Build()
-
-	if _, ok := originalExpr.(*ast.StarExpr); !ok {
-		t.Error("Original should create ast.StarExpr")
-	}
-
-	if _, ok := cloneExpr.(*ast.StarExpr); !ok {
-		t.Error("Clone should create ast.StarExpr")
-	}
-
-	// Test that modifying clone doesn't affect original
-	clone.AsPointer(false)
-	originalExpr = original.Build()
-	cloneExpr = clone.Build()
-
-	if _, ok := originalExpr.(*ast.StarExpr); !ok {
-		t.Error("Original should still create ast.StarExpr after clone modification")
-	}
-
-	if _, ok := cloneExpr.(*ast.StarExpr); ok {
-		t.Error("Clone should not create ast.StarExpr after modification")
-	}
-}
-
 func TestNewArrayTypeBuilder(t *testing.T) {
 	builder := NewArrayTypeBuilder()
 
@@ -613,49 +554,6 @@ func TestArrayTypeBuilder_UtilityMethods(t *testing.T) {
 	// Verify it's the same element reference
 	if element != builder.element {
 		t.Error("GetElement should return the same element reference")
-	}
-}
-
-func TestArrayTypeBuilder_Clone(t *testing.T) {
-	stringBuilder := String()
-	original := NewArrayTypeBuilder().WithElement(stringBuilder)
-	clone := original.Clone()
-
-	// Test that clone has the same element type
-	if !clone.HasElement() {
-		t.Error("Clone should have an element")
-	}
-
-	// Test that clone has different element reference
-	if clone.GetElement() == original.GetElement() {
-		t.Error("Clone should have a different element reference")
-	}
-
-	// Test that modifying clone doesn't affect original
-	clone.WithElement(Int())
-	if original.GetElement() != stringBuilder {
-		t.Error("Modifying clone should not affect original")
-	}
-}
-
-func TestArrayTypeBuilder_CloneNested(t *testing.T) {
-	// Test cloning nested arrays
-	inner := NewArrayTypeBuilder().WithElement(String())
-	outer := NewArrayTypeBuilder().WithElement(inner)
-
-	clone := outer.Clone()
-
-	// Test that clone has nested structure
-	if !clone.HasElement() {
-		t.Error("Clone should have an element")
-	}
-
-	if innerClone, ok := clone.GetElement().(*ArrayTypeBuilder); ok {
-		if !innerClone.HasElement() {
-			t.Error("Inner clone should have an element")
-		}
-	} else {
-		t.Error("Clone element should be ArrayTypeBuilder")
 	}
 }
 
@@ -955,60 +853,6 @@ func TestTypeAliasBuilder_UtilityMethods(t *testing.T) {
 	typeBuilder := builder.GetType()
 	if typeBuilder == nil {
 		t.Error("GetType should not return nil")
-	}
-}
-
-func TestTypeAliasBuilder_Clone(t *testing.T) {
-	stringBuilder := String()
-	original := NewTypeAliasBuilder().
-		WithName("OriginalAlias").
-		WithType(stringBuilder)
-
-	clone := original.Clone()
-
-	// Test that clone has the same name
-	if clone.GetName() != "OriginalAlias" {
-		t.Error("Clone should have the same name")
-	}
-
-	// Test that clone has different type reference
-	if clone.GetType() == original.GetType() {
-		t.Error("Clone should have a different type reference")
-	}
-
-	// Test that modifying clone doesn't affect original
-	clone.WithName("CloneAlias")
-	if original.GetName() != "OriginalAlias" {
-		t.Error("Modifying clone should not affect original")
-	}
-}
-
-func TestTypeAliasBuilder_CloneWithArrayType(t *testing.T) {
-	// Test cloning with ArrayTypeBuilder
-	original := NewTypeAliasBuilder().
-		WithName("ArrayAlias").
-		WithType(StringSlice())
-
-	clone := original.Clone()
-
-	// Test that clone has the same name
-	if clone.GetName() != "ArrayAlias" {
-		t.Error("Clone should have the same name")
-	}
-
-	// Test that clone has different type reference
-	if clone.GetType() == original.GetType() {
-		t.Error("Clone should have a different type reference")
-	}
-
-	// Test that the cloned type works
-	spec := clone.Build()
-	if arrayType, ok := spec.Type.(*ast.ArrayType); ok {
-		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
-			if ident.Name != "string" {
-				t.Errorf("Expected array element type 'string', got %s", ident.Name)
-			}
-		}
 	}
 }
 

@@ -36,11 +36,7 @@ func (fb *FunctionBuilder) WithName(name string) *FunctionBuilder {
 // WithReceiver sets the method receiver using a FieldBuilder
 // Returns the builder for method chaining
 func (fb *FunctionBuilder) WithReceiver(receiver *FieldBuilder) *FunctionBuilder {
-	if receiver == nil {
-		fb.receiver = nil
-		return fb
-	}
-	fb.receiver = receiver.Clone()
+	fb.receiver = receiver
 	return fb
 }
 
@@ -50,7 +46,7 @@ func (fb *FunctionBuilder) AddParam(param *FieldBuilder) *FunctionBuilder {
 	if param == nil {
 		panic("param cannot be nil")
 	}
-	fb.params = append(fb.params, param.Clone())
+	fb.params = append(fb.params, param)
 	return fb
 }
 
@@ -61,7 +57,7 @@ func (fb *FunctionBuilder) AddParams(params ...*FieldBuilder) *FunctionBuilder {
 		if param == nil {
 			panic("param cannot be nil")
 		}
-		fb.params = append(fb.params, param.Clone())
+		fb.params = append(fb.params, param)
 	}
 	return fb
 }
@@ -72,7 +68,7 @@ func (fb *FunctionBuilder) AddResult(result *FieldBuilder) *FunctionBuilder {
 	if result == nil {
 		panic("result cannot be nil")
 	}
-	fb.results = append(fb.results, result.Clone())
+	fb.results = append(fb.results, result)
 	return fb
 }
 
@@ -83,7 +79,7 @@ func (fb *FunctionBuilder) AddResults(results ...*FieldBuilder) *FunctionBuilder
 		if result == nil {
 			panic("result cannot be nil")
 		}
-		fb.results = append(fb.results, result.Clone())
+		fb.results = append(fb.results, result)
 	}
 	return fb
 }
@@ -113,7 +109,7 @@ func (fb *FunctionBuilder) WithBody(body *BodyBuilder) *FunctionBuilder {
 		fb.body = NewBodyBuilder()
 		return fb
 	}
-	fb.body = body.Clone()
+	fb.body = body
 	return fb
 }
 
@@ -188,32 +184,6 @@ func (fb *FunctionBuilder) ParamCount() int {
 // ResultCount returns the number of return values
 func (fb *FunctionBuilder) ResultCount() int {
 	return len(fb.results) + len(fb.rawResults)
-}
-
-// Clone creates a copy of the FunctionBuilder
-func (fb *FunctionBuilder) Clone() *FunctionBuilder {
-	clone := &FunctionBuilder{
-		name:       fb.name,
-		params:     make([]*FieldBuilder, len(fb.params)),
-		rawParams:  make([]*ast.Field, len(fb.rawParams)),
-		results:    make([]*FieldBuilder, len(fb.results)),
-		rawResults: make([]*ast.Field, len(fb.rawResults)),
-	}
-	if fb.receiver != nil {
-		clone.receiver = fb.receiver.Clone()
-	}
-	for i, param := range fb.params {
-		clone.params[i] = param.Clone()
-	}
-	copy(clone.rawParams, fb.rawParams)
-	for i, result := range fb.results {
-		clone.results[i] = result.Clone()
-	}
-	copy(clone.rawResults, fb.rawResults)
-	if fb.body != nil {
-		clone.body = fb.body.Clone()
-	}
-	return clone
 }
 
 // Helper methods for common parameter types
@@ -376,15 +346,6 @@ func (bb *BodyBuilder) IsEmpty() bool {
 func (bb *BodyBuilder) Clear() *BodyBuilder {
 	bb.statements = make([]ast.Stmt, 0)
 	return bb
-}
-
-// Clone creates a copy of the BodyBuilder
-func (bb *BodyBuilder) Clone() *BodyBuilder {
-	clone := &BodyBuilder{
-		statements: make([]ast.Stmt, len(bb.statements)),
-	}
-	copy(clone.statements, bb.statements)
-	return clone
 }
 
 // Helper function builders

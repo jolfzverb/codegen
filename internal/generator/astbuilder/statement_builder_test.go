@@ -58,15 +58,6 @@ func TestReturnBuilder_NilErr(t *testing.T) {
 	assert.Equal(t, "return nil, err", result)
 }
 
-func TestReturnBuilder_Clone(t *testing.T) {
-	original := Return1(I("a"))
-	clone := original.Clone()
-	clone.AddResult(I("b"))
-
-	assert.Equal(t, "return a", formatStmt(t, original.Build()))
-	assert.Equal(t, "return a, b", formatStmt(t, clone.Build()))
-}
-
 // AssignBuilder tests
 
 func TestAssignBuilder_Simple(t *testing.T) {
@@ -103,14 +94,6 @@ func TestAssignBuilder_DefineCallWithErr(t *testing.T) {
 	assert.Equal(t, "result, err := getValue()", result)
 }
 
-func TestAssignBuilder_Clone(t *testing.T) {
-	original := Assign(I("x"), I("y"))
-	clone := original.Clone()
-
-	assert.Equal(t, "x = y", formatStmt(t, original.Build()))
-	assert.Equal(t, "x = y", formatStmt(t, clone.Build()))
-}
-
 func TestAssignBuilder_PanicsOnEmptyLhs(t *testing.T) {
 	assert.Panics(t, func() {
 		NewAssignBuilder().AddRhs(I("x")).Build()
@@ -144,14 +127,6 @@ func TestVarDeclBuilder_WithType(t *testing.T) {
 		Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "var items []string", result)
-}
-
-func TestVarDeclBuilder_Clone(t *testing.T) {
-	original := DeclareVar("x", I("int"))
-	clone := original.Clone()
-
-	assert.Equal(t, "var x int", formatStmt(t, original.Build()))
-	assert.Equal(t, "var x int", formatStmt(t, clone.Build()))
 }
 
 func TestVarDeclBuilder_PanicsOnMissingName(t *testing.T) {
@@ -230,14 +205,6 @@ func TestIfBuilder_DirectBodyManipulation(t *testing.T) {
 	assert.Equal(t, "if x > 0 {\n\treturn x\n}", result)
 }
 
-func TestIfBuilder_Clone(t *testing.T) {
-	original := IfErrNotNil().WithBody(NewBodyBuilder().Return1(I("err")))
-	clone := original.Clone()
-
-	assert.Equal(t, "if err != nil {\n\treturn err\n}", formatStmt(t, original.Build()))
-	assert.Equal(t, "if err != nil {\n\treturn err\n}", formatStmt(t, clone.Build()))
-}
-
 func TestIfBuilder_PanicsOnMissingCond(t *testing.T) {
 	assert.Panics(t, func() {
 		NewIfBuilder().Build()
@@ -262,14 +229,6 @@ func TestExprStmtBuilder_MethodCallStmt(t *testing.T) {
 	stmt := MethodCallStmt("fmt", "Println", Str("hello")).Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, `fmt.Println("hello")`, result)
-}
-
-func TestExprStmtBuilder_Clone(t *testing.T) {
-	original := CallStmt(I("foo"))
-	clone := original.Clone()
-
-	assert.Equal(t, "foo()", formatStmt(t, original.Build()))
-	assert.Equal(t, "foo()", formatStmt(t, clone.Build()))
 }
 
 func TestExprStmtBuilder_PanicsOnMissingExpr(t *testing.T) {
@@ -319,14 +278,6 @@ func TestRangeBuilder_AsAssign(t *testing.T) {
 	assert.Equal(t, "for i, v = range items {\n}", result)
 }
 
-func TestRangeBuilder_Clone(t *testing.T) {
-	original := RangeValue("item", I("items"))
-	clone := original.Clone()
-
-	assert.Equal(t, "for _, item := range items {\n}", formatStmt(t, original.Build()))
-	assert.Equal(t, "for _, item := range items {\n}", formatStmt(t, clone.Build()))
-}
-
 func TestRangeBuilder_PanicsOnMissingX(t *testing.T) {
 	assert.Panics(t, func() {
 		NewRangeBuilder().WithKey(I("i")).Build()
@@ -363,15 +314,6 @@ func TestSwitchBuilder_CaseWithMultipleExprs(t *testing.T) {
 	result := formatStmt(t, stmt)
 	expected := "switch x {\ncase 1, 2:\n\treturn \"small\"\n}"
 	assert.Equal(t, expected, result)
-}
-
-func TestSwitchBuilder_Clone(t *testing.T) {
-	original := Switch(I("x")).
-		AddCase(Case(IntLit("1")))
-	clone := original.Clone()
-
-	assert.Equal(t, "switch x {\ncase 1:\n}", formatStmt(t, original.Build()))
-	assert.Equal(t, "switch x {\ncase 1:\n}", formatStmt(t, clone.Build()))
 }
 
 // Integration tests

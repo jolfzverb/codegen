@@ -109,19 +109,6 @@ func TestFunctionBuilder_HelperMethod(t *testing.T) {
 	assert.Equal(t, "func (s *Service) DoWork() {\n}", result)
 }
 
-func TestFunctionBuilder_Clone(t *testing.T) {
-	original := NewFunctionBuilder().
-		WithName("Test").
-		WithPointerReceiver("h", "Handler").
-		AddParam(StringField("name"))
-
-	clone := original.Clone()
-	clone.WithName("TestClone")
-
-	assert.Equal(t, "Test", original.GetName())
-	assert.Equal(t, "TestClone", clone.GetName())
-}
-
 func TestFunctionBuilder_UtilityMethods(t *testing.T) {
 	fb := NewFunctionBuilder().
 		WithName("Test").
@@ -246,15 +233,6 @@ func TestBodyBuilder_UtilityMethods(t *testing.T) {
 
 	bb.Clear()
 	assert.True(t, bb.IsEmpty())
-}
-
-func TestBodyBuilder_Clone(t *testing.T) {
-	original := NewBodyBuilder().Return()
-	clone := original.Clone()
-	clone.Return1(I("nil"))
-
-	assert.Equal(t, 1, original.StatementCount())
-	assert.Equal(t, 2, clone.StatementCount())
 }
 
 func TestFunctionBuilder_WithBody(t *testing.T) {
