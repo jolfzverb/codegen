@@ -59,8 +59,11 @@ func (g *Generator) WriteSchemasToOutput(output io.Writer) error {
 func (g *Generator) AddSchema(model SchemaStruct) {
 	structBuilder := astbuilder.NewStructBuilder().WithName(model.Name)
 	for _, field := range model.Fields {
-		fieldBuilder := astbuilder.NewFieldBuilder().WithName(field.Name).WithType(
-			astbuilder.NewSimpleTypeBuilder().AddElement(field.Type).AsPointer(!field.Required))
+		var fieldType astbuilder.TypeExpressionBuilder = astbuilder.Ident(field.Type)
+		if !field.Required {
+			fieldType = astbuilder.Star(fieldType)
+		}
+		fieldBuilder := astbuilder.NewFieldBuilder().WithName(field.Name).WithType(fieldType)
 		for _, tag := range field.TagJSON {
 			fieldBuilder.AddJSONTag(tag)
 		}

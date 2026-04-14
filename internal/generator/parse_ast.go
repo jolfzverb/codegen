@@ -47,8 +47,8 @@ func (g *Generator) AddParseQueryParamsMethod(baseName string, params openapi3.P
 	fn := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"QueryParams").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
-		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"QueryParams").AsPointer(true))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.Selector("http", "Request")))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"QueryParams")))).
 		AddResult(astbuilder.ErrorField()).
 		WithBody(bodyBuilder)
 
@@ -127,8 +127,8 @@ func (g *Generator) AddParseHeadersMethod(baseName string, params openapi3.Param
 	fn := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"Headers").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
-		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Headers").AsPointer(true))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.Selector("http", "Request")))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Headers")))).
 		AddResult(astbuilder.ErrorField()).
 		WithBody(bodyBuilder)
 
@@ -181,8 +181,8 @@ func (g *Generator) AddParseCookiesMethod(baseName string, params openapi3.Param
 	fn := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"Cookies").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
-		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Cookies").AsPointer(true))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.Selector("http", "Request")))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Cookies")))).
 		AddResult(astbuilder.ErrorField()).
 		WithBody(bodyBuilder)
 
@@ -237,7 +237,7 @@ func (g *Generator) AddParseRequestBodyMethod(baseName string, contentType strin
 
 	fn := astbuilder.Function("parse"+baseName+"RequestBody").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.Selector("http", "Request")))).
 		AddResultExpr(astbuilder.Star(bodyType)).
 		AddResultExpr(astbuilder.Error()).
 		WithBody(bodyBuilder)
@@ -302,8 +302,8 @@ func (g *Generator) AddParseRequestMethod(baseName string, contentType string, p
 	fn := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"Request").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Selector("http", "Request").AsPointer(true))).
-		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Request").AsPointer(true))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.Selector("http", "Request")))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Request")))).
 		AddResult(astbuilder.ErrorField()).
 		WithBody(bodyBuilder)
 

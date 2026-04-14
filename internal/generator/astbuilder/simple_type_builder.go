@@ -40,13 +40,6 @@ func (stb *SimpleTypeBuilder) AddElements(elements ...string) *SimpleTypeBuilder
 	return stb
 }
 
-// AsPointer sets whether the type should be built as a pointer (*Type)
-// Returns the builder for method chaining
-func (stb *SimpleTypeBuilder) AsPointer(isPointer bool) *SimpleTypeBuilder {
-	stb.asPointer = isPointer
-	return stb
-}
-
 // Build creates the ast.Expr for the simple type
 func (stb *SimpleTypeBuilder) Build() ast.Expr {
 	if len(stb.elements) == 0 {
@@ -157,11 +150,6 @@ func Ident(name string) *SimpleTypeBuilder {
 // Selector creates a simple type builder for a selector expression like "package.Type"
 func Selector(packageName, typeName string) *SimpleTypeBuilder {
 	return NewSimpleTypeBuilder().AddElements(packageName, typeName)
-}
-
-// Pointer creates a pointer to the type built by this builder
-func (stb *SimpleTypeBuilder) Pointer() *SimpleTypeBuilder {
-	return stb.AsPointer(true)
 }
 
 // Slice creates a slice of the type built by this builder
@@ -388,13 +376,6 @@ func SelectorAlias(name, packageName, typeName string) *TypeAliasBuilder {
 	return NewTypeAliasBuilder().
 		WithName(name).
 		WithType(Selector(packageName, typeName))
-}
-
-// PointerAlias creates a TypeAliasBuilder for "type AliasName *Type"
-func PointerAlias(name, typeName string) *TypeAliasBuilder {
-	return NewTypeAliasBuilder().
-		WithName(name).
-		WithType(Ident(typeName).AsPointer(true))
 }
 
 // SliceAlias creates a TypeAliasBuilder for "type AliasName []Type"

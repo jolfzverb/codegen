@@ -202,7 +202,7 @@ func (fb *FunctionBuilder) AddErrorResult() *FunctionBuilder {
 func (fb *FunctionBuilder) WithPointerReceiver(name, typeName string) *FunctionBuilder {
 	return fb.WithReceiver(NewFieldBuilder().
 		WithName(name).
-		WithType(Ident(typeName).AsPointer(true)))
+		WithType(Star(Ident(typeName))))
 }
 
 // WithValueReceiver sets a value receiver with the given name and type

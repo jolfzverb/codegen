@@ -305,23 +305,6 @@ func TestSimpleTypeBuilder_HelperMethods(t *testing.T) {
 	}
 }
 
-func TestSimpleTypeBuilder_Pointer(t *testing.T) {
-	builder := NewSimpleTypeBuilder().AddElement("string")
-	ptrBuilder := builder.Pointer()
-
-	if starExpr, ok := ptrBuilder.Build().(*ast.StarExpr); ok {
-		if ident, ok := starExpr.X.(*ast.Ident); ok {
-			if ident.Name != "string" {
-				t.Errorf("Expected pointer target to be 'string', got %s", ident.Name)
-			}
-		} else {
-			t.Error("Pointer target should be ast.Ident")
-		}
-	} else {
-		t.Error("Pointer should create ast.StarExpr")
-	}
-}
-
 func TestSimpleTypeBuilder_Slice(t *testing.T) {
 	builder := NewSimpleTypeBuilder().AddElement("string")
 	sliceBuilder := builder.Slice()
@@ -340,95 +323,6 @@ func TestSimpleTypeBuilder_Slice(t *testing.T) {
 		}
 	} else {
 		t.Error("Slice should create ast.ArrayType")
-	}
-}
-
-func TestSimpleTypeBuilder_AsPointer(t *testing.T) {
-	// Test with single element
-	builder := NewSimpleTypeBuilder().AddElement("string").AsPointer(true)
-	expr := builder.Build()
-
-	if starExpr, ok := expr.(*ast.StarExpr); ok {
-		if ident, ok := starExpr.X.(*ast.Ident); ok {
-			if ident.Name != "string" {
-				t.Errorf("Expected pointer target to be 'string', got %s", ident.Name)
-			}
-		} else {
-			t.Error("Pointer target should be ast.Ident")
-		}
-	} else {
-		t.Error("AsPointer(true) should create ast.StarExpr")
-	}
-
-	// Test with multiple elements (selector expression)
-	builder = NewSimpleTypeBuilder().AddElements("context", "Context").AsPointer(true)
-	expr = builder.Build()
-
-	if starExpr, ok := expr.(*ast.StarExpr); ok {
-		if selector, ok := starExpr.X.(*ast.SelectorExpr); ok {
-			if selector.Sel.Name != "Context" {
-				t.Errorf("Expected selector name 'Context', got %s", selector.Sel.Name)
-			}
-		} else {
-			t.Error("Pointer target should be ast.SelectorExpr")
-		}
-	} else {
-		t.Error("AsPointer(true) with selector should create ast.StarExpr")
-	}
-
-	// Test with AsPointer(false) - should not create pointer
-	builder = NewSimpleTypeBuilder().AddElement("string").AsPointer(false)
-	expr = builder.Build()
-
-	if _, ok := expr.(*ast.StarExpr); ok {
-		t.Error("AsPointer(false) should not create ast.StarExpr")
-	}
-
-	if ident, ok := expr.(*ast.Ident); ok {
-		if ident.Name != "string" {
-			t.Errorf("Expected identifier 'string', got %s", ident.Name)
-		}
-	} else {
-		t.Error("AsPointer(false) should create ast.Ident")
-	}
-
-	// Test default behavior (should not create pointer)
-	builder = NewSimpleTypeBuilder().AddElement("string")
-	expr = builder.Build()
-
-	if _, ok := expr.(*ast.StarExpr); ok {
-		t.Error("Default behavior should not create ast.StarExpr")
-	}
-
-	if ident, ok := expr.(*ast.Ident); ok {
-		if ident.Name != "string" {
-			t.Errorf("Expected identifier 'string', got %s", ident.Name)
-		}
-	} else {
-		t.Error("Default behavior should create ast.Ident")
-	}
-}
-
-func TestSimpleTypeBuilder_AsPointerMethodChaining(t *testing.T) {
-	builder := NewSimpleTypeBuilder().
-		AddElement("string").
-		AsPointer(true)
-
-	result := builder.AsPointer(false)
-	if result != builder {
-		t.Error("AsPointer should return the builder for chaining")
-	}
-
-	expr := builder.Build()
-	if _, ok := expr.(*ast.StarExpr); ok {
-		t.Error("AsPointer(false) should not create ast.StarExpr")
-	}
-
-	// Test chaining with true
-	builder.AsPointer(true)
-	expr = builder.Build()
-	if _, ok := expr.(*ast.StarExpr); !ok {
-		t.Error("AsPointer(true) should create ast.StarExpr")
 	}
 }
 
@@ -922,22 +816,6 @@ func TestTypeAliasBuilder_HelperFunctions(t *testing.T) {
 	if selector, ok := spec.Type.(*ast.SelectorExpr); ok {
 		if selector.Sel.Name != "Context" {
 			t.Errorf("Expected selector name 'Context', got %s", selector.Sel.Name)
-		}
-	}
-
-	// Test PointerAlias
-	pointerAlias := PointerAlias("MyStringPtr", "string")
-	spec = pointerAlias.Build()
-
-	if spec.Name.Name != "MyStringPtr" {
-		t.Errorf("Expected name 'MyStringPtr', got %s", spec.Name.Name)
-	}
-
-	if starExpr, ok := spec.Type.(*ast.StarExpr); ok {
-		if ident, ok := starExpr.X.(*ast.Ident); ok {
-			if ident.Name != "string" {
-				t.Errorf("Expected pointer target type 'string', got %s", ident.Name)
-			}
 		}
 	}
 

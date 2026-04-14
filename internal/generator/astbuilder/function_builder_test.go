@@ -86,7 +86,7 @@ func TestFunctionBuilder_CompleteMethod(t *testing.T) {
 		WithPointerReceiver("h", "Handler").
 		AddContextParam("ctx").
 		AddParam(SelectorField("r", "models", "Request")).
-		AddResult(NewFieldBuilder().WithType(Selector("models", "Response").AsPointer(true))).
+		AddResult(NewFieldBuilder().WithType(Star(Selector("models", "Response")))).
 		AddErrorResult().
 		Build()
 
