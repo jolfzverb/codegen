@@ -77,14 +77,14 @@ func (g *Generator) AddSchema(model SchemaStruct) {
 
 func (g *Generator) AddTypeAlias(name string, typeName string) {
 	typeAliasBuilder := astbuilder.NewTypeAliasBuilder().WithName(name).WithType(
-		astbuilder.NewSimpleTypeBuilder().AddElement(typeName))
+		astbuilder.SimpleType(typeName))
 	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder)
 }
 
 func (g *Generator) AddSliceAlias(name string, typeName string) {
 	typeAliasBuilder := astbuilder.NewTypeAliasBuilder().WithName(name).WithType(
 		astbuilder.NewArrayTypeBuilder().WithElement(
-			astbuilder.NewSimpleTypeBuilder().AddElement(typeName)))
+			astbuilder.SimpleType(typeName)))
 	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder)
 }
 

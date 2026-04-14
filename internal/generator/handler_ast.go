@@ -42,7 +42,7 @@ func (g *Generator) InitHandlerImports() {
 func (g *Generator) InitHandlerStruct() {
 	g.HandlersFile.handlerDeclBuilder = astbuilder.NewStructBuilder().WithName("Handler").
 		AddField(astbuilder.NewFieldBuilder().WithName("validator").WithType(
-			astbuilder.Star(astbuilder.NewSimpleTypeBuilder().AddElements("validator", "Validate"))))
+			astbuilder.Star(astbuilder.SimpleType("validator", "Validate"))))
 }
 
 func (g *Generator) InitHandlerConstructor() {
@@ -97,21 +97,21 @@ func (g *Generator) AddHandlersInterface(name string, methodName string, request
 		astbuilder.NewInterfaceMethodBuilder().WithName(methodName).
 			AddArgField(
 				astbuilder.NewFieldBuilder().WithName("ctx").WithType(
-					astbuilder.NewSimpleTypeBuilder().AddElements("context", "Context"),
+					astbuilder.SimpleType("context", "Context"),
 				)).
 			AddArgField(
 				astbuilder.NewFieldBuilder().WithName("r").WithType(
-					astbuilder.NewSimpleTypeBuilder().AddElements(
+					astbuilder.SimpleType(
 						g.GetCurrentModelsPackage(), requestName,
 					))).
 			AddRetvalField(
 				astbuilder.NewFieldBuilder().WithType(
-					astbuilder.Star(astbuilder.NewSimpleTypeBuilder().AddElements(
+					astbuilder.Star(astbuilder.SimpleType(
 						g.GetCurrentModelsPackage(), responseName,
 					)))).
 			AddRetvalField(
 				astbuilder.NewFieldBuilder().WithType(
-					astbuilder.NewSimpleTypeBuilder().AddElement("error")),
+					astbuilder.SimpleType("error")),
 			),
 	)
 
@@ -123,7 +123,7 @@ func (g *Generator) AddDependencyToHandlers(baseName string) {
 
 	g.HandlersFile.handlerDeclBuilder.AddField(
 		astbuilder.NewFieldBuilder().WithName(fieldName).WithType(
-			astbuilder.NewSimpleTypeBuilder().AddElement(baseName + "Handler")))
+			astbuilder.SimpleType(baseName + "Handler")))
 
 	g.HandlersFile.handlerConstructorBuilder.AddParam(astbuilder.IdentField(fieldName, baseName+"Handler"))
 

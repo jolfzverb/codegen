@@ -19,16 +19,6 @@ func NewSimpleTypeBuilder() *SimpleTypeBuilder {
 	}
 }
 
-// AddElement adds an element to the type expression
-// Returns the builder for method chaining
-func (stb *SimpleTypeBuilder) AddElement(element string) *SimpleTypeBuilder {
-	if element == "" {
-		return stb
-	}
-	stb.elements = append(stb.elements, element)
-	return stb
-}
-
 // AddElements adds multiple elements to the type expression
 // Returns the builder for method chaining
 func (stb *SimpleTypeBuilder) AddElements(elements ...string) *SimpleTypeBuilder {
@@ -38,6 +28,10 @@ func (stb *SimpleTypeBuilder) AddElements(elements ...string) *SimpleTypeBuilder
 		}
 	}
 	return stb
+}
+
+func SimpleType(elements ...string) *SimpleTypeBuilder {
+	return NewSimpleTypeBuilder().AddElements(elements...)
 }
 
 // Build creates the ast.Expr for the simple type
@@ -72,42 +66,37 @@ func (stb *SimpleTypeBuilder) Build() ast.Expr {
 
 // String creates a simple type builder for "string"
 func String() *SimpleTypeBuilder {
-	return NewSimpleTypeBuilder().AddElement("string")
+	return SimpleType("string")
 }
 
 // Int creates a simple type builder for "int"
 func Int() *SimpleTypeBuilder {
-	return NewSimpleTypeBuilder().AddElement("int")
+	return SimpleType("int")
 }
 
 // Bool creates a simple type builder for "bool"
 func Bool() *SimpleTypeBuilder {
-	return NewSimpleTypeBuilder().AddElement("bool")
+	return SimpleType("bool")
 }
 
 // Error creates a simple type builder for "error"
 func Error() *SimpleTypeBuilder {
-	return NewSimpleTypeBuilder().AddElement("error")
+	return SimpleType("error")
 }
 
 // Context creates a simple type builder for "context.Context"
 func Context() *SimpleTypeBuilder {
-	return NewSimpleTypeBuilder().AddElements("context", "Context")
+	return SimpleType("context", "Context")
 }
 
 // Ident creates a simple type builder for a single identifier
 func Ident(name string) *SimpleTypeBuilder {
-	return NewSimpleTypeBuilder().AddElement(name)
+	return SimpleType(name)
 }
 
 // Selector creates a simple type builder for a selector expression like "package.Type"
 func Selector(packageName, typeName string) *SimpleTypeBuilder {
-	return NewSimpleTypeBuilder().AddElements(packageName, typeName)
-}
-
-// Slice creates a slice of the type built by this builder
-func (stb *SimpleTypeBuilder) Slice() *ArrayTypeBuilder {
-	return SliceOf(stb)
+	return SimpleType(packageName, typeName)
 }
 
 // TypeExpressionBuilder is an interface that can build ast.Expr types

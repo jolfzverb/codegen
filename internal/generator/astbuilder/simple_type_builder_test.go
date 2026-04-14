@@ -22,40 +22,6 @@ func TestNewSimpleTypeBuilder(t *testing.T) {
 	}
 }
 
-func TestSimpleTypeBuilder_AddElement(t *testing.T) {
-	builder := NewSimpleTypeBuilder()
-
-	// Test adding a single element
-	result := builder.AddElement("string")
-	if result != builder {
-		t.Error("AddElement should return the builder for chaining")
-	}
-
-	if len(builder.elements) != 1 {
-		t.Errorf("Expected 1 element, got %d", len(builder.elements))
-	}
-
-	if builder.elements[0] != "string" {
-		t.Errorf("Expected element 'string', got %s", builder.elements[0])
-	}
-
-	// Test adding another element
-	builder.AddElement("Context")
-	if len(builder.elements) != 2 {
-		t.Errorf("Expected 2 elements, got %d", len(builder.elements))
-	}
-
-	if builder.elements[1] != "Context" {
-		t.Errorf("Expected element 'Context', got %s", builder.elements[1])
-	}
-
-	// Test adding empty element (should be ignored)
-	builder.AddElement("")
-	if len(builder.elements) != 2 {
-		t.Errorf("Expected 2 elements after adding empty, got %d", len(builder.elements))
-	}
-}
-
 func TestSimpleTypeBuilder_AddElements(t *testing.T) {
 	builder := NewSimpleTypeBuilder()
 
@@ -90,7 +56,7 @@ func TestSimpleTypeBuilder_AddElements(t *testing.T) {
 
 func TestSimpleTypeBuilder_Build(t *testing.T) {
 	// Test single element (should create ast.Ident)
-	builder := NewSimpleTypeBuilder().AddElement("string")
+	builder := NewSimpleTypeBuilder().AddElements("string")
 	expr := builder.Build()
 
 	if ident, ok := expr.(*ast.Ident); ok {
@@ -152,27 +118,6 @@ func TestSimpleTypeBuilder_BuildWithoutElements(t *testing.T) {
 	}()
 
 	builder.Build()
-}
-
-func TestSimpleTypeBuilder_Slice(t *testing.T) {
-	builder := NewSimpleTypeBuilder().AddElement("string")
-	sliceBuilder := builder.Slice()
-
-	if arrayType, ok := sliceBuilder.Build().(*ast.ArrayType); ok {
-		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
-			if ident.Name != "string" {
-				t.Errorf("Expected slice element type to be 'string', got %s", ident.Name)
-			}
-		} else {
-			t.Error("Slice element type should be ast.Ident")
-		}
-
-		if arrayType.Len != nil {
-			t.Error("Slice should have nil length")
-		}
-	} else {
-		t.Error("Slice should create ast.ArrayType")
-	}
 }
 
 func TestNewArrayTypeBuilder(t *testing.T) {

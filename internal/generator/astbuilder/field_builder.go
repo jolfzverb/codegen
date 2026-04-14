@@ -17,7 +17,7 @@ type FieldBuilder struct {
 // NewFieldBuilder creates a new FieldBuilder
 func NewFieldBuilder() *FieldBuilder {
 	return &FieldBuilder{
-		typeBuilder:  NewSimpleTypeBuilder(),
+		typeBuilder:  SimpleType(),
 		jsonTags:     make([]string, 0),
 		validateTags: make([]string, 0),
 	}
