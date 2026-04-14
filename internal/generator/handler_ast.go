@@ -145,7 +145,7 @@ func (g *Generator) GenerateHandlersFile() *ast.File {
 	addRoutesBuilder := astbuilder.NewFunctionBuilder().
 		WithName("AddRoutes").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("router").WithType(astbuilder.Selector("chi", "Router"))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("router").WithType(astbuilder.SimpleType("chi", "Router"))).
 		WithBody(g.HandlersFile.addRoutesBodyBuilder)
 
 	fb := astbuilder.NewFileBuilder(g.HandlersFile.packageName).
@@ -188,8 +188,8 @@ func (g *Generator) CreateHandler(baseName string) {
 	funcBuilder := astbuilder.NewFunctionBuilder().
 		WithName("handle"+baseName).
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
-		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.Selector("http", "Request"))))
+		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.SimpleType("http", "ResponseWriter"))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.SimpleType("http", "Request"))))
 
 	g.HandlersFile.handleFuncBuilders[baseName] = funcBuilder
 	g.HandlersFile.handleSwitchBuilders[baseName] = astbuilder.Switch(astbuilder.I("contentType"))
@@ -212,7 +212,7 @@ func (g *Generator) CreateDirectHandler(baseName string) {
 			astbuilder.SelectorField("w", "http", "ResponseWriter"),
 			astbuilder.NewFieldBuilder().
 				WithName("r").
-				WithType(astbuilder.Star(astbuilder.Selector("http", "Request"))),
+				WithType(astbuilder.Star(astbuilder.SimpleType("http", "Request"))),
 		).
 		WithBody(astbuilder.NewBodyBuilder().
 			Call(astbuilder.Sel(astbuilder.I("h"), "handle"+baseName+"Request"), astbuilder.I("w"), astbuilder.I("r")),
@@ -279,8 +279,8 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 	fn := astbuilder.NewFunctionBuilder().
 		WithName("handle"+baseName+"Request").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
-		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.Selector("http", "Request")))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.SimpleType("http", "ResponseWriter"))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.SimpleType("http", "Request")))).
 		WithBody(body)
 
 	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, fn)
@@ -330,9 +330,9 @@ func (g *Generator) AddWriteResponseMethodHandlers(baseName string, codes []stri
 	writeResponseFunc := astbuilder.NewFunctionBuilder().
 		WithName("write"+baseName+"Response").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.SimpleType("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("response").WithType(
-			astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response")))).
+			astbuilder.Star(astbuilder.SimpleType(g.GetCurrentModelsPackage(), baseName+"Response")))).
 		WithBody(body)
 
 	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, writeResponseFunc)
@@ -373,9 +373,9 @@ func (g *Generator) AddWriteHeadersForResponseCode(baseName string, code string,
 	writeResponseFunc := astbuilder.NewFunctionBuilder().
 		WithName("write"+baseName+code+"ResponseHeaders").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.SimpleType("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(
-			astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code)))).
+			astbuilder.Star(astbuilder.SimpleType(g.GetCurrentModelsPackage(), baseName+"Response"+code)))).
 		WithBody(body)
 
 	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, writeResponseFunc)
@@ -416,9 +416,9 @@ func (g *Generator) AddWriteResponseCode(baseName string, code string, response 
 	writeResponseFunc := astbuilder.NewFunctionBuilder().
 		WithName("write"+baseName+code+"Response").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.Selector("http", "ResponseWriter"))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("w").WithType(astbuilder.SimpleType("http", "ResponseWriter"))).
 		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(
-			astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"Response"+code)))).
+			astbuilder.Star(astbuilder.SimpleType(g.GetCurrentModelsPackage(), baseName+"Response"+code)))).
 		WithBody(bodyBuilder)
 
 	g.HandlersFile.restBuilders = append(g.HandlersFile.restBuilders, writeResponseFunc)
@@ -459,8 +459,8 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 	parsePathParamsFunc := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"PathParams").
 		WithPointerReceiver("h", "Handler").
-		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.Selector("http", "Request")))).
-		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Star(astbuilder.Selector(g.GetCurrentModelsPackage(), baseName+"PathParams")))).
+		AddParam(astbuilder.NewFieldBuilder().WithName("r").WithType(astbuilder.Star(astbuilder.SimpleType("http", "Request")))).
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Star(astbuilder.SimpleType(g.GetCurrentModelsPackage(), baseName+"PathParams")))).
 		AddResult(astbuilder.ErrorField()).
 		WithBody(bodyBuilder)
 

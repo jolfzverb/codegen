@@ -283,7 +283,7 @@ func TestArrayTypeBuilder_HelperFunctions(t *testing.T) {
 	}
 
 	// Test SelectorSlice
-	selectorSlice := SelectorSlice("pkg", "Type")
+	selectorSlice := SliceOf(SimpleType("pkg", "Type"))
 	if !selectorSlice.HasElement() {
 		t.Error("SelectorSlice should have an element")
 	}
@@ -596,20 +596,6 @@ func TestTypeAliasBuilder_HelperFunctions(t *testing.T) {
 	if ident, ok := spec.Type.(*ast.Ident); ok {
 		if ident.Name != "int" {
 			t.Errorf("Expected type 'int', got %s", ident.Name)
-		}
-	}
-
-	// Test SelectorAlias
-	selectorAlias := SelectorAlias("MyContext", "context", "Context")
-	spec = selectorAlias.Build()
-
-	if spec.Name.Name != "MyContext" {
-		t.Errorf("Expected name 'MyContext', got %s", spec.Name.Name)
-	}
-
-	if selector, ok := spec.Type.(*ast.SelectorExpr); ok {
-		if selector.Sel.Name != "Context" {
-			t.Errorf("Expected selector name 'Context', got %s", selector.Sel.Name)
 		}
 	}
 

@@ -256,7 +256,7 @@ func TestFieldBuilder_HelperMethods(t *testing.T) {
 	// Test with a more complex type using SimpleTypeBuilder
 	builder = NewFieldBuilder().
 		WithName("complex").
-		WithType(Selector("package", "ComplexType"))
+		WithType(SimpleType("package", "ComplexType"))
 	field = builder.Build()
 
 	if len(field.Names) != 1 || field.Names[0].Name != "complex" {

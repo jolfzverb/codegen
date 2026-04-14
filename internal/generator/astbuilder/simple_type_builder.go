@@ -94,11 +94,6 @@ func Ident(name string) *SimpleTypeBuilder {
 	return SimpleType(name)
 }
 
-// Selector creates a simple type builder for a selector expression like "package.Type"
-func Selector(packageName, typeName string) *SimpleTypeBuilder {
-	return SimpleType(packageName, typeName)
-}
-
 // TypeExpressionBuilder is an interface that can build ast.Expr types
 type TypeExpressionBuilder interface {
 	Build() ast.Expr
@@ -177,11 +172,6 @@ func ContextSlice() *ArrayTypeBuilder {
 // IdentSlice creates an ArrayTypeBuilder for []Identifier
 func IdentSlice(identifier string) *ArrayTypeBuilder {
 	return NewArrayTypeBuilder().WithElement(Ident(identifier))
-}
-
-// SelectorSlice creates an ArrayTypeBuilder for []package.Type
-func SelectorSlice(packageName, typeName string) *ArrayTypeBuilder {
-	return NewArrayTypeBuilder().WithElement(Selector(packageName, typeName))
 }
 
 // SliceOf creates an ArrayTypeBuilder for []TypeExpressionBuilder
@@ -311,13 +301,6 @@ func IdentAlias(name, typeName string) *TypeAliasBuilder {
 	return NewTypeAliasBuilder().
 		WithName(name).
 		WithType(Ident(typeName))
-}
-
-// SelectorAlias creates a TypeAliasBuilder for "type AliasName package.Type"
-func SelectorAlias(name, packageName, typeName string) *TypeAliasBuilder {
-	return NewTypeAliasBuilder().
-		WithName(name).
-		WithType(Selector(packageName, typeName))
 }
 
 // SliceAlias creates a TypeAliasBuilder for "type AliasName []Type"

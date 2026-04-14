@@ -192,7 +192,7 @@ func IdentField(name, typeName string) *FieldBuilder {
 func SelectorField(name, packageName, typeName string) *FieldBuilder {
 	return NewFieldBuilder().
 		WithName(name).
-		WithType(Selector(packageName, typeName))
+		WithType(SimpleType(packageName, typeName))
 }
 
 // Utility methods
@@ -289,5 +289,5 @@ func IdentSliceField(name, identifier string) *FieldBuilder {
 
 // SelectorSliceField creates a field builder for a []package.Type field
 func SelectorSliceField(name, packageName, typeName string) *FieldBuilder {
-	return NewFieldBuilder().WithName(name).WithType(SelectorSlice(packageName, typeName))
+	return NewFieldBuilder().WithName(name).WithType(SliceOf(SimpleType(packageName, typeName)))
 }
