@@ -89,11 +89,6 @@ func Context() *SimpleTypeBuilder {
 	return SimpleType("context", "Context")
 }
 
-// Ident creates a simple type builder for a single identifier
-func Ident(name string) *SimpleTypeBuilder {
-	return SimpleType(name)
-}
-
 // TypeExpressionBuilder is an interface that can build ast.Expr types
 type TypeExpressionBuilder interface {
 	Build() ast.Expr
@@ -171,7 +166,7 @@ func ContextSlice() *ArrayTypeBuilder {
 
 // IdentSlice creates an ArrayTypeBuilder for []Identifier
 func IdentSlice(identifier string) *ArrayTypeBuilder {
-	return NewArrayTypeBuilder().WithElement(Ident(identifier))
+	return NewArrayTypeBuilder().WithElement(I(identifier))
 }
 
 // SliceOf creates an ArrayTypeBuilder for []TypeExpressionBuilder
@@ -300,14 +295,14 @@ func ContextSliceAlias(name string) *TypeAliasBuilder {
 func IdentAlias(name, typeName string) *TypeAliasBuilder {
 	return NewTypeAliasBuilder().
 		WithName(name).
-		WithType(Ident(typeName))
+		WithType(I(typeName))
 }
 
 // SliceAlias creates a TypeAliasBuilder for "type AliasName []Type"
 func SliceAlias(name, typeName string) *TypeAliasBuilder {
 	return NewTypeAliasBuilder().
 		WithName(name).
-		WithType(SliceOf(Ident(typeName)))
+		WithType(SliceOf(I(typeName)))
 }
 
 // ArrayAlias creates a TypeAliasBuilder for "type AliasName []Type" (same as SliceAlias)

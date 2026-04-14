@@ -159,7 +159,7 @@ func (g *Generator) AddContainsNullIfNeeded() {
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.DeclareVar("temp", astbuilder.I("any"))).
-		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("data"), astbuilder.Amp(astbuilder.Ident("temp")))).
+		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("data"), astbuilder.Amp(astbuilder.I("temp")))).
 		AddStmt(astbuilder.If(astbuilder.Ne(astbuilder.I("err"), astbuilder.I("nil"))).WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.Return1(astbuilder.I("false"))))).
 		AddStmt(astbuilder.Return1(astbuilder.Eq(astbuilder.I("temp"), astbuilder.I("nil"))))
@@ -238,7 +238,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	if len(requiredFields) > 0 || len(objectFields) > 0 {
 		bodyBuilder.AddStmt(astbuilder.DeclareVarWithType("obj", astbuilder.MapOf(astbuilder.String(), astbuilder.SimpleType("json", "RawMessage"))))
 		bodyBuilder.
-			AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("jsonData"), astbuilder.Amp(astbuilder.Ident("obj")))).
+			AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("jsonData"), astbuilder.Amp(astbuilder.I("obj")))).
 			AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(astbuilder.I("err")))))
 	}
 
@@ -327,7 +327,7 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 
 	bodyBuilder := astbuilder.NewBodyBuilder().
 		AddStmt(astbuilder.DeclareVarWithType("arr", astbuilder.SliceOf(astbuilder.SimpleType("json", "RawMessage")))).
-		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("jsonData"), astbuilder.Amp(astbuilder.Ident("arr")))).
+		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("jsonData"), astbuilder.Amp(astbuilder.I("arr")))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(astbuilder.NewBodyBuilder().AddStmt(astbuilder.Return1(astbuilder.I("err"))))).
 		AddStmt(astbuilder.Range("index", "obj", astbuilder.I("arr")).WithBody(rangeBody)).
 		AddStmt(astbuilder.Return1(astbuilder.I("nil")))

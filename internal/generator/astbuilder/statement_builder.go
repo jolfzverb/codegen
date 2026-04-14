@@ -572,7 +572,7 @@ func IntLit(value string) *IntLitBuilder {
 
 // I creates an identifier expression
 func I(name string) *SimpleTypeBuilder {
-	return Ident(name)
+	return SimpleType(name)
 }
 
 // StrBuilder builds a string literal expression

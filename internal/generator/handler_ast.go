@@ -46,11 +46,11 @@ func (g *Generator) InitHandlerStruct() {
 }
 
 func (g *Generator) InitHandlerConstructor() {
-	g.HandlersFile.handlerConstructorLit = astbuilder.NewCompositeLitBuilder(astbuilder.Ident("Handler")).
+	g.HandlersFile.handlerConstructorLit = astbuilder.NewCompositeLitBuilder(astbuilder.I("Handler")).
 		AddKeyValue("validator", astbuilder.Call(astbuilder.Sel(astbuilder.I("validator"), "New"), astbuilder.Call(astbuilder.Sel(astbuilder.I("validator"), "WithRequiredStructEnabled"))))
 	g.HandlersFile.handlerConstructorBuilder = astbuilder.NewFunctionBuilder().
 		WithName("NewHandler").
-		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Star(astbuilder.Ident("Handler"))))
+		AddResult(astbuilder.NewFieldBuilder().WithType(astbuilder.Star(astbuilder.I("Handler"))))
 }
 
 func (g *Generator) InitRoutesFunc() {
@@ -207,7 +207,7 @@ func (g *Generator) CreateDirectHandler(baseName string) {
 		WithName("handle"+baseName).
 		WithReceiver(astbuilder.NewFieldBuilder().
 			WithName("h").
-			WithType(astbuilder.Star(astbuilder.Ident("Handler")))).
+			WithType(astbuilder.Star(astbuilder.I("Handler")))).
 		AddParams(
 			astbuilder.SelectorField("w", "http", "ResponseWriter"),
 			astbuilder.NewFieldBuilder().
@@ -268,7 +268,7 @@ func (g *Generator) AddHandleOperationMethodHandlers(baseName string) {
 			AddStmt(astbuilder.CallStmt(astbuilder.Sel(astbuilder.I("http"), "Error"), astbuilder.I("w"), astbuilder.Call(astbuilder.Sel(astbuilder.I("fmt"), "Sprintf"), astbuilder.Str("{\"error\":%s}"), astbuilder.Call(astbuilder.Sel(astbuilder.I("strconv"), "Quote"), astbuilder.Call(astbuilder.Sel(astbuilder.I("err"), "Error")))), astbuilder.Sel(astbuilder.I("http"), "StatusBadRequest"))).
 			AddStmt(astbuilder.Return()))).
 		AddStmt(astbuilder.DefineCall("ctx", astbuilder.Sel(astbuilder.I("r"), "Context"))).
-		AddStmt(astbuilder.DefineCallWithErr("response", astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), GoIdentLowercase(baseName)), "Handle"+baseName), astbuilder.I("ctx"), astbuilder.Star(astbuilder.Ident("request")))).
+		AddStmt(astbuilder.DefineCallWithErr("response", astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), GoIdentLowercase(baseName)), "Handle"+baseName), astbuilder.I("ctx"), astbuilder.Star(astbuilder.I("request")))).
 		AddStmt(astbuilder.If(astbuilder.Or(astbuilder.Ne(astbuilder.I("err"), astbuilder.I("nil")), astbuilder.Eq(astbuilder.I("response"), astbuilder.I("nil")))).
 			WithBody(astbuilder.NewBodyBuilder().
 				AddStmt(astbuilder.CallStmt(astbuilder.Sel(astbuilder.I("http"), "Error"), astbuilder.I("w"), astbuilder.Str("{\"error\":\"InternalServerError\"}"), astbuilder.Sel(astbuilder.I("http"), "StatusInternalServerError"))).
@@ -365,7 +365,7 @@ func (g *Generator) AddWriteHeadersForResponseCode(baseName string, code string,
 		AddStmt(astbuilder.DefineCallWithErr("headersJSON", astbuilder.Sel(astbuilder.I("json"), "Marshal"), astbuilder.Sel(astbuilder.I("r"), "Headers"))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(httpErrorBody)).
 		AddStmt(astbuilder.DeclareVarWithType("headers", astbuilder.MapOf(astbuilder.String(), astbuilder.String()))).
-		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("headersJSON"), astbuilder.Amp(astbuilder.Ident("headers"))))).
+		AddStmt(astbuilder.Assign(astbuilder.I("err"), astbuilder.Call(astbuilder.Sel(astbuilder.I("json"), "Unmarshal"), astbuilder.I("headersJSON"), astbuilder.Amp(astbuilder.I("headers"))))).
 		AddStmt(astbuilder.IfErrNotNil().WithBody(httpErrorBody)).
 		AddStmt(astbuilder.Range("key", "value", astbuilder.I("headers")).WithBody(astbuilder.NewBodyBuilder().
 			AddStmt(astbuilder.CallStmt(astbuilder.Sel(astbuilder.Call(astbuilder.Sel(astbuilder.I("w"), "Header")), "Set"), astbuilder.I("key"), astbuilder.I("value")))))
@@ -454,7 +454,7 @@ func (g *Generator) AddParsePathParamsMethod(baseName string, params openapi3.Pa
 	bodyBuilder.
 		AddStmt(astbuilder.DefineCall("err", astbuilder.Sel(astbuilder.Sel(astbuilder.I("h"), "validator"), "Struct"), astbuilder.I("pathParams"))).
 		AddStmt(astbuilder.IfErrNotNilReturn(astbuilder.I("nil"))).
-		AddStmt(astbuilder.Return2(astbuilder.Amp(astbuilder.Ident("pathParams")), astbuilder.I("nil")))
+		AddStmt(astbuilder.Return2(astbuilder.Amp(astbuilder.I("pathParams")), astbuilder.I("nil")))
 
 	parsePathParamsFunc := astbuilder.NewFunctionBuilder().
 		WithName("parse"+baseName+"PathParams").

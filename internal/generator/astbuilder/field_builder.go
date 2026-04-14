@@ -185,7 +185,7 @@ func ContextField(name string) *FieldBuilder {
 func IdentField(name, typeName string) *FieldBuilder {
 	return NewFieldBuilder().
 		WithName(name).
-		WithType(Ident(typeName))
+		WithType(I(typeName))
 }
 
 // SelectorField creates a field builder for a field with a selector type
