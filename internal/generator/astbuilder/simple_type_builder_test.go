@@ -25,7 +25,6 @@ func TestNewSimpleTypeBuilder(t *testing.T) {
 func TestSimpleTypeBuilder_AddElements(t *testing.T) {
 	builder := NewSimpleTypeBuilder()
 
-	// Test adding multiple elements
 	result := builder.AddElements("context", "Context")
 	if result != builder {
 		t.Error("AddElements should return the builder for chaining")
@@ -43,7 +42,7 @@ func TestSimpleTypeBuilder_AddElements(t *testing.T) {
 		t.Errorf("Expected second element 'Context', got %s", builder.elements[1])
 	}
 
-	// Test adding elements with empty strings (should be ignored)
+	// Empty strings should be ignored
 	builder.AddElements("", "Type", "")
 	if len(builder.elements) != 3 {
 		t.Errorf("Expected 3 elements after adding with empty strings, got %d", len(builder.elements))
@@ -55,7 +54,7 @@ func TestSimpleTypeBuilder_AddElements(t *testing.T) {
 }
 
 func TestSimpleTypeBuilder_Build(t *testing.T) {
-	// Test single element (should create ast.Ident)
+	// Single element -> ast.Ident
 	builder := NewSimpleTypeBuilder().AddElements("string")
 	expr := builder.Build()
 
@@ -67,7 +66,7 @@ func TestSimpleTypeBuilder_Build(t *testing.T) {
 		t.Error("Single element should create ast.Ident")
 	}
 
-	// Test multiple elements (should create ast.SelectorExpr)
+	// Two elements -> ast.SelectorExpr
 	builder = NewSimpleTypeBuilder().AddElements("context", "Context")
 	expr = builder.Build()
 
@@ -87,7 +86,7 @@ func TestSimpleTypeBuilder_Build(t *testing.T) {
 		t.Error("Multiple elements should create ast.SelectorExpr")
 	}
 
-	// Test three elements (should create nested selector)
+	// Three elements -> nested selector
 	builder = NewSimpleTypeBuilder().AddElements("package", "subpackage", "Type")
 	expr = builder.Build()
 
@@ -120,52 +119,18 @@ func TestSimpleTypeBuilder_BuildWithoutElements(t *testing.T) {
 	builder.Build()
 }
 
-func TestNewArrayTypeBuilder(t *testing.T) {
-	builder := NewArrayTypeBuilder()
-
-	if builder == nil {
-		t.Fatal("NewArrayTypeBuilder returned nil")
-	}
-
-	if builder.HasElement() {
-		t.Error("Expected no element initially")
-	}
-}
-
-func TestArrayTypeBuilder_WithElement(t *testing.T) {
-	builder := NewArrayTypeBuilder()
-	stringBuilder := String()
-
-	result := builder.WithElement(stringBuilder)
-	if result != builder {
-		t.Error("WithElement should return the builder for chaining")
-	}
-
-	if !builder.HasElement() {
-		t.Error("Expected element to be set")
-	}
-
-	if builder.GetElement() != stringBuilder {
-		t.Error("Expected element to be the same reference")
-	}
-}
-
-func TestArrayTypeBuilder_WithElementNil(t *testing.T) {
-	builder := NewArrayTypeBuilder()
-
+func TestSliceOf_Nil(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Error("WithElement should panic when element is nil")
+			t.Error("SliceOf should panic when element is nil")
 		}
 	}()
 
-	builder.WithElement(nil)
+	SliceOf(nil)
 }
 
 func TestArrayTypeBuilder_Build(t *testing.T) {
-	// Test with SimpleTypeBuilder
-	builder := NewArrayTypeBuilder().WithElement(String())
-	expr := builder.Build()
+	expr := SliceOf(String()).Build()
 
 	if arrayType, ok := expr.(*ast.ArrayType); ok {
 		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
@@ -185,7 +150,7 @@ func TestArrayTypeBuilder_Build(t *testing.T) {
 }
 
 func TestArrayTypeBuilder_BuildWithoutElement(t *testing.T) {
-	builder := NewArrayTypeBuilder()
+	builder := &ArrayTypeBuilder{}
 
 	defer func() {
 		if r := recover(); r == nil {
@@ -197,11 +162,8 @@ func TestArrayTypeBuilder_BuildWithoutElement(t *testing.T) {
 }
 
 func TestArrayTypeBuilder_NestedArrays(t *testing.T) {
-	// Test nested arrays: [][]string
-	innerBuilder := NewArrayTypeBuilder().WithElement(String())
-	outerBuilder := NewArrayTypeBuilder().WithElement(innerBuilder)
-
-	expr := outerBuilder.Build()
+	// [][]string
+	expr := SliceOf(SliceOf(String())).Build()
 
 	if outerArrayType, ok := expr.(*ast.ArrayType); ok {
 		if innerArrayType, ok := outerArrayType.Elt.(*ast.ArrayType); ok {
@@ -220,207 +182,8 @@ func TestArrayTypeBuilder_NestedArrays(t *testing.T) {
 	}
 }
 
-func TestArrayTypeBuilder_UtilityMethods(t *testing.T) {
-	builder := NewArrayTypeBuilder()
-
-	// Test HasElement
-	if builder.HasElement() {
-		t.Error("Expected HasElement to return false initially")
-	}
-
-	builder.WithElement(String())
-	if !builder.HasElement() {
-		t.Error("Expected HasElement to return true after setting element")
-	}
-
-	// Test GetElement
-	element := builder.GetElement()
-	if element == nil {
-		t.Error("GetElement should not return nil")
-	}
-
-	// Verify it's the same element reference
-	if element != builder.element {
-		t.Error("GetElement should return the same element reference")
-	}
-}
-
-func TestArrayTypeBuilder_HelperFunctions(t *testing.T) {
-	// Test StringSlice
-	stringSlice := StringSlice()
-	if !stringSlice.HasElement() {
-		t.Error("StringSlice should have an element")
-	}
-
-	// Test IntSlice
-	intSlice := IntSlice()
-	if !intSlice.HasElement() {
-		t.Error("IntSlice should have an element")
-	}
-
-	// Test BoolSlice
-	boolSlice := BoolSlice()
-	if !boolSlice.HasElement() {
-		t.Error("BoolSlice should have an element")
-	}
-
-	// Test ErrorSlice
-	errorSlice := ErrorSlice()
-	if !errorSlice.HasElement() {
-		t.Error("ErrorSlice should have an element")
-	}
-
-	// Test ContextSlice
-	contextSlice := ContextSlice()
-	if !contextSlice.HasElement() {
-		t.Error("ContextSlice should have an element")
-	}
-
-	// Test IdentSlice
-	identSlice := IdentSlice("CustomType")
-	if !identSlice.HasElement() {
-		t.Error("IdentSlice should have an element")
-	}
-
-	// Test SelectorSlice
-	selectorSlice := SliceOf(SimpleType("pkg", "Type"))
-	if !selectorSlice.HasElement() {
-		t.Error("SelectorSlice should have an element")
-	}
-
-	// Test SliceOf
-	sliceOf := SliceOf(String())
-	if !sliceOf.HasElement() {
-		t.Error("SliceOf should have an element")
-	}
-}
-
-func TestArrayTypeBuilder_ComplexNesting(t *testing.T) {
-	// Test complex nesting: [][]context.Context
-	contextSlice := ContextSlice()
-	nestedSlice := SliceOf(contextSlice)
-
-	expr := nestedSlice.Build()
-
-	if outerArrayType, ok := expr.(*ast.ArrayType); ok {
-		if innerArrayType, ok := outerArrayType.Elt.(*ast.ArrayType); ok {
-			if selector, ok := innerArrayType.Elt.(*ast.SelectorExpr); ok {
-				if selector.Sel.Name != "Context" {
-					t.Errorf("Expected selector name 'Context', got %s", selector.Sel.Name)
-				}
-			} else {
-				t.Error("Inner element should be ast.SelectorExpr")
-			}
-		} else {
-			t.Error("Inner element should be ast.ArrayType")
-		}
-	} else {
-		t.Error("Outer expression should be ast.ArrayType")
-	}
-}
-
-func TestArrayTypeBuilder_MethodChaining(t *testing.T) {
-	builder := NewArrayTypeBuilder().
-		WithElement(String())
-
-	if !builder.HasElement() {
-		t.Error("Method chaining should work correctly")
-	}
-
-	// Test that all operations return the same builder
-	operations := []func() *ArrayTypeBuilder{
-		func() *ArrayTypeBuilder { return builder.WithElement(Int()) },
-	}
-
-	for i, op := range operations {
-		if op() != builder {
-			t.Errorf("Operation %d should return the same builder", i)
-		}
-	}
-}
-
-func TestNewTypeAliasBuilder(t *testing.T) {
-	builder := NewTypeAliasBuilder()
-
-	if builder == nil {
-		t.Fatal("NewTypeAliasBuilder returned nil")
-	}
-
-	if builder.HasName() {
-		t.Error("Expected no name initially")
-	}
-
-	if builder.HasType() {
-		t.Error("Expected no type initially")
-	}
-}
-
-func TestTypeAliasBuilder_WithName(t *testing.T) {
-	builder := NewTypeAliasBuilder()
-
-	result := builder.WithName("MyAlias")
-	if result != builder {
-		t.Error("WithName should return the builder for chaining")
-	}
-
-	if !builder.HasName() {
-		t.Error("Expected name to be set")
-	}
-
-	if builder.GetName() != "MyAlias" {
-		t.Errorf("Expected name 'MyAlias', got %s", builder.GetName())
-	}
-}
-
-func TestTypeAliasBuilder_WithNameEmpty(t *testing.T) {
-	builder := NewTypeAliasBuilder()
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("WithName should panic when name is empty")
-		}
-	}()
-
-	builder.WithName("")
-}
-
-func TestTypeAliasBuilder_WithType(t *testing.T) {
-	builder := NewTypeAliasBuilder()
-	stringBuilder := String()
-
-	result := builder.WithType(stringBuilder)
-	if result != builder {
-		t.Error("WithType should return the builder for chaining")
-	}
-
-	if !builder.HasType() {
-		t.Error("Expected type to be set")
-	}
-
-	if builder.GetType() != stringBuilder {
-		t.Error("Expected type to be the same reference")
-	}
-}
-
-func TestTypeAliasBuilder_WithTypeNil(t *testing.T) {
-	builder := NewTypeAliasBuilder()
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("WithType should panic when type is nil")
-		}
-	}()
-
-	builder.WithType(nil)
-}
-
-func TestTypeAliasBuilder_Build(t *testing.T) {
-	// Test with SimpleTypeBuilder
-	builder := NewTypeAliasBuilder().
-		WithName("StringAlias").
-		WithType(String())
-
-	spec := builder.Build()
+func TestAliasOf_Build(t *testing.T) {
+	spec := AliasOf("StringAlias", String()).Build()
 
 	if spec.Name.Name != "StringAlias" {
 		t.Errorf("Expected name 'StringAlias', got %s", spec.Name.Name)
@@ -435,13 +198,8 @@ func TestTypeAliasBuilder_Build(t *testing.T) {
 	}
 }
 
-func TestTypeAliasBuilder_BuildWithArrayType(t *testing.T) {
-	// Test with ArrayTypeBuilder
-	builder := NewTypeAliasBuilder().
-		WithName("StringSliceAlias").
-		WithType(StringSlice())
-
-	spec := builder.Build()
+func TestAliasOf_BuildWithArrayType(t *testing.T) {
+	spec := AliasOf("StringSliceAlias", SliceOf(String())).Build()
 
 	if spec.Name.Name != "StringSliceAlias" {
 		t.Errorf("Expected name 'StringSliceAlias', got %s", spec.Name.Name)
@@ -460,36 +218,31 @@ func TestTypeAliasBuilder_BuildWithArrayType(t *testing.T) {
 	}
 }
 
-func TestTypeAliasBuilder_BuildWithoutName(t *testing.T) {
-	builder := NewTypeAliasBuilder().WithType(String())
-
+func TestAliasOf_EmptyName(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Error("Build should panic when no name is set")
+			t.Error("AliasOf should panic when name is empty")
 		}
 	}()
 
-	builder.Build()
+	AliasOf("", String())
 }
 
-func TestTypeAliasBuilder_BuildWithoutType(t *testing.T) {
-	builder := NewTypeAliasBuilder().WithName("MyAlias")
-
+func TestAliasOf_NilType(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Error("Build should panic when no type is set")
+			t.Error("AliasOf should panic when type is nil")
 		}
 	}()
 
-	builder.Build()
+	AliasOf("Name", nil)
 }
 
-func TestTypeAliasBuilder_BuildAsDeclaration(t *testing.T) {
-	builder := NewTypeAliasBuilder().
-		WithName("MyAlias").
-		WithType(String())
-
-	decl := builder.BuildAsDeclaration()
+func TestTypeAliasBuilder_BuildDecl(t *testing.T) {
+	decl, ok := AliasOf("MyAlias", String()).BuildDecl().(*ast.GenDecl)
+	if !ok {
+		t.Fatal("BuildDecl should return *ast.GenDecl")
+	}
 
 	if decl.Tok != token.TYPE {
 		t.Error("Declaration should have TYPE token")
@@ -508,136 +261,9 @@ func TestTypeAliasBuilder_BuildAsDeclaration(t *testing.T) {
 	}
 }
 
-func TestTypeAliasBuilder_UtilityMethods(t *testing.T) {
-	builder := NewTypeAliasBuilder()
-
-	// Test HasName
-	if builder.HasName() {
-		t.Error("Expected HasName to return false initially")
-	}
-
-	builder.WithName("TestAlias")
-	if !builder.HasName() {
-		t.Error("Expected HasName to return true after setting name")
-	}
-
-	// Test GetName
-	name := builder.GetName()
-	if name != "TestAlias" {
-		t.Errorf("Expected name 'TestAlias', got %s", name)
-	}
-
-	// Test HasType
-	if builder.HasType() {
-		t.Error("Expected HasType to return false initially")
-	}
-
-	builder.WithType(String())
-	if !builder.HasType() {
-		t.Error("Expected HasType to return true after setting type")
-	}
-
-	// Test GetType
-	typeBuilder := builder.GetType()
-	if typeBuilder == nil {
-		t.Error("GetType should not return nil")
-	}
-}
-
-func TestTypeAliasBuilder_HelperFunctions(t *testing.T) {
-	// Test StringSliceAlias
-	stringSliceAlias := StringSliceAlias("StringList")
-	spec := stringSliceAlias.Build()
-
-	if spec.Name.Name != "StringList" {
-		t.Errorf("Expected name 'StringList', got %s", spec.Name.Name)
-	}
-
-	if arrayType, ok := spec.Type.(*ast.ArrayType); ok {
-		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
-			if ident.Name != "string" {
-				t.Errorf("Expected array element type 'string', got %s", ident.Name)
-			}
-		}
-	}
-
-	// Test IntSliceAlias
-	intSliceAlias := IntSliceAlias("IntList")
-	spec = intSliceAlias.Build()
-
-	if arrayType, ok := spec.Type.(*ast.ArrayType); ok {
-		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
-			if ident.Name != "int" {
-				t.Errorf("Expected array element type 'int', got %s", ident.Name)
-			}
-		}
-	}
-
-	// Test BoolSliceAlias
-	boolSliceAlias := BoolSliceAlias("BoolList")
-	spec = boolSliceAlias.Build()
-
-	if arrayType, ok := spec.Type.(*ast.ArrayType); ok {
-		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
-			if ident.Name != "bool" {
-				t.Errorf("Expected array element type 'bool', got %s", ident.Name)
-			}
-		}
-	}
-
-	// Test IdentAlias
-	identAlias := IdentAlias("MyInt", "int")
-	spec = identAlias.Build()
-
-	if spec.Name.Name != "MyInt" {
-		t.Errorf("Expected name 'MyInt', got %s", spec.Name.Name)
-	}
-
-	if ident, ok := spec.Type.(*ast.Ident); ok {
-		if ident.Name != "int" {
-			t.Errorf("Expected type 'int', got %s", ident.Name)
-		}
-	}
-
-	// Test SliceAlias
-	sliceAlias := SliceAlias("MyStringSlice", "string")
-	spec = sliceAlias.Build()
-
-	if spec.Name.Name != "MyStringSlice" {
-		t.Errorf("Expected name 'MyStringSlice', got %s", spec.Name.Name)
-	}
-
-	if arrayType, ok := spec.Type.(*ast.ArrayType); ok {
-		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
-			if ident.Name != "string" {
-				t.Errorf("Expected slice element type 'string', got %s", ident.Name)
-			}
-		}
-	}
-
-	// Test CustomAlias
-	customAlias := CustomAlias("MyCustom", StringSlice())
-	spec = customAlias.Build()
-
-	if spec.Name.Name != "MyCustom" {
-		t.Errorf("Expected name 'MyCustom', got %s", spec.Name.Name)
-	}
-
-	if arrayType, ok := spec.Type.(*ast.ArrayType); ok {
-		if ident, ok := arrayType.Elt.(*ast.Ident); ok {
-			if ident.Name != "string" {
-				t.Errorf("Expected custom type element 'string', got %s", ident.Name)
-			}
-		}
-	}
-}
-
-func TestTypeAliasBuilder_ComplexTypes(t *testing.T) {
-	// Test nested arrays: [][]string
-	nestedArray := SliceOf(StringSlice())
-	alias := CustomAlias("StringMatrix", nestedArray)
-
-	spec := alias.Build()
+func TestAliasOf_NestedArrayType(t *testing.T) {
+	// type StringMatrix [][]string
+	spec := AliasOf("StringMatrix", SliceOf(SliceOf(String()))).Build()
 
 	if outerArrayType, ok := spec.Type.(*ast.ArrayType); ok {
 		if innerArrayType, ok := outerArrayType.Elt.(*ast.ArrayType); ok {
@@ -656,24 +282,63 @@ func TestTypeAliasBuilder_ComplexTypes(t *testing.T) {
 	}
 }
 
-func TestTypeAliasBuilder_MethodChaining(t *testing.T) {
-	builder := NewTypeAliasBuilder().
-		WithName("ChainedAlias").
-		WithType(String())
+func TestMapOf_Build(t *testing.T) {
+	expr := MapOf(String(), Int()).Build()
 
-	if !builder.HasName() || !builder.HasType() {
-		t.Error("Method chaining should work correctly")
+	mapType, ok := expr.(*ast.MapType)
+	if !ok {
+		t.Fatal("Build should return *ast.MapType")
 	}
 
-	// Test that all operations return the same builder
-	operations := []func() *TypeAliasBuilder{
-		func() *TypeAliasBuilder { return builder.WithName("NewName") },
-		func() *TypeAliasBuilder { return builder.WithType(Int()) },
+	if ident, ok := mapType.Key.(*ast.Ident); !ok || ident.Name != "string" {
+		t.Error("Expected key type 'string'")
 	}
 
-	for i, op := range operations {
-		if op() != builder {
-			t.Errorf("Operation %d should return the same builder", i)
+	if ident, ok := mapType.Value.(*ast.Ident); !ok || ident.Name != "int" {
+		t.Error("Expected value type 'int'")
+	}
+}
+
+func TestMapOf_NilKey(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("MapOf should panic when key is nil")
 		}
-	}
+	}()
+
+	MapOf(nil, Int())
+}
+
+func TestMapOf_NilValue(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("MapOf should panic when value is nil")
+		}
+	}()
+
+	MapOf(String(), nil)
+}
+
+func TestMapTypeBuilder_BuildWithoutKey(t *testing.T) {
+	builder := &MapTypeBuilder{value: Int()}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Build should panic when no key is set")
+		}
+	}()
+
+	builder.Build()
+}
+
+func TestMapTypeBuilder_BuildWithoutValue(t *testing.T) {
+	builder := &MapTypeBuilder{key: String()}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Build should panic when no value is set")
+		}
+	}()
+
+	builder.Build()
 }

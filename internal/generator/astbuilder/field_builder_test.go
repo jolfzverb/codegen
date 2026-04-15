@@ -431,7 +431,7 @@ func TestFieldBuilder_WithArrayType(t *testing.T) {
 	// Test with ArrayTypeBuilder
 	builder := NewFieldBuilder().
 		WithName("tags").
-		WithType(StringSlice())
+		WithType(SliceOf(String()))
 
 	field := builder.Build()
 
@@ -458,7 +458,7 @@ func TestFieldBuilder_WithArrayType(t *testing.T) {
 
 func TestFieldBuilder_WithNestedArrayType(t *testing.T) {
 	// Test with nested arrays: [][]string
-	nestedArray := SliceOf(StringSlice())
+	nestedArray := SliceOf(SliceOf(String()))
 	builder := NewFieldBuilder().
 		WithName("matrix").
 		WithType(nestedArray)
@@ -560,7 +560,7 @@ func TestFieldBuilder_WithArrayTypeAndTags(t *testing.T) {
 	// Test ArrayTypeBuilder with tags
 	builder := NewFieldBuilder().
 		WithName("items").
-		WithType(StringSlice()).
+		WithType(SliceOf(String())).
 		AddJSONTags("items", "omitempty").
 		AddValidateTags("required", "min=1")
 

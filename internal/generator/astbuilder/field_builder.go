@@ -259,32 +259,32 @@ func (fb *FieldBuilder) ClearAllTags() *FieldBuilder {
 
 // StringSliceField creates a field builder for a []string field
 func StringSliceField(name string) *FieldBuilder {
-	return NewFieldBuilder().WithName(name).WithType(StringSlice())
+	return NewFieldBuilder().WithName(name).WithType(SliceOf(String()))
 }
 
 // IntSliceField creates a field builder for a []int field
 func IntSliceField(name string) *FieldBuilder {
-	return NewFieldBuilder().WithName(name).WithType(IntSlice())
+	return NewFieldBuilder().WithName(name).WithType(SliceOf(Int()))
 }
 
 // BoolSliceField creates a field builder for a []bool field
 func BoolSliceField(name string) *FieldBuilder {
-	return NewFieldBuilder().WithName(name).WithType(BoolSlice())
+	return NewFieldBuilder().WithName(name).WithType(SliceOf(Bool()))
 }
 
 // ErrorSliceField creates a field builder for a []error field
 func ErrorSliceField(name string) *FieldBuilder {
-	return NewFieldBuilder().WithName(name).WithType(ErrorSlice())
+	return NewFieldBuilder().WithName(name).WithType(SliceOf(Error()))
 }
 
 // ContextSliceField creates a field builder for a []context.Context field
 func ContextSliceField(name string) *FieldBuilder {
-	return NewFieldBuilder().WithName(name).WithType(ContextSlice())
+	return NewFieldBuilder().WithName(name).WithType(SliceOf(Context()))
 }
 
 // IdentSliceField creates a field builder for a []Identifier field
 func IdentSliceField(name, identifier string) *FieldBuilder {
-	return NewFieldBuilder().WithName(name).WithType(IdentSlice(identifier))
+	return NewFieldBuilder().WithName(name).WithType(SliceOf(I(identifier)))
 }
 
 // SelectorSliceField creates a field builder for a []package.Type field

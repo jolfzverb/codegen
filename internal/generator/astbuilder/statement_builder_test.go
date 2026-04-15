@@ -123,7 +123,7 @@ func TestVarDeclBuilder_WithValue(t *testing.T) {
 func TestVarDeclBuilder_WithType(t *testing.T) {
 	stmt := NewVarDeclBuilder().
 		WithName("items").
-		WithType(StringSlice()).
+		WithType(SliceOf(String())).
 		Build()
 	result := formatStmt(t, stmt)
 	assert.Equal(t, "var items []string", result)
