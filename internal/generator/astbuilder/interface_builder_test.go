@@ -271,10 +271,11 @@ func TestInterfaceBuilder_Build(t *testing.T) {
 		WithMethod(method1).
 		WithMethod(method2)
 
-	decl := builder.Build()
+	result := builder.Build()
 
-	if decl == nil {
-		t.Fatal("Build returned nil")
+	decl, ok := result.(*ast.GenDecl)
+	if !ok {
+		t.Fatal("Build should return *ast.GenDecl")
 	}
 
 	if decl.Tok != token.TYPE {
@@ -296,7 +297,7 @@ func TestInterfaceBuilder_Build(t *testing.T) {
 	}
 }
 
-func TestInterfaceBuilder_BuildAsDeclaration(t *testing.T) {
+func TestInterfaceBuilder_BuildReturnsGenDecl(t *testing.T) {
 	methodBuilder := NewInterfaceMethodBuilder().
 		WithName("TestMethod")
 
@@ -304,14 +305,15 @@ func TestInterfaceBuilder_BuildAsDeclaration(t *testing.T) {
 		WithName("TestInterface").
 		WithMethod(methodBuilder)
 
-	decl := builder.BuildAsDeclaration()
+	result := builder.Build()
 
-	if decl == nil {
-		t.Fatal("BuildAsDeclaration returned nil")
+	decl, ok := result.(*ast.GenDecl)
+	if !ok {
+		t.Fatal("Build should return *ast.GenDecl")
 	}
 
-	if _, ok := decl.(*ast.GenDecl); !ok {
-		t.Error("BuildAsDeclaration should return *ast.GenDecl")
+	if decl.Tok != token.TYPE {
+		t.Error("Build should return GenDecl with TYPE token")
 	}
 }
 
@@ -483,10 +485,10 @@ func TestInterfaceBuilder_ComplexExample(t *testing.T) {
 		WithName("CreateHandler").
 		WithMethod(methodBuilder)
 
-	decl := builder.Build()
+	genDecl := builder.Build().(*ast.GenDecl)
 
 	// Verify the structure
-	typeSpec := decl.Specs[0].(*ast.TypeSpec)
+	typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
 	if typeSpec.Name.Name != "CreateHandler" {
 		t.Errorf("Expected interface name 'CreateHandler', got %s", typeSpec.Name.Name)
 	}
@@ -790,10 +792,10 @@ func TestInterfaceMethodBuilder_ComplexExample(t *testing.T) {
 		WithName("CreateHandler").
 		WithMethod(methodBuilder)
 
-	decl := builder.Build()
+	genDecl := builder.Build().(*ast.GenDecl)
 
 	// Verify the structure
-	typeSpec := decl.Specs[0].(*ast.TypeSpec)
+	typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
 	if typeSpec.Name.Name != "CreateHandler" {
 		t.Errorf("Expected interface name 'CreateHandler', got %s", typeSpec.Name.Name)
 	}

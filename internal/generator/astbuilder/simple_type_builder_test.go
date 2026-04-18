@@ -238,10 +238,10 @@ func TestAliasOf_NilType(t *testing.T) {
 	AliasOf("Name", nil)
 }
 
-func TestTypeAliasBuilder_BuildDecl(t *testing.T) {
-	decl, ok := AliasOf("MyAlias", String()).BuildDecl().(*ast.GenDecl)
+func TestTypeDeclBuilder(t *testing.T) {
+	decl, ok := TypeDecl(AliasOf("MyAlias", String())).Build().(*ast.GenDecl)
 	if !ok {
-		t.Fatal("BuildDecl should return *ast.GenDecl")
+		t.Fatal("TypeDecl.Build should return *ast.GenDecl")
 	}
 
 	if decl.Tok != token.TYPE {

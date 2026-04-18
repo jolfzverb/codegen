@@ -156,12 +156,15 @@ func TestStructBuilder_BuildWithoutName(t *testing.T) {
 	builder.Build()
 }
 
-func TestStructBuilder_BuildAsDeclaration(t *testing.T) {
+func TestStructBuilder_TypeDecl(t *testing.T) {
 	builder := NewStructBuilder().
 		WithName("Person").
 		AddField(StringField("name"))
 
-	decl := builder.BuildAsDeclaration()
+	decl, ok := TypeDecl(builder).Build().(*ast.GenDecl)
+	if !ok {
+		t.Fatal("TypeDecl.Build should return *ast.GenDecl")
+	}
 
 	if decl.Tok != token.TYPE {
 		t.Error("Declaration should have token.TYPE")

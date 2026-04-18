@@ -120,7 +120,7 @@ func (fb *FunctionBuilder) Body() *BodyBuilder {
 }
 
 // Build creates the ast.FuncDecl
-func (fb *FunctionBuilder) Build() *ast.FuncDecl {
+func (fb *FunctionBuilder) Build() ast.Decl {
 	if fb.name == "" {
 		panic("function must have a name")
 	}
@@ -157,9 +157,6 @@ func (fb *FunctionBuilder) Build() *ast.FuncDecl {
 }
 
 // Utility methods
-
-// BuildDecl implements DeclBuilder.
-func (fb *FunctionBuilder) BuildDecl() ast.Decl { return fb.Build() }
 
 // HasName returns true if the function has a name
 func (fb *FunctionBuilder) HasName() bool {

@@ -7,7 +7,30 @@ import (
 
 // DeclBuilder builds a top-level Go declaration.
 type DeclBuilder interface {
-	BuildDecl() ast.Decl
+	Build() ast.Decl
+}
+
+// TypeSpecBuilder builds an *ast.TypeSpec.
+type TypeSpecBuilder interface {
+	Build() *ast.TypeSpec
+}
+
+// TypeDeclBuilder wraps a TypeSpecBuilder into a type declaration.
+type TypeDeclBuilder struct {
+	spec *ast.TypeSpec
+}
+
+// TypeDecl creates a TypeDeclBuilder from a TypeSpecBuilder.
+func TypeDecl(builder TypeSpecBuilder) *TypeDeclBuilder {
+	return &TypeDeclBuilder{spec: builder.Build()}
+}
+
+// Build creates the ast.Decl.
+func (tdb *TypeDeclBuilder) Build() ast.Decl {
+	return &ast.GenDecl{
+		Tok:   token.TYPE,
+		Specs: []ast.Spec{tdb.spec},
+	}
 }
 
 // FileBuilder builds an *ast.File with a package declaration, imports, and top-level declarations.
@@ -31,7 +54,7 @@ func (fb *FileBuilder) WithImports(ib *ImportsBuilder) *FileBuilder {
 
 // AddDecl appends a top-level declaration to the file.
 func (fb *FileBuilder) AddDecl(b DeclBuilder) *FileBuilder {
-	fb.decls = append(fb.decls, b.BuildDecl())
+	fb.decls = append(fb.decls, b.Build())
 	return fb
 }
 

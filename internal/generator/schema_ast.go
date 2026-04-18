@@ -72,17 +72,15 @@ func (g *Generator) AddSchema(model SchemaStruct) {
 		}
 		structBuilder.AddField(fieldBuilder)
 	}
-	g.SchemasFile.fileBuilder.AddDecl(structBuilder)
+	g.SchemasFile.fileBuilder.AddDecl(astbuilder.TypeDecl(structBuilder))
 }
 
 func (g *Generator) AddTypeAlias(name string, typeName string) {
-	typeAliasBuilder := astbuilder.AliasOf(name, astbuilder.SimpleType(typeName))
-	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder)
+	g.SchemasFile.fileBuilder.AddDecl(astbuilder.TypeDecl(astbuilder.AliasOf(name, astbuilder.SimpleType(typeName))))
 }
 
 func (g *Generator) AddSliceAlias(name string, typeName string) {
-	typeAliasBuilder := astbuilder.AliasOf(name, astbuilder.SliceOf(astbuilder.SimpleType(typeName)))
-	g.SchemasFile.fileBuilder.AddDecl(typeAliasBuilder)
+	g.SchemasFile.fileBuilder.AddDecl(astbuilder.TypeDecl(astbuilder.AliasOf(name, astbuilder.SliceOf(astbuilder.SimpleType(typeName)))))
 }
 
 func (g *Generator) AddParamsModel(baseName string, paramType string, params openapi3.Parameters) error {

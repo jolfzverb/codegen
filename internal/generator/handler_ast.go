@@ -153,7 +153,7 @@ func (g *Generator) GenerateHandlersFile() *ast.File {
 	for _, b := range g.HandlersFile.interfaceBuilders {
 		fb.AddDecl(b)
 	}
-	fb.AddDecl(g.HandlersFile.handlerDeclBuilder)
+	fb.AddDecl(astbuilder.TypeDecl(g.HandlersFile.handlerDeclBuilder))
 	fb.AddDecl(constructorBuilder)
 	fb.AddDecl(addRoutesBuilder)
 	for _, b := range g.HandlersFile.restBuilders {

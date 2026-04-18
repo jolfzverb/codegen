@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func formatFuncDecl(t *testing.T, funcDecl *ast.FuncDecl) string {
+func formatFuncDecl(t *testing.T, node ast.Node) string {
 	t.Helper()
 	fset := token.NewFileSet()
 	var buf strings.Builder
-	err := format.Node(&buf, fset, funcDecl)
+	err := format.Node(&buf, fset, node)
 	require.NoError(t, err)
 	return buf.String()
 }

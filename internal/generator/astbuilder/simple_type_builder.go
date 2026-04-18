@@ -2,7 +2,6 @@ package astbuilder
 
 import (
 	"go/ast"
-	"go/token"
 )
 
 // SimpleTypeBuilder provides a fluent interface for building simple type expressions
@@ -130,13 +129,6 @@ func (tab *TypeAliasBuilder) Build() *ast.TypeSpec {
 	}
 }
 
-// BuildDecl implements DeclBuilder.
-func (tab *TypeAliasBuilder) BuildDecl() ast.Decl {
-	return &ast.GenDecl{
-		Tok:   token.TYPE,
-		Specs: []ast.Spec{tab.Build()},
-	}
-}
 
 // AliasOf creates a TypeAliasBuilder for "type name Type"
 func AliasOf(name string, typeBuilder TypeExpressionBuilder) *TypeAliasBuilder {

@@ -2,7 +2,6 @@ package astbuilder
 
 import (
 	"go/ast"
-	"go/token"
 )
 
 // StructBuilder provides a fluent interface for building Go structs
@@ -68,17 +67,6 @@ func (sb *StructBuilder) Build() *ast.TypeSpec {
 		},
 	}
 }
-
-// BuildAsDeclaration creates the ast.GenDecl for the struct
-func (sb *StructBuilder) BuildAsDeclaration() *ast.GenDecl {
-	return &ast.GenDecl{
-		Tok:   token.TYPE,
-		Specs: []ast.Spec{sb.Build()},
-	}
-}
-
-// BuildDecl implements DeclBuilder.
-func (sb *StructBuilder) BuildDecl() ast.Decl { return sb.BuildAsDeclaration() }
 
 // Utility methods
 

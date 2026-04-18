@@ -56,7 +56,7 @@ func (ib *InterfaceBuilder) WithMethod(methodBuilder *InterfaceMethodBuilder) *I
 }
 
 // Build creates the interface declaration AST
-func (ib *InterfaceBuilder) Build() *ast.GenDecl {
+func (ib *InterfaceBuilder) Build() ast.Decl {
 	if ib.name == "" {
 		panic("interface name is required")
 	}
@@ -84,14 +84,6 @@ func (ib *InterfaceBuilder) Build() *ast.GenDecl {
 	}
 }
 
-// BuildAsDeclaration creates the interface declaration AST
-// This is an alias for Build() for consistency with other builders
-func (ib *InterfaceBuilder) BuildAsDeclaration() ast.Decl {
-	return ib.Build()
-}
-
-// BuildDecl implements DeclBuilder.
-func (ib *InterfaceBuilder) BuildDecl() ast.Decl { return ib.Build() }
 
 // WithName sets the method name
 // Returns the method builder for method chaining
