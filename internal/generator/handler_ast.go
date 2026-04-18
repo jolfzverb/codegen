@@ -40,9 +40,8 @@ func (g *Generator) InitHandlerImports() {
 }
 
 func (g *Generator) InitHandlerStruct() {
-	g.HandlersFile.handlerDeclBuilder = astbuilder.NewStructBuilder().WithName("Handler").
-		AddField(astbuilder.NewFieldBuilder().WithName("validator").WithType(
-			astbuilder.Star(astbuilder.SimpleType("validator", "Validate"))))
+	g.HandlersFile.handlerDeclBuilder = astbuilder.Struct("Handler",
+		astbuilder.Field("validator", astbuilder.Star(astbuilder.SimpleType("validator", "Validate"))))
 }
 
 func (g *Generator) InitHandlerConstructor() {
@@ -121,11 +120,10 @@ func (g *Generator) AddHandlersInterface(name string, methodName string, request
 func (g *Generator) AddDependencyToHandlers(baseName string) {
 	fieldName := GoIdentLowercase(baseName)
 
-	g.HandlersFile.handlerDeclBuilder.AddField(
-		astbuilder.NewFieldBuilder().WithName(fieldName).WithType(
-			astbuilder.SimpleType(baseName + "Handler")))
+	g.HandlersFile.handlerDeclBuilder.AddFields(
+		astbuilder.Field(fieldName, astbuilder.SimpleType(baseName+"Handler")))
 
-	g.HandlersFile.handlerConstructorBuilder.AddParam(astbuilder.IdentField(fieldName, baseName+"Handler"))
+	g.HandlersFile.handlerConstructorBuilder.AddParam(astbuilder.Field(fieldName, astbuilder.I(baseName+"Handler")))
 
 	g.HandlersFile.handlerConstructorLit.AddKeyValue(fieldName, astbuilder.I(fieldName))
 }
@@ -209,7 +207,7 @@ func (g *Generator) CreateDirectHandler(baseName string) {
 			WithName("h").
 			WithType(astbuilder.Star(astbuilder.I("Handler")))).
 		AddParams(
-			astbuilder.SelectorField("w", "http", "ResponseWriter"),
+			astbuilder.Field("w", astbuilder.SimpleType("http", "ResponseWriter")),
 			astbuilder.NewFieldBuilder().
 				WithName("r").
 				WithType(astbuilder.Star(astbuilder.SimpleType("http", "Request"))),

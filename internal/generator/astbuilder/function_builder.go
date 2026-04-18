@@ -204,7 +204,7 @@ func (fb *FunctionBuilder) WithPointerReceiver(name, typeName string) *FunctionB
 
 // WithValueReceiver sets a value receiver with the given name and type
 func (fb *FunctionBuilder) WithValueReceiver(name, typeName string) *FunctionBuilder {
-	return fb.WithReceiver(IdentField(name, typeName))
+	return fb.WithReceiver(Field(name, I(typeName)))
 }
 
 // BodyBuilder provides a fluent interface for building function body statements

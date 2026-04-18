@@ -63,14 +63,10 @@ func (g *Generator) AddSchema(model SchemaStruct) {
 		if !field.Required {
 			fieldType = astbuilder.Star(fieldType)
 		}
-		fieldBuilder := astbuilder.NewFieldBuilder().WithName(field.Name).WithType(fieldType)
-		for _, tag := range field.TagJSON {
-			fieldBuilder.AddJSONTag(tag)
-		}
-		for _, tag := range field.TagValidate {
-			fieldBuilder.AddValidateTag(tag)
-		}
-		structBuilder.AddField(fieldBuilder)
+		fieldBuilder := astbuilder.Field(field.Name, fieldType)
+		fieldBuilder.AddJSONTags(field.TagJSON...)
+		fieldBuilder.AddValidateTags(field.TagValidate...)
+		structBuilder.AddFields(fieldBuilder)
 	}
 	g.SchemasFile.fileBuilder.AddDecl(astbuilder.TypeDecl(structBuilder))
 }

@@ -165,7 +165,7 @@ func (g *Generator) AddContainsNullIfNeeded() {
 		AddStmt(astbuilder.Return1(astbuilder.Eq(astbuilder.I("temp"), astbuilder.I("nil"))))
 
 	fn := astbuilder.Function("containsNull").
-		AddParam(astbuilder.SelectorField("data", "json", "RawMessage")).
+		AddParam(astbuilder.Field("data", astbuilder.SimpleType("json", "RawMessage"))).
 		AddResult(astbuilder.BoolField("")).
 		WithBody(bodyBuilder)
 
@@ -300,7 +300,7 @@ func (g *Generator) AddObjectValidate(modelName string, schema *openapi3.SchemaR
 	}
 
 	fn := astbuilder.Function("Validate" + modelName + "JSON").
-		AddParam(astbuilder.SelectorField(paramName, "json", "RawMessage")).
+		AddParam(astbuilder.Field(paramName, astbuilder.SimpleType("json", "RawMessage"))).
 		AddResult(astbuilder.ErrorField()).
 		WithBody(bodyBuilder)
 
@@ -333,7 +333,7 @@ func (g *Generator) AddArrayValidate(modelName string, schema *openapi3.SchemaRe
 		AddStmt(astbuilder.Return1(astbuilder.I("nil")))
 
 	fn := astbuilder.Function("Validate" + modelName + "JSON").
-		AddParam(astbuilder.SelectorField("jsonData", "json", "RawMessage")).
+		AddParam(astbuilder.Field("jsonData", astbuilder.SimpleType("json", "RawMessage"))).
 		AddResult(astbuilder.ErrorField()).
 		WithBody(bodyBuilder)
 

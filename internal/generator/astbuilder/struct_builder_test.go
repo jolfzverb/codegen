@@ -22,6 +22,40 @@ func TestNewStructBuilder(t *testing.T) {
 	}
 }
 
+func TestStruct_Constructor(t *testing.T) {
+	sb := Struct("Person", StringField("name"), IntField("age"))
+
+	if sb.name != "Person" {
+		t.Errorf("Expected name 'Person', got %s", sb.name)
+	}
+
+	if len(sb.fields) != 2 {
+		t.Errorf("Expected 2 fields, got %d", len(sb.fields))
+	}
+}
+
+func TestStruct_ConstructorNoFields(t *testing.T) {
+	sb := Struct("Empty")
+
+	if sb.name != "Empty" {
+		t.Errorf("Expected name 'Empty', got %s", sb.name)
+	}
+
+	if len(sb.fields) != 0 {
+		t.Errorf("Expected 0 fields, got %d", len(sb.fields))
+	}
+}
+
+func TestStruct_ConstructorNilField(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Struct should panic when a field is nil")
+		}
+	}()
+
+	Struct("Bad", StringField("ok"), nil)
+}
+
 func TestStructBuilder_WithName(t *testing.T) {
 	builder := NewStructBuilder()
 
@@ -33,56 +67,12 @@ func TestStructBuilder_WithName(t *testing.T) {
 	if builder.name != "TestStruct" {
 		t.Errorf("Expected name 'TestStruct', got %s", builder.name)
 	}
-
-	// Test chaining
-	builder.WithName("AnotherStruct").WithName("FinalStruct")
-	if builder.name != "FinalStruct" {
-		t.Errorf("Expected chained name 'FinalStruct', got %s", builder.name)
-	}
-}
-
-func TestStructBuilder_AddField(t *testing.T) {
-	builder := NewStructBuilder()
-
-	fieldBuilder := StringField("name")
-	result := builder.AddField(fieldBuilder)
-
-	if result != builder {
-		t.Error("AddField should return the builder for chaining")
-	}
-
-	if len(builder.fields) != 1 {
-		t.Errorf("Expected 1 field, got %d", len(builder.fields))
-	}
-
-	// Test adding another field
-	builder.AddField(IntField("age"))
-	if len(builder.fields) != 2 {
-		t.Errorf("Expected 2 fields, got %d", len(builder.fields))
-	}
-}
-
-func TestStructBuilder_AddFieldNil(t *testing.T) {
-	builder := NewStructBuilder()
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("AddField should panic when field builder is nil")
-		}
-	}()
-
-	builder.AddField(nil)
 }
 
 func TestStructBuilder_AddFields(t *testing.T) {
 	builder := NewStructBuilder()
 
-	field1 := StringField("name")
-	field2 := IntField("age")
-	field3 := BoolField("active")
-
-	result := builder.AddFields(field1, field2, field3)
-
+	result := builder.AddFields(StringField("name"), IntField("age"), BoolField("active"))
 	if result != builder {
 		t.Error("AddFields should return the builder for chaining")
 	}
@@ -105,12 +95,7 @@ func TestStructBuilder_AddFieldsNil(t *testing.T) {
 }
 
 func TestStructBuilder_Build(t *testing.T) {
-	builder := NewStructBuilder().
-		WithName("Person").
-		AddField(StringField("name")).
-		AddField(IntField("age"))
-
-	typeSpec := builder.Build()
+	typeSpec := Struct("Person", StringField("name"), IntField("age")).Build()
 
 	if typeSpec.Name.Name != "Person" {
 		t.Errorf("Expected type name 'Person', got %s", typeSpec.Name.Name)
@@ -125,7 +110,6 @@ func TestStructBuilder_Build(t *testing.T) {
 		t.Errorf("Expected 2 fields, got %d", len(structType.Fields.List))
 	}
 
-	// Check first field
 	field1 := structType.Fields.List[0]
 	if len(field1.Names) != 1 || field1.Names[0].Name != "name" {
 		t.Error("First field should be named 'name'")
@@ -134,7 +118,6 @@ func TestStructBuilder_Build(t *testing.T) {
 		t.Error("First field should be of type 'string'")
 	}
 
-	// Check second field
 	field2 := structType.Fields.List[1]
 	if len(field2.Names) != 1 || field2.Names[0].Name != "age" {
 		t.Error("Second field should be named 'age'")
@@ -145,7 +128,7 @@ func TestStructBuilder_Build(t *testing.T) {
 }
 
 func TestStructBuilder_BuildWithoutName(t *testing.T) {
-	builder := NewStructBuilder().AddField(StringField("name"))
+	builder := NewStructBuilder().AddFields(StringField("name"))
 
 	defer func() {
 		if r := recover(); r == nil {
@@ -157,11 +140,7 @@ func TestStructBuilder_BuildWithoutName(t *testing.T) {
 }
 
 func TestStructBuilder_TypeDecl(t *testing.T) {
-	builder := NewStructBuilder().
-		WithName("Person").
-		AddField(StringField("name"))
-
-	decl, ok := TypeDecl(builder).Build().(*ast.GenDecl)
+	decl, ok := TypeDecl(Struct("Person", StringField("name"))).Build().(*ast.GenDecl)
 	if !ok {
 		t.Fatal("TypeDecl.Build should return *ast.GenDecl")
 	}
@@ -184,288 +163,30 @@ func TestStructBuilder_TypeDecl(t *testing.T) {
 	}
 }
 
-func TestStructBuilder_UtilityMethods(t *testing.T) {
-	builder := NewStructBuilder()
-
-	// Test HasName
-	if builder.HasName() {
-		t.Error("HasName should return false initially")
-	}
-
-	builder.WithName("TestStruct")
-	if !builder.HasName() {
-		t.Error("HasName should return true after setting name")
-	}
-
-	// Test GetName
-	if builder.GetName() != "TestStruct" {
-		t.Errorf("Expected name 'TestStruct', got %s", builder.GetName())
-	}
-
-	// Test FieldCount
-	if builder.FieldCount() != 0 {
-		t.Errorf("Expected 0 fields initially, got %d", builder.FieldCount())
-	}
-
-	// Test HasFields
-	if builder.HasFields() {
-		t.Error("HasFields should return false initially")
-	}
-
-	builder.AddField(StringField("name"))
-	if !builder.HasFields() {
-		t.Error("HasFields should return true after adding field")
-	}
-
-	if builder.FieldCount() != 1 {
-		t.Errorf("Expected 1 field, got %d", builder.FieldCount())
-	}
-}
-
-func TestStructBuilder_GetFields(t *testing.T) {
-	builder := NewStructBuilder().
-		AddField(StringField("name")).
-		AddField(IntField("age"))
-
-	fields := builder.GetFields()
-
-	if len(fields) != 2 {
-		t.Errorf("Expected 2 fields, got %d", len(fields))
-	}
-}
-
-func TestStructBuilder_GetField(t *testing.T) {
-	builder := NewStructBuilder().
-		AddField(StringField("name")).
-		AddField(IntField("age"))
-
-	// Test valid index
-	field := builder.GetField(0)
-	if field == nil {
-		t.Fatal("GetField(0) should not return nil")
-	}
-	if field.GetName() != "name" {
-		t.Errorf("Expected field name 'name', got %s", field.GetName())
-	}
-
-	// Test invalid index
-	field = builder.GetField(-1)
-	if field != nil {
-		t.Error("GetField(-1) should return nil")
-	}
-
-	field = builder.GetField(2)
-	if field != nil {
-		t.Error("GetField(2) should return nil")
-	}
-}
-
-func TestStructBuilder_GetFieldByName(t *testing.T) {
-	builder := NewStructBuilder().
-		AddField(StringField("name")).
-		AddField(IntField("age"))
-
-	// Test existing field
-	field := builder.GetFieldByName("name")
-	if field == nil {
-		t.Fatal("GetFieldByName('name') should not return nil")
-	}
-	if field.GetName() != "name" {
-		t.Errorf("Expected field name 'name', got %s", field.GetName())
-	}
-
-	// Test non-existing field
-	field = builder.GetFieldByName("nonexistent")
-	if field != nil {
-		t.Error("GetFieldByName('nonexistent') should return nil")
-	}
-}
-
-func TestStructBuilder_RemoveField(t *testing.T) {
-	builder := NewStructBuilder().
-		AddField(StringField("name")).
-		AddField(IntField("age")).
-		AddField(BoolField("active"))
-
-	// Test removing middle field
-	result := builder.RemoveField(1)
-	if result != builder {
-		t.Error("RemoveField should return the builder for chaining")
-	}
-
-	if builder.FieldCount() != 2 {
-		t.Errorf("Expected 2 fields after removal, got %d", builder.FieldCount())
-	}
-
-	// Check that the correct field was removed
-	if builder.fields[0].GetName() != "name" {
-		t.Error("First field should still be 'name'")
-	}
-	if builder.fields[1].GetName() != "active" {
-		t.Error("Second field should now be 'active'")
-	}
-
-	// Test invalid index
-	builder.RemoveField(-1)
-	if builder.FieldCount() != 2 {
-		t.Error("RemoveField with invalid index should not affect field count")
-	}
-
-	builder.RemoveField(10)
-	if builder.FieldCount() != 2 {
-		t.Error("RemoveField with invalid index should not affect field count")
-	}
-}
-
-func TestStructBuilder_RemoveFieldByName(t *testing.T) {
-	builder := NewStructBuilder().
-		AddField(StringField("name")).
-		AddField(IntField("age")).
-		AddField(BoolField("active"))
-
-	// Test removing existing field
-	result := builder.RemoveFieldByName("age")
-	if result != builder {
-		t.Error("RemoveFieldByName should return the builder for chaining")
-	}
-
-	if builder.FieldCount() != 2 {
-		t.Errorf("Expected 2 fields after removal, got %d", builder.FieldCount())
-	}
-
-	// Check that the correct field was removed
-	if builder.fields[0].GetName() != "name" {
-		t.Error("First field should still be 'name'")
-	}
-	if builder.fields[1].GetName() != "active" {
-		t.Error("Second field should now be 'active'")
-	}
-
-	// Test removing non-existing field
-	builder.RemoveFieldByName("nonexistent")
-	if builder.FieldCount() != 2 {
-		t.Error("RemoveFieldByName with non-existing field should not affect field count")
-	}
-}
-
-func TestStructBuilder_Clear(t *testing.T) {
-	builder := NewStructBuilder().
-		AddField(StringField("name")).
-		AddField(IntField("age"))
-
-	result := builder.Clear()
-	if result != builder {
-		t.Error("Clear should return the builder for chaining")
-	}
-
-	if builder.FieldCount() != 0 {
-		t.Errorf("Expected 0 fields after clear, got %d", builder.FieldCount())
-	}
-
-	if builder.HasFields() {
-		t.Error("HasFields should return false after clear")
-	}
-}
-
-func TestStructBuilder_HelperMethods(t *testing.T) {
-	builder := NewStructBuilder()
-
-	// Test AddStringField
-	result := builder.AddStringField("name")
-	if result != builder {
-		t.Error("AddStringField should return the builder for chaining")
-	}
-
-	// Test AddIntField
-	builder.AddIntField("age")
-
-	// Test AddBoolField
-	builder.AddBoolField("active")
-
-	// Test AddContextField
-	builder.AddContextField("ctx")
-
-	// Test AddIdentField
-	builder.AddIdentField("customType", "CustomType")
-
-	// Test AddSelectorField
-	builder.AddSelectorField("response", "apimodels", "Response")
-
-	if builder.FieldCount() != 6 {
-		t.Errorf("Expected 6 fields, got %d", builder.FieldCount())
-	}
-
-	// Verify field types
-	fields := builder.GetFields()
-	if fields[0].GetName() != "name" {
-		t.Error("First field should be named 'name'")
-	}
-	if fields[1].GetName() != "age" {
-		t.Error("Second field should be named 'age'")
-	}
-	if fields[2].GetName() != "active" {
-		t.Error("Third field should be named 'active'")
-	}
-	if fields[3].GetName() != "ctx" {
-		t.Error("Fourth field should be named 'ctx'")
-	}
-	if fields[4].GetName() != "customType" {
-		t.Error("Fifth field should be named 'customType'")
-	}
-	if fields[5].GetName() != "response" {
-		t.Error("Sixth field should be named 'response'")
-	}
-}
-
 func TestStructBuilder_MethodChaining(t *testing.T) {
-	builder := NewStructBuilder().
-		WithName("Person").
-		AddField(StringField("name")).
-		AddField(IntField("age")).
-		AddFields(BoolField("active"), ContextField("ctx")).
-		AddStringField("email").
-		AddIntField("score")
+	builder := Struct("Person").
+		AddFields(StringField("name"), IntField("age")).
+		AddFields(BoolField("active"))
 
-	if builder.GetName() != "Person" {
-		t.Errorf("Expected name 'Person', got %s", builder.GetName())
+	if builder.name != "Person" {
+		t.Errorf("Expected name 'Person', got %s", builder.name)
 	}
 
-	if builder.FieldCount() != 6 {
-		t.Errorf("Expected 6 fields, got %d", builder.FieldCount())
-	}
-
-	// Test that all operations return the same builder
-	operations := []func() *StructBuilder{
-		func() *StructBuilder { return builder.WithName("Test") },
-		func() *StructBuilder { return builder.AddField(StringField("test")) },
-		func() *StructBuilder { return builder.AddFields(IntField("test2")) },
-		func() *StructBuilder { return builder.AddStringField("test3") },
-		func() *StructBuilder { return builder.Clear() },
-	}
-
-	for i, op := range operations {
-		if op() != builder {
-			t.Errorf("Operation %d should return the same builder", i)
-		}
+	if len(builder.fields) != 3 {
+		t.Errorf("Expected 3 fields, got %d", len(builder.fields))
 	}
 }
 
 func TestStructBuilder_ComplexExample(t *testing.T) {
-	// Create a complex struct similar to what might be generated
-	builder := NewStructBuilder().
-		WithName("CreateRequest").
-		AddStringField("name").
-		AddStringField("description").
-		AddIntField("priority").
-		AddBoolField("active").
-		AddContextField("ctx").
-		AddSelectorField("metadata", "apimodels", "Metadata").
-		AddField(NewFieldBuilder().
-			WithName("tags").
-			WithType(String()).
-			AddJSONTags("tags", "omitempty"))
-
-	typeSpec := builder.Build()
+	typeSpec := Struct("CreateRequest",
+		StringField("name"),
+		StringField("description"),
+		IntField("priority"),
+		BoolField("active"),
+		ContextField("ctx"),
+		Field("metadata", SimpleType("apimodels", "Metadata")),
+		NewFieldBuilder().WithName("tags").WithType(String()).AddJSONTags("tags", "omitempty"),
+	).Build()
 
 	if typeSpec.Name.Name != "CreateRequest" {
 		t.Errorf("Expected type name 'CreateRequest', got %s", typeSpec.Name.Name)
@@ -476,7 +197,6 @@ func TestStructBuilder_ComplexExample(t *testing.T) {
 		t.Errorf("Expected 7 fields, got %d", len(structType.Fields.List))
 	}
 
-	// Verify specific fields
 	fields := structType.Fields.List
 	if fields[0].Names[0].Name != "name" {
 		t.Error("First field should be named 'name'")

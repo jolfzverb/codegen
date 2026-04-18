@@ -170,12 +170,12 @@ func TestInterfaceMethodBuilder_AddArgField(t *testing.T) {
 	}
 
 	param := methodBuilder.params[0]
-	if !param.HasName() {
+	if param.name == "" {
 		t.Error("Expected parameter to have a name")
 	}
 
-	if param.GetName() != "param1" {
-		t.Errorf("Expected parameter name 'param1', got %s", param.GetName())
+	if param.name != "param1" {
+		t.Errorf("Expected parameter name 'param1', got %s", param.name)
 	}
 
 	// Test adding unnamed parameter
@@ -185,7 +185,7 @@ func TestInterfaceMethodBuilder_AddArgField(t *testing.T) {
 	}
 
 	unnamedParam := methodBuilder.params[1]
-	if unnamedParam.HasName() {
+	if unnamedParam.name != "" {
 		t.Error("Expected unnamed parameter to not have a name")
 	}
 }
@@ -204,12 +204,12 @@ func TestInterfaceMethodBuilder_AddRetvalField(t *testing.T) {
 	}
 
 	retval := methodBuilder.results[0]
-	if !retval.HasName() {
+	if retval.name == "" {
 		t.Error("Expected return value to have a name")
 	}
 
-	if retval.GetName() != "result1" {
-		t.Errorf("Expected return value name 'result1', got %s", retval.GetName())
+	if retval.name != "result1" {
+		t.Errorf("Expected return value name 'result1', got %s", retval.name)
 	}
 
 	// Test adding unnamed return value
@@ -219,7 +219,7 @@ func TestInterfaceMethodBuilder_AddRetvalField(t *testing.T) {
 	}
 
 	unnamedRetval := methodBuilder.results[1]
-	if unnamedRetval.HasName() {
+	if unnamedRetval.name != "" {
 		t.Error("Expected unnamed return value to not have a name")
 	}
 }
@@ -229,8 +229,8 @@ func TestInterfaceMethodBuilder_WithMethod(t *testing.T) {
 	methodBuilder := NewInterfaceMethodBuilder().
 		WithName("TestMethod").
 		AddArgField(ContextField("ctx")).
-		AddArgField(IdentField("req", "Request")).
-		AddRetvalField(IdentField("", "Response")).
+		AddArgField(Field("req", I("Request"))).
+		AddRetvalField(Field("", I("Response"))).
 		AddRetvalField(ErrorField())
 
 	result := builder.WithMethod(methodBuilder)
@@ -366,12 +366,12 @@ func TestInterfaceMethodBuilder_HelperMethods(t *testing.T) {
 	}
 
 	contextParam := method.params[0]
-	if !contextParam.HasName() {
+	if contextParam.name == "" {
 		t.Error("Expected context parameter to have a name")
 	}
 
-	if contextParam.GetName() != "ctx" {
-		t.Errorf("Expected context parameter name 'ctx', got %s", contextParam.GetName())
+	if contextParam.name != "ctx" {
+		t.Errorf("Expected context parameter name 'ctx', got %s", contextParam.name)
 	}
 
 	// Check error return value
@@ -380,7 +380,7 @@ func TestInterfaceMethodBuilder_HelperMethods(t *testing.T) {
 	}
 
 	errorResult := method.results[0]
-	if errorResult.HasName() {
+	if errorResult.name != "" {
 		t.Error("Expected error return value to not have a name")
 	}
 }
@@ -477,8 +477,8 @@ func TestInterfaceBuilder_ComplexExample(t *testing.T) {
 	methodBuilder := NewInterfaceMethodBuilder().
 		WithName("HandleCreate").
 		AddArgField(ContextField("ctx")).
-		AddArgField(SelectorField("r", "apimodels", "CreateRequest")).
-		AddRetvalField(SelectorField("", "apimodels", "CreateResponse")).
+		AddArgField(Field("r", SimpleType("apimodels", "CreateRequest"))).
+		AddRetvalField(Field("", SimpleType("apimodels", "CreateResponse"))).
 		AddErrorRetval()
 
 	builder := NewInterfaceBuilder().
@@ -630,12 +630,12 @@ func TestInterfaceMethodBuilder_AddArgFieldIntegration(t *testing.T) {
 	}
 
 	param := methodBuilder.params[0]
-	if !param.HasName() {
+	if param.name == "" {
 		t.Error("Expected parameter to have a name")
 	}
 
-	if param.GetName() != "param" {
-		t.Errorf("Expected parameter name 'param', got %s", param.GetName())
+	if param.name != "param" {
+		t.Errorf("Expected parameter name 'param', got %s", param.name)
 	}
 }
 
@@ -665,12 +665,12 @@ func TestInterfaceMethodBuilder_AddArgFieldWithContext(t *testing.T) {
 	}
 
 	param := methodBuilder.params[0]
-	if !param.HasName() {
+	if param.name == "" {
 		t.Error("Expected parameter to have a name")
 	}
 
-	if param.GetName() != "ctx" {
-		t.Errorf("Expected parameter name 'ctx', got %s", param.GetName())
+	if param.name != "ctx" {
+		t.Errorf("Expected parameter name 'ctx', got %s", param.name)
 	}
 }
 
@@ -704,12 +704,12 @@ func TestInterfaceMethodBuilder_AddRetvalFieldIntegration(t *testing.T) {
 	}
 
 	retval := methodBuilder.results[0]
-	if !retval.HasName() {
+	if retval.name == "" {
 		t.Error("Expected return value to have a name")
 	}
 
-	if retval.GetName() != "result" {
-		t.Errorf("Expected return value name 'result', got %s", retval.GetName())
+	if retval.name != "result" {
+		t.Errorf("Expected return value name 'result', got %s", retval.name)
 	}
 }
 
@@ -739,7 +739,7 @@ func TestInterfaceMethodBuilder_AddRetvalFieldWithError(t *testing.T) {
 	}
 
 	retval := methodBuilder.results[0]
-	if retval.HasName() {
+	if retval.name != "" {
 		t.Error("Expected error return value to not have a name")
 	}
 }
@@ -770,12 +770,12 @@ func TestInterfaceMethodBuilder_AddPointerRetvalField(t *testing.T) {
 	}
 
 	retval := methodBuilder.results[0]
-	if !retval.HasName() {
+	if retval.name == "" {
 		t.Error("Expected return value to have a name")
 	}
 
-	if retval.GetName() != "ptr" {
-		t.Errorf("Expected return value name 'ptr', got %s", retval.GetName())
+	if retval.name != "ptr" {
+		t.Errorf("Expected return value name 'ptr', got %s", retval.name)
 	}
 }
 
@@ -784,8 +784,8 @@ func TestInterfaceMethodBuilder_ComplexExample(t *testing.T) {
 	methodBuilder := NewInterfaceMethodBuilder().
 		WithName("HandleCreate").
 		AddArgField(ContextField("ctx")).
-		AddArgField(SelectorField("r", "apimodels", "CreateRequest")).
-		AddRetvalField(SelectorField("", "apimodels", "CreateResponse")).
+		AddArgField(Field("r", SimpleType("apimodels", "CreateRequest"))).
+		AddRetvalField(Field("", SimpleType("apimodels", "CreateResponse"))).
 		AddRetvalField(ErrorField())
 
 	builder := NewInterfaceBuilder().
@@ -870,20 +870,20 @@ func TestInterfaceMethodBuilder_MethodChainingWithNewBuilders(t *testing.T) {
 	}
 
 	// Check parameters
-	if method.params[0].GetName() != "name" {
+	if method.params[0].name != "name" {
 		t.Error("First parameter should be named 'name'")
 	}
 
-	if method.params[1].GetName() != "ctx" {
+	if method.params[1].name != "ctx" {
 		t.Error("Second parameter should be named 'ctx'")
 	}
 
 	// Check return values
-	if method.results[0].GetName() != "count" {
+	if method.results[0].name != "count" {
 		t.Error("First return value should be named 'count'")
 	}
 
-	if method.results[1].HasName() {
+	if method.results[1].name != "" {
 		t.Error("Second return value should be unnamed")
 	}
 }
