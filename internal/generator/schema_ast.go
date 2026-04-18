@@ -1,22 +1,19 @@
 package generator
 
 import (
-	"go/ast"
 	"go/format"
 	"go/token"
 	"io"
-	"slices"
 	"sort"
-	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-faster/errors"
+	"github.com/sintoniastrategy/validgo-gen/internal/generator/astbuilder"
 )
 
 type SchemasFile struct {
 	requiredFieldsArePointers bool
-	packageImports            []string
-	decls                     []*ast.GenDecl
+	fileBuilder               *astbuilder.FileBuilder
 	generatedModels           map[string]bool
 }
 
@@ -37,42 +34,8 @@ func (g *Generator) NewSchemasFile() {
 	g.SchemasFile = &SchemasFile{
 		requiredFieldsArePointers: g.Opts.RequiredFieldsArePointers,
 		generatedModels:           make(map[string]bool),
+		fileBuilder:               astbuilder.NewFileBuilder(g.PackageName + "models"),
 	}
-}
-
-func (g *Generator) GenerateImportsSpecsSchemas(imp []string) ([]*ast.ImportSpec, []ast.Spec) {
-	var systemImports []string //nolint:prealloc
-	var libImports []string
-	for _, path := range imp {
-		prefix := strings.SplitN(path, "/", 2)[0] //nolint:mnd
-		if strings.Contains(prefix, ".") {
-			libImports = append(libImports, path)
-
-			continue
-		}
-		systemImports = append(systemImports, path)
-	}
-
-	sort.Strings(systemImports)
-	sort.Strings(libImports)
-
-	specs := make([]*ast.ImportSpec, 0, len(imp))
-	for _, path := range systemImports {
-		specs = append(specs, &ast.ImportSpec{Path: Str(path)})
-	}
-
-	// Add a space to separate system and library imports
-	// but go/ast is too great for that
-	for _, path := range libImports {
-		specs = append(specs, &ast.ImportSpec{Path: Str(path)})
-	}
-
-	declSpecs := make([]ast.Spec, 0, len(specs))
-	for _, spec := range specs {
-		declSpecs = append(declSpecs, spec)
-	}
-
-	return specs, declSpecs
 }
 
 func (g *Generator) WriteSchemasToOutput(output io.Writer) error {
@@ -83,26 +46,9 @@ func (g *Generator) WriteSchemasToOutput(output io.Writer) error {
 		return errors.Wrap(err, op)
 	}
 
-	importSpecs, declSpecs := g.GenerateImportsSpecs(g.SchemasFile.packageImports)
+	g.SchemasFile.fileBuilder.WithImports(g.SchemasImportsBuilder)
 
-	file := &ast.File{
-		Name:    ast.NewIdent(g.PackageName + "models"),
-		Imports: importSpecs,
-		Decls:   []ast.Decl{},
-	}
-
-	if len(declSpecs) > 0 {
-		file.Decls = append(file.Decls, &ast.GenDecl{
-			Tok:   token.IMPORT,
-			Specs: declSpecs,
-		})
-	}
-
-	for _, decl := range g.SchemasFile.decls {
-		file.Decls = append(file.Decls, decl)
-	}
-
-	err = format.Node(output, token.NewFileSet(), file)
+	err = format.Node(output, token.NewFileSet(), g.SchemasFile.fileBuilder.Build())
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
@@ -111,85 +57,26 @@ func (g *Generator) WriteSchemasToOutput(output io.Writer) error {
 }
 
 func (g *Generator) AddSchema(model SchemaStruct) {
-	fieldList := make([]*ast.Field, 0, len(model.Fields))
+	structBuilder := astbuilder.NewStructBuilder().WithName(model.Name)
 	for _, field := range model.Fields {
-		jsonTags := strings.Join(field.TagJSON, ",")
-		validateTags := strings.Join(field.TagValidate, ",")
-
-		var tags string
-		if len(field.TagJSON) > 0 {
-			tags += "json:\"" + jsonTags + "\""
+		var fieldType astbuilder.TypeExpressionBuilder = astbuilder.I(field.Type)
+		if !field.Required {
+			fieldType = astbuilder.Star(fieldType)
 		}
-		if len(field.TagValidate) > 0 {
-			if len(tags) > 0 {
-				tags += " "
-			}
-			tags += "validate:\"" + validateTags + "\""
-		}
-		if len(tags) > 0 {
-			tags = "`" + tags + "`"
-		}
-		var typeExpr ast.Expr
-		if field.Required {
-			typeExpr = ast.NewIdent(field.Type)
-		} else {
-			typeExpr = Star(ast.NewIdent(field.Type))
-		}
-		var tag *ast.BasicLit
-		if len(tags) > 0 {
-			tag = &ast.BasicLit{
-				Kind:  token.STRING,
-				Value: tags,
-			}
-		}
-		fieldList = append(fieldList, &ast.Field{
-			Names: []*ast.Ident{ast.NewIdent(field.Name)},
-			Type:  typeExpr,
-			Tag:   tag,
-		})
+		fieldBuilder := astbuilder.Field(field.Name, fieldType)
+		fieldBuilder.AddJSONTags(field.TagJSON...)
+		fieldBuilder.AddValidateTags(field.TagValidate...)
+		structBuilder.AddFields(fieldBuilder)
 	}
-
-	g.SchemasFile.decls = append(g.SchemasFile.decls, &ast.GenDecl{
-		Tok: token.TYPE,
-		Specs: []ast.Spec{
-			&ast.TypeSpec{
-				Name: ast.NewIdent(model.Name),
-				Type: &ast.StructType{
-					Fields: &ast.FieldList{
-						List: fieldList,
-					},
-				},
-			},
-		},
-	})
+	g.SchemasFile.fileBuilder.AddDecl(astbuilder.TypeDecl(structBuilder))
 }
 
 func (g *Generator) AddTypeAlias(name string, typeName string) {
-	g.SchemasFile.decls = append(g.SchemasFile.decls, &ast.GenDecl{
-		Tok: token.TYPE,
-		Specs: []ast.Spec{
-			&ast.TypeSpec{
-				Name: ast.NewIdent(name),
-				Type: &ast.Ident{
-					Name: typeName,
-				},
-			},
-		},
-	})
+	g.SchemasFile.fileBuilder.AddDecl(astbuilder.TypeDecl(astbuilder.AliasOf(name, astbuilder.SimpleType(typeName))))
 }
 
 func (g *Generator) AddSliceAlias(name string, typeName string) {
-	g.SchemasFile.decls = append(g.SchemasFile.decls, &ast.GenDecl{
-		Tok: token.TYPE,
-		Specs: []ast.Spec{
-			&ast.TypeSpec{
-				Name: ast.NewIdent(name),
-				Type: &ast.ArrayType{
-					Elt: ast.NewIdent(typeName),
-				},
-			},
-		},
-	})
+	g.SchemasFile.fileBuilder.AddDecl(astbuilder.TypeDecl(astbuilder.AliasOf(name, astbuilder.SliceOf(astbuilder.SimpleType(typeName)))))
 }
 
 func (g *Generator) AddParamsModel(baseName string, paramType string, params openapi3.Parameters) error {
@@ -302,10 +189,7 @@ func (g *Generator) GetIntegerType(format string) string {
 }
 
 func (g *Generator) AddSchemasImport(path string) {
-	if slices.Contains(g.SchemasFile.packageImports, path) {
-		return
-	}
-	g.SchemasFile.packageImports = append(g.SchemasFile.packageImports, path)
+	g.SchemasImportsBuilder.AddImport(path)
 }
 
 func (g *Generator) GetStringType(format string) string {
